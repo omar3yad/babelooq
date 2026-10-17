@@ -680,3 +680,51 @@ async def admin_operators_page(
             "operators": operator_data,
         },
     )
+
+
+# ---------------------------------------------------------------------------
+# Cards Management Page
+# ---------------------------------------------------------------------------
+
+
+@router.get("/cards")
+async def admin_cards_page(
+    request: Request,
+    status: Optional[str] = None,
+    search: Optional[str] = None,
+    page: int = Query(1, ge=1),
+    current_user: User = Depends(require_admin_ui),
+    db: AsyncSession = Depends(get_db),
+):
+    from repositories.card_repo import ParkingCardRepository
+    from models.parking_card import CardStatus
+    
+    card_status = None
+    if status:
+        try:
+            card_status = CardStatus(status.upper())
+        except ValueError:
+            pass
+
+    card_repo = ParkingCardRepository(db)
+    cards, total = await card_repo.get_all(status=card_status, search=search, page=page, size=30)
+    counts = await card_repo.get_counts()
+    
+    total_pages = max(1, (total + 29) // 30)
+
+    templates = request.app.state.templates
+    return templates.TemplateResponse(
+        "admin/cards.html",
+        {
+            "request": request,
+            "user": current_user,
+            "cards": cards,
+            "counts": counts,
+            "total": total,
+            "current_page": page,
+            "total_pages": total_pages,
+            "selected_status": status or "",
+            "search": search or "",
+        },
+    )
+

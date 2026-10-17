@@ -1,3 +1,4 @@
+import os
 import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, Request, HTTPException
@@ -93,7 +94,8 @@ app.add_middleware(
 )
 
 # Mount static files
-app.mount("/static", StaticFiles(directory="static"), name="static")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
 
 # Database availability middleware
 @app.middleware("http")
@@ -181,7 +183,7 @@ async def root_redirect():
 @app.get("/proposal.html", include_in_schema=False)
 async def proposal_page():
     from fastapi.responses import FileResponse
-    return FileResponse("proposal.html", media_type="text/html")
+    return FileResponse(os.path.join(BASE_DIR, "proposal.html"), media_type="text/html")
 
 @app.get("/proposal-general", include_in_schema=False)
 @app.get("/proposal-general.html", include_in_schema=False)
@@ -189,17 +191,23 @@ async def proposal_page():
 @app.get("/general-proposal", include_in_schema=False)
 async def proposal_general_page():
     from fastapi.responses import FileResponse
-    return FileResponse("proposal-general.html", media_type="text/html")
+    return FileResponse(os.path.join(BASE_DIR, "proposal-general.html"), media_type="text/html")
 
 
 @app.get("/favicon.ico", include_in_schema=False)
 async def favicon():
-    from fastapi.responses import FileResponse
-    return FileResponse("static/favicon.ico", media_type="image/x-icon")
+    from fastapi.responses import FileResponse, Response
+    fav_path = os.path.join(BASE_DIR, "static", "favicon.ico")
+    if os.path.exists(fav_path):
+        return FileResponse(fav_path, media_type="image/x-icon")
+    return Response(status_code=204)
 
 @app.get("/apple-touch-icon.png", include_in_schema=False)
 async def apple_touch_icon():
-    from fastapi.responses import FileResponse
-    return FileResponse("static/apple-touch-icon.png", media_type="image/png")
+    from fastapi.responses import FileResponse, Response
+    icon_path = os.path.join(BASE_DIR, "static", "apple-touch-icon.png")
+    if os.path.exists(icon_path):
+        return FileResponse(icon_path, media_type="image/png")
+    return Response(status_code=204)
 
 

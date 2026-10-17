@@ -1,6 +1,7 @@
 from datetime import date, datetime
-from fastapi import APIRouter, Depends, Query, Request
-from fastapi.responses import RedirectResponse
+from typing import Optional, List, Dict, Any
+from fastapi import APIRouter, Depends, Query, Request, UploadFile, File, Form, Response, Body, HTTPException
+from fastapi.responses import RedirectResponse, JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
@@ -18,6 +19,7 @@ from services.audit_service import AuditService
 from services.subscriber_service import SubscriberService
 from services.subscription_service import SubscriptionService
 from services.card_service import CardService
+from services.excel_import_service import ExcelImportService
 
 router = APIRouter(prefix="/ui/admin", tags=["ui-subscriptions"])
 
@@ -112,6 +114,99 @@ async def admin_subscriber_new_page(
             "user": current_user,
         },
     )
+
+
+# ---------------------------------------------------------------------------
+# Excel Corporate / Bulk Subscribers Import (Must be before {subscriber_id})
+# ---------------------------------------------------------------------------
+
+
+@router.get("/subscribers/import")
+@router.get("/subscribers-import")
+async def admin_subscribers_import_page(
+    request: Request,
+    current_user: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    plan_repo = SubscriptionPlanRepository(db)
+    active_plans = await plan_repo.get_all(active_only=True)
+
+    templates = request.app.state.templates
+    return templates.TemplateResponse(
+        "admin/subscribers_import.html",
+        {
+            "request": request,
+            "user": current_user,
+            "plans": active_plans,
+        },
+    )
+
+
+@router.get("/subscribers/template-excel")
+async def download_subscribers_template(
+    current_user: User = Depends(require_admin),
+):
+    content = ExcelImportService.generate_template()
+    return Response(
+        content=content,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": 'attachment; filename="subscribers_template.xlsx"'},
+    )
+
+
+@router.post("/subscribers/import-preview")
+async def preview_subscribers_import(
+    file: UploadFile = File(...),
+    default_company: str = Form(""),
+    current_user: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        content = await file.read()
+        parsed = ExcelImportService.parse_file(content, file.filename or "upload.xlsx")
+        preview_data = await ExcelImportService.preview(parsed, default_company.strip(), db)
+        return JSONResponse(
+            {
+                "success": True,
+                "data": preview_data,
+                "parsed_rows": parsed,
+            }
+        )
+    except Exception as e:
+        return JSONResponse(
+            {"success": False, "error": str(e)},
+            status_code=400,
+        )
+
+
+@router.post("/subscribers/import-confirm")
+async def confirm_subscribers_import(
+    payload: Dict[str, Any] = Body(...),
+    current_user: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        rows = payload.get("rows", [])
+        if not rows:
+            return JSONResponse({"success": False, "error": "لا توجد بيانات للاستيراد"}, status_code=400)
+
+        default_company = (payload.get("default_company") or "").strip()
+        plan_id = payload.get("plan_id")
+        if plan_id:
+            plan_id = int(plan_id)
+        update_existing = bool(payload.get("update_existing", True))
+
+        result = await ExcelImportService.execute_import(
+            parsed_rows=rows,
+            default_company=default_company,
+            plan_id=plan_id,
+            update_existing=update_existing,
+            current_user_id=current_user.id,
+            db=db,
+        )
+        return JSONResponse(result)
+    except Exception as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
 
 
 @router.get("/subscribers/{subscriber_id}")
@@ -299,3 +394,4 @@ async def admin_subscriptions_page(
             "plan_id": plan_id,
         },
     )
+

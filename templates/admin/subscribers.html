@@ -9,11 +9,18 @@
             <h1 class="text-2xl font-bold text-white">{{ t("subscriptions.subscriber.title") if t is defined else "المشتركين" }}</h1>
             <p class="text-sm text-gray-400 mt-1">إدارة المشتركين وباقاتهم وسجلات اشتراكاتهم</p>
         </div>
-        <a href="/ui/admin/subscribers/new"
-            class="bg-green-600 hover:bg-green-500 text-white font-medium px-4 py-2 rounded-lg transition flex items-center gap-2 justify-center">
-            <span>➕</span>
-            <span>إضافة مشترك جديد</span>
-        </a>
+        <div class="flex items-center gap-3">
+            <a href="/ui/admin/subscribers/import"
+                class="bg-indigo-600 hover:bg-indigo-500 text-white font-medium px-4 py-2 rounded-lg transition flex items-center gap-2 justify-center shadow-sm">
+                <span>📥</span>
+                <span>استيراد إكسيل للشركات</span>
+            </a>
+            <a href="/ui/admin/subscribers/new"
+                class="bg-green-600 hover:bg-green-500 text-white font-medium px-4 py-2 rounded-lg transition flex items-center gap-2 justify-center">
+                <span>➕</span>
+                <span>إضافة مشترك جديد</span>
+            </a>
+        </div>
     </div>
 
     <div class="bg-gray-900 border border-gray-800 rounded-xl p-4 shadow-sm">
@@ -22,7 +29,7 @@
             <input type="hidden" name="expiring_days" value="{{ expiring_days }}">
             {% endif %}
             <div>
-                <input type="text" name="search" value="{{ search }}" placeholder="بحث بالاسم أو اللوحة أو الهاتف..."
+                <input type="text" name="search" value="{{ search }}" placeholder="بحث بالاسم أو الشركة أو اللوحة أو الكارت..."
                     class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3.5 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500">
             </div>
             <div>
@@ -64,8 +71,9 @@
             <table class="w-full text-right text-sm text-gray-300">
                 <thead class="bg-gray-800/80 text-gray-400 font-semibold border-b border-gray-800">
                     <tr>
-                        <th class="p-4">الاسم الكامل</th>
+                        <th class="p-4">الاسم الكامل / الشركة</th>
                         <th class="p-4">رقم اللوحة</th>
+                        <th class="p-4">كود الكارت</th>
                         <th class="p-4">الهاتف</th>
                         <th class="p-4">الباقة الحالية</th>
                         <th class="p-4">الحالة</th>
@@ -78,11 +86,20 @@
                     {% for sub in subscribers %}
                     <tr onclick="window.location.href='/ui/admin/subscribers/{{ sub.id }}'"
                         class="hover:bg-gray-800/50 cursor-pointer transition">
-                        <td class="p-4 font-bold text-white flex items-center gap-2">
-                            <span>👤</span>
-                            <span>{{ sub.full_name }}</span>
+                        <td class="p-4">
+                            <div class="font-bold text-white flex items-center gap-2">
+                                <span>👤</span>
+                                <span>{{ sub.full_name }}</span>
+                            </div>
+                            {% if sub.company_name %}
+                            <div class="text-xs text-cyan-400 font-medium flex items-center gap-1 mt-0.5">
+                                <span>🏢</span>
+                                <span>{{ sub.company_name }}</span>
+                            </div>
+                            {% endif %}
                         </td>
                         <td class="p-4 font-mono font-semibold text-indigo-300">{{ sub.plate_number }}</td>
+                        <td class="p-4 font-mono text-xs text-cyan-300">{{ sub.card_code or "—" }}</td>
                         <td class="p-4 text-gray-400 font-mono">{{ sub.phone_number or "—" }}</td>
                         <td class="p-4">
                             {% if sub.active_subscription and sub.active_subscription.plan_label %}

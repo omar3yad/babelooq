@@ -10,6 +10,7 @@ from schemas.common import PaginatedResponse
 from schemas.parking_card import (
     ParkingCardCreate,
     ParkingCardBulkCreate,
+    ParkingCardRangeCreate,
     ParkingCardResponse,
     ParkingCardStatusUpdate,
 )
@@ -46,7 +47,7 @@ async def create_card(
     if existing:
         raise HTTPException(
             status_code=409,
-            detail="Card code already exists",
+            detail="كود الكارت مسجل مسبقاً",
             headers={"X-Error-Code": "CARD_CODE_ALREADY_EXISTS"},
         )
 
@@ -65,44 +66,108 @@ async def create_cards_bulk(
     card_repo: ParkingCardRepository = Depends(get_card_repo),
 ):
     normalized_codes = []
+    seen = set()
     for code in data.card_codes:
         try:
-            normalized_codes.append(card_service.normalize_code(code))
+            norm = card_service.normalize_code(code)
+            if norm not in seen:
+                normalized_codes.append(norm)
+                seen.add(norm)
         except InvalidBarcodeFormatError as e:
             raise HTTPException(
                 status_code=422,
-                detail=e.message,
+                detail=f"كود غير صالح '{code}': {e.message}",
                 headers={"X-Error-Code": "INVALID_BARCODE_FORMAT"},
             )
 
     conflicting = await card_repo.get_existing_codes(normalized_codes)
-    if conflicting:
+    new_codes = [c for c in normalized_codes if c not in conflicting]
+    
+    if not new_codes:
         raise HTTPException(
             status_code=409,
-            detail=f"Duplicate codes: {', '.join(conflicting)}",
-            headers={"X-Error-Code": "BULK_CARD_CONFLICT"},
+            detail=f"جميع الكروت المدخلة مسجلة مسبقاً ({len(conflicting)} كارت)",
+            headers={"X-Error-Code": "ALL_CARDS_EXIST"},
         )
 
-    cards = await card_repo.bulk_create(normalized_codes)
+    cards = await card_repo.bulk_create(new_codes)
     await db.commit()
-    for c in cards:
-        await db.refresh(c)
 
-    responses = [ParkingCardResponse.model_validate(c).model_dump(mode="json") for c in cards]
     return {
-        "data": responses,
         "created": len(cards),
+        "skipped": len(conflicting),
+        "conflicting": conflicting[:20],
+        "total_requested": len(normalized_codes),
+    }
+
+@router.post("/range", status_code=201)
+async def create_cards_range(
+    data: ParkingCardRangeCreate,
+    current_user: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+    card_service: CardService = Depends(get_card_service),
+    card_repo: ParkingCardRepository = Depends(get_card_repo),
+):
+    if data.start_number > data.end_number:
+        raise HTTPException(
+            status_code=422,
+            detail="رقم البداية يجب أن يكون أصغر من أو يساوي رقم النهاية",
+            headers={"X-Error-Code": "INVALID_RANGE"},
+        )
+    
+    count = data.end_number - data.start_number + 1
+    if count > 5000:
+        raise HTTPException(
+            status_code=422,
+            detail=f"الحد الأقصى للإضافة في المرة الواحدة هو 5000 كارت (المطلوب {count})",
+            headers={"X-Error-Code": "RANGE_TOO_LARGE"},
+        )
+
+    codes = []
+    for num in range(data.start_number, data.end_number + 1):
+        num_str = str(num).zfill(data.pad_zeros) if data.pad_zeros > 0 else str(num)
+        raw_code = f"{data.prefix}{num_str}{data.suffix}"
+        try:
+            codes.append(card_service.normalize_code(raw_code))
+        except InvalidBarcodeFormatError as e:
+            raise HTTPException(
+                status_code=422,
+                detail=f"كود ناتج غير صالح '{raw_code}': {e.message}",
+                headers={"X-Error-Code": "INVALID_BARCODE_FORMAT"},
+            )
+
+    conflicting = await card_repo.get_existing_codes(codes)
+    conflicting_set = set(conflicting)
+    new_codes = [c for c in codes if c not in conflicting_set]
+
+    if not new_codes:
+        raise HTTPException(
+            status_code=409,
+            detail=f"جميع الكروت في هذا النطاق مسجلة مسبقاً ({len(conflicting)} كارت)",
+            headers={"X-Error-Code": "ALL_CARDS_EXIST"},
+        )
+
+    cards = await card_repo.bulk_create(new_codes)
+    await db.commit()
+
+    return {
+        "created": len(cards),
+        "skipped": len(conflicting),
+        "total_in_range": count,
+        "first_card": codes[0],
+        "last_card": codes[-1],
     }
 
 @router.get("/", response_model=PaginatedResponse[ParkingCardResponse])
 async def get_cards(
     status: CardStatus | None = None,
+    search: str | None = None,
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=100),
     current_user: User = Depends(require_admin),
     card_repo: ParkingCardRepository = Depends(get_card_repo),
 ):
-    cards, total = await card_repo.get_all(status=status, page=page, size=size)
+    cards, total = await card_repo.get_all(status=status, search=search, page=page, size=size)
     responses = [ParkingCardResponse.model_validate(c) for c in cards]
     return PaginatedResponse[ParkingCardResponse](
         data=responses,
@@ -110,6 +175,7 @@ async def get_cards(
         page=page,
         size=size,
     )
+
 
 @router.get("/{card_code}")
 async def get_card_by_code(

@@ -22,12 +22,21 @@ class SubscriberRepository:
         )
         return result.scalars().first()
 
+    async def get_by_card_code(self, card_code: str) -> Subscriber | None:
+        """Fetches a subscriber by card code."""
+        result = await self.db.execute(
+            select(Subscriber).where(Subscriber.card_code == card_code).limit(1)
+        )
+        return result.scalars().first()
+
     async def create(
         self,
         full_name: str,
         plate_number: str,
-        phone_number: str | None,
-        notes: str | None,
+        phone_number: str | None = None,
+        notes: str | None = None,
+        company_name: str | None = None,
+        card_code: str | None = None,
     ) -> Subscriber:
         """Creates a new subscriber and flushes."""
         subscriber = Subscriber(
@@ -35,6 +44,8 @@ class SubscriberRepository:
             plate_number=plate_number,
             phone_number=phone_number,
             notes=notes,
+            company_name=company_name,
+            card_code=card_code,
         )
         self.db.add(subscriber)
         await self.db.flush()
@@ -65,6 +76,8 @@ class SubscriberRepository:
             search_filter = or_(
                 Subscriber.full_name.ilike(search_pattern),
                 Subscriber.plate_number.ilike(search_pattern),
+                Subscriber.company_name.ilike(search_pattern),
+                Subscriber.card_code.ilike(search_pattern),
             )
             query = query.where(search_filter)
             count_query = count_query.where(search_filter)
@@ -81,3 +94,4 @@ class SubscriberRepository:
 
 
 __all__ = ["SubscriberRepository"]
+

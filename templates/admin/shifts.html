@@ -29,12 +29,11 @@
 
       <!-- Gate Number -->
       <div>
-        <label class="block text-xs font-medium text-gray-300 mb-1">البوابة</label>
+        <label class="block text-xs font-medium text-gray-300 mb-1">نوع العامل / البوابة</label>
         <select name="gate_number" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-indigo-500">
           <option value="">{{ t("admin.filter.all_gates") }}</option>
-          {% for g in range(1, 6) %}
-          <option value="{{ g }}" {% if filters.gate_number == g %}selected{% endif %}>بوابة {{ g | to_arabic_indic }}</option>
-          {% endfor %}
+          <option value="1" {% if filters.gate_number == 1 %}selected{% endif %}>🟢 عامل دخول</option>
+          <option value="2" {% if filters.gate_number == 2 %}selected{% endif %}>🔵 عامل خروج</option>
         </select>
       </div>
 
@@ -91,7 +90,7 @@
           <tr>
             <th class="p-3">رقم الشيفت</th>
             <th class="p-3">العامل</th>
-            <th class="p-3">البوابة</th>
+            <th class="p-3">نوع الشيفت</th>
             <th class="p-3">البداية</th>
             <th class="p-3">النهاية</th>
             <th class="p-3">الإيراد المحسوب</th>
@@ -107,7 +106,15 @@
           <tr onclick="window.location.href='/ui/admin/shifts/{{ s.id }}'" class="cursor-pointer hover:bg-gray-700/40 transition">
             <td class="p-3 font-mono font-medium text-white">#{{ s.id | to_arabic_indic }}</td>
             <td class="p-3 text-gray-200">{{ operator_names.get(s.operator_id, "—") }}</td>
-            <td class="p-3 text-gray-300">بوابة {{ s.gate_number | to_arabic_indic }}</td>
+            <td class="p-3">
+              {% if s.gate_number == 1 %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-950/80 text-emerald-300 border border-emerald-500/40">🟢 دخول</span>
+              {% elif s.gate_number == 2 %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-950/80 text-blue-300 border border-blue-500/40">🔵 خروج</span>
+              {% else %}
+                <span class="text-gray-300 text-xs">بوابة {{ s.gate_number | to_arabic_indic }}</span>
+              {% endif %}
+            </td>
             <td class="p-3 text-gray-400 text-xs">{{ s.started_at | format_datetime }}</td>
             <td class="p-3 text-gray-400 text-xs">{{ s.ended_at | format_datetime if s.ended_at else "مفتوح" }}</td>
             <td class="p-3 font-semibold text-emerald-400">{{ computed | format_egp }}</td>

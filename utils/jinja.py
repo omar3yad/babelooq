@@ -228,6 +228,9 @@ def register_jinja_filters(templates: Jinja2Templates) -> None:
 
 def create_jinja2_environment(settings=None) -> Jinja2Templates:
     """Factory to create Jinja2Templates with all registered filters and globals."""
-    templates = Jinja2Templates(directory="templates")
+    base_dir = os.path.dirname(os.path.dirname(__file__))
+    templates_dir = os.path.join(base_dir, "templates")
+    templates = Jinja2Templates(directory=templates_dir)
     register_jinja_filters(templates)
     return templates
+

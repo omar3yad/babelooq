@@ -1,114 +1,526 @@
 <!-- templates/operator/dashboard.html -->
 {% extends "base.html" %}
 
-{% block title %}لوحة تحكم المشغل - garage4u{% endblock %}
+{% block title %}لوحة تحكم المشغل - garage4u POS{% endblock %}
+
+{% block head %}
+<!-- Google Fonts: Cairo & Outfit -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;600;700;800;900&family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --font-ar: 'Cairo', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --font-num: 'Outfit', 'Cairo', monospace, sans-serif;
+  }
+
+  body {
+    font-family: var(--font-ar);
+    background-color: #060911;
+    color: #f8fafc;
+    overflow-x: hidden;
+  }
+
+  .font-digital {
+    font-family: var(--font-num);
+  }
+
+  /* Two-Column Side-By-Side POS Layout */
+  .pos-layout-row {
+    display: flex;
+    flex-direction: row;
+    gap: 18px;
+    width: 100%;
+    align-items: stretch;
+  }
+
+  @media (max-width: 960px) {
+    .pos-layout-row {
+      flex-direction: column;
+    }
+  }
+
+  .pos-main-column {
+    flex: 1.35; /* Right area (~58%) */
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+  }
+
+  .pos-sidebar-column {
+    flex: 1.0; /* Left area (~42%) */
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+  }
+
+  /* Ambient Glass Cards */
+  .glass-card {
+    background: rgba(13, 20, 36, 0.95);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(56, 189, 248, 0.2);
+    box-shadow: 0 16px 36px -8px rgba(0, 0, 0, 0.65);
+    border-radius: 18px;
+  }
+
+  /* Guaranteed Dark Scanner Input */
+  .scanner-dark-input {
+    background-color: #030712 !important;
+    color: #ffffff !important;
+    border: 2px solid rgba(56, 189, 248, 0.55) !important;
+    box-shadow: inset 0 4px 14px rgba(0, 0, 0, 0.95) !important;
+  }
+  .scanner-dark-input::placeholder {
+    color: #94a3b8 !important;
+    opacity: 1 !important;
+  }
+  .scanner-dark-input:focus {
+    border-color: #38bdf8 !important;
+    box-shadow: inset 0 4px 14px rgba(0, 0, 0, 0.95), 0 0 20px rgba(56, 189, 248, 0.35) !important;
+  }
+
+  /* Giant Crisp Clean Price (NO GLOW / NO BLUR) */
+  .giant-clean-price {
+    font-family: var(--font-num);
+    font-size: clamp(5.5rem, 9.5vw, 8.5rem);
+    line-height: 0.92;
+    font-weight: 900;
+    letter-spacing: -0.03em;
+    color: #34d399;
+    filter: none !important;
+    text-shadow: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Smooth Custom Scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: rgba(15, 23, 42, 0.6);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(51, 65, 85, 0.8);
+    border-radius: 9999px;
+  }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-6 max-w-lg flex flex-col flex-grow">
-    
+<div class="w-full min-h-[calc(100vh-60px)] bg-[#060911] text-slate-100 p-3 sm:p-5 flex flex-col justify-between gap-4">
+
     {% if not shift %}
-    <div class="bg-amber-600 text-white font-bold px-4 py-3 rounded-lg mb-6 shadow-md text-center">
-        {{ t("operator.dashboard.no_shift_banner") }}
-    </div>
-    {% endif %}
-
-    <div class="bg-gray-800 border border-gray-700 rounded-lg p-4 mb-6 shadow-lg flex flex-col gap-2">
-        <div class="flex justify-between items-center text-sm text-gray-400">
-            <span>المشغل: <strong class="text-white">{{ user.full_name }}</strong></span>
-            <span>بوابة: <strong class="text-white">{{ user.gate_number }}</strong></span>
+    <!-- ================================================================= -->
+    <!-- NO ACTIVE SHIFT MODAL                                            -->
+    <!-- ================================================================= -->
+    <div class="max-w-xl mx-auto my-auto w-full glass-card p-8 sm:p-10 text-center flex flex-col items-center gap-5 border border-amber-500/30">
+        <div class="w-24 h-24 rounded-3xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-5xl shadow-[0_0_40px_rgba(245,158,11,0.2)]">
+            ⚠️
         </div>
-        {% if shift %}
-        <div class="flex justify-between items-center text-sm text-gray-400 border-t border-gray-700 pt-2">
-            <span>بداية الشيفت: <strong class="text-white">{{ shift.started_at | format_datetime }}</strong></span>
-            <span>العمليات: <strong class="text-indigo-400" id="session-count">{{ session_total }}</strong></span>
-        </div>
-        {% endif %}
-        <div class="text-center text-2xl font-mono text-indigo-400 mt-1" id="live-clock">
-            ٠٠:٠٠:٠٠
-        </div>
-    </div>
-
-    <div class="flex flex-col gap-4 mb-6">
-        <div class="flex gap-4">
-            <a href="/ui/operator/entry"
-               class="flex-1 flex flex-col items-center justify-center bg-green-600 hover:bg-green-700 text-white rounded-xl shadow-lg transition duration-200 py-6 text-xl font-bold min-h-[120px] {% if not shift %}opacity-50 pointer-events-none{% endif %}"
-               {% if not shift %}tabindex="-1" aria-disabled="true"{% endif %}>
-                <svg class="w-8 h-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
-                </svg>
-                {{ t("operator.dashboard.entry_button") }}
-            </a>
-            
-            <a href="/ui/operator/exit" 
-               class="flex-1 flex flex-col items-center justify-center bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg transition duration-200 py-6 text-xl font-bold min-h-[120px] {% if not shift %}opacity-50 pointer-events-none{% endif %}"
-               {% if not shift %}tabindex="-1" aria-disabled="true"{% endif %}>
-                <svg class="w-8 h-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
-                </svg>
-                {{ t("operator.dashboard.exit_button") }}
-            </a>
-        </div>
-
         <div>
-            <a href="/ui/operator/lost-card"
-               id="btn-lost-card"
-               class="w-full flex items-center justify-center bg-amber-600 hover:bg-amber-700 text-white rounded-xl shadow-lg transition duration-200 py-4 text-lg font-bold min-h-[64px] {% if not shift %}opacity-50 pointer-events-none{% endif %}"
-               {% if not shift %}tabindex="-1" aria-disabled="true"{% endif %}>
-                <svg class="w-6 h-6 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-                </svg>
-                {{ t("operator.dashboard.lost_card_button") }}
-            </a>
+            <h1 class="text-3xl font-black text-white tracking-tight">{{ t("operator.dashboard.no_shift_banner") }}</h1>
+            <p class="text-slate-300 text-base mt-2 leading-relaxed">
+                لا توجد وردية مفتوحة حالياً. يرجى فتح وردية جديدة لتتمكن من مسح كروت الجراج وحساب تكلفة الخروج وإصدار الإيصالات.
+            </p>
         </div>
+        <a href="/ui/operator/shift/start" class="mt-3 w-full bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:to-teal-500 text-white font-black py-4 px-6 rounded-2xl shadow-xl transition-all duration-200 text-xl flex items-center justify-center gap-2">
+            <span>{{ t("operator.shift.start_button") }}</span>
+            <span class="text-2xl">➔</span>
+        </a>
     </div>
 
-    <div class="mt-auto mb-6">
-        {% if shift %}
-        <a href="/ui/operator/shift/end" class="w-full flex items-center justify-center bg-red-600 hover:bg-red-700 text-white py-3 rounded-lg font-bold shadow-md transition duration-200">
-            {{ t("operator.shift.end_button") }}
-        </a>
-        {% else %}
-        <a href="/ui/operator/shift/start" class="w-full flex items-center justify-center bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-bold shadow-md transition duration-200">
-            {{ t("operator.shift.start_button") }}
-        </a>
-        {% endif %}
-    </div>
+    {% else %}
+    <!-- ================================================================= -->
+    <!-- FULL-SCREEN LUXURY POS TERMINAL                                   -->
+    <!-- ================================================================= -->
+    <div class="w-full flex-grow flex flex-col gap-4 max-w-[1900px] mx-auto">
 
-    {% if shift and sessions %}
-    <div class="bg-gray-800 border border-gray-700 rounded-lg shadow-lg overflow-hidden mb-6">
-        <div class="px-4 py-3 bg-gray-750 border-b border-gray-700 font-bold text-sm text-gray-300">آخر ١٠ عمليات</div>
-        <table class="w-full text-right border-collapse">
-            <thead>
-                <tr class="text-xs text-gray-500 border-b border-gray-700 bg-gray-900/50">
-                    <th class="p-3">رقم الكرت</th>
-                    <th class="p-3">الدخول</th>
-                    <th class="p-3">الخروج</th>
-                    <th class="p-3">المبلغ</th>
-                </tr>
-            </thead>
-            <tbody class="text-sm">
-                {% for s in sessions %}
-                <tr class="border-b border-gray-700 hover:bg-gray-750 transition duration-150">
-                    <td class="p-3 font-mono text-gray-300">{{ s.card_code }}</td>
-                    <td class="p-3 text-xs text-gray-400">{{ s.entry_time | format_datetime }}</td>
-                    <td class="p-3 text-xs text-gray-400">
-                        {% if s.exit_time %}
-                            {{ s.exit_time | format_datetime }}
+        <!-- 1. TOP COMMAND BAR -->
+        <header class="glass-card p-3.5 sm:p-4 flex flex-wrap justify-between items-center gap-4">
+            
+            <!-- Operator Profile & Shift Info (Right side in RTL) -->
+            <div class="flex items-center gap-3.5">
+                <div class="w-12 h-12 rounded-2xl bg-[#0b1329] border border-cyan-500/40 flex items-center justify-center text-2xl shadow-md text-white font-bold">
+                    👤
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-sm text-slate-400 font-semibold">المشغل الحالي:</span>
+                        <h2 class="text-white text-base sm:text-lg font-black tracking-tight">{{ user.full_name }}</h2>
+                    </div>
+                    <div class="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
+                        <span>بدء الوردية:</span>
+                        <span class="font-digital text-slate-200 font-bold bg-[#030712] px-2.5 py-0.5 rounded-md border border-slate-700/80">
+                            {{ shift.started_at | format_datetime }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gate Identity & Clock & Shift Controls (Left side in RTL) -->
+            <div class="flex items-center gap-3 flex-wrap">
+                
+                <!-- Gate Indicator Pill -->
+                {% if user.gate_number == 1 %}
+                <div class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-black bg-emerald-950/80 text-emerald-300 border border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.15)]">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+                    <span>بوابة الدخول الرئيسية (#1)</span>
+                </div>
+                {% else %}
+                <div class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-black bg-[#031525] text-cyan-300 border border-cyan-500/60 shadow-[0_0_15px_rgba(6,182,212,0.15)]">
+                    <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping"></span>
+                    <span>بوابة الخروج والمحاسبة (2B)</span>
+                </div>
+                {% endif %}
+
+                <!-- Digital LCD Live Clock -->
+                <div class="bg-[#030712] border border-cyan-500/40 px-4 py-2 rounded-xl font-digital text-base sm:text-lg font-black text-cyan-400 tracking-wider shadow-[inset_0_2px_8px_rgba(0,0,0,0.8)] flex items-center gap-2" id="live-clock">
+                    ٠٠:٠٠:٠٠
+                </div>
+
+                <!-- End Shift Button -->
+                <a href="/ui/operator/shift/end" class="bg-rose-950/70 hover:bg-rose-900 text-rose-300 hover:text-white border border-rose-700/70 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition duration-150 flex items-center gap-2 shadow-sm">
+                    <span class="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse"></span>
+                    <span>إنهاء الوردية</span>
+                </a>
+
+                <!-- Logout Button -->
+                <a href="/ui/logout" class="bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/80 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition duration-150">
+                    تسجيل الخروج
+                </a>
+            </div>
+        </header>
+
+        <!-- 2. UPPER SECTION: 2 COLUMNS (HERO DISPLAY ON RIGHT | SCANNER & COUNTER ON LEFT) -->
+        <div class="pos-layout-row">
+
+            <!-- ========================================================= -->
+            <!-- RIGHT COLUMN: HERO CUSTOMER DISPLAY (~58%)                -->
+            <!-- ========================================================= -->
+            <div class="pos-main-column">
+
+                <!-- HERO CUSTOMER DISPLAY VIEWPORT -->
+                <div class="glass-card p-6 sm:p-7 shadow-2xl flex flex-col justify-between relative min-h-[440px] overflow-hidden border border-cyan-500/30">
+                    
+                    <!-- 1. STANDBY SCREEN -->
+                    <div id="standby-display" class="flex flex-col items-center justify-center text-center gap-4 my-auto py-8">
+                        <div class="w-24 h-24 rounded-3xl bg-slate-900/80 border border-cyan-500/30 flex items-center justify-center shadow-inner relative">
+                            <svg class="w-12 h-12 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path>
+                            </svg>
+                            <span class="absolute -bottom-1 -right-1 flex h-4 w-4">
+                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                <span class="relative inline-flex rounded-full h-4 w-4 bg-emerald-500 border-2 border-slate-900"></span>
+                            </span>
+                        </div>
+                        <div>
+                            <h3 class="text-2xl sm:text-3xl font-black text-white tracking-tight">
+                                {% if user.gate_number == 1 %}شاشة تسجيل الدخول التلقائي{% else %}شاشة الحساب والخروج الذكي{% endif %}
+                            </h3>
+                            <p class="text-sm sm:text-base text-slate-300 max-w-md mt-2 leading-relaxed">
+                                مرر كارت الجراج أمام الماسح الضوئي وسيتم تأكيد الخروج فورياً وإظهار المبلغ للعميل.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- 2. EXIT CUSTOMER DISPLAY (CLEAN SOLID PRICE WITHOUT GLOW + AUTO CONFIRM + OPTIONAL PRINT) -->
+                    <div id="exit-display-box" class="hidden flex flex-col justify-between gap-4 w-full h-full my-auto">
+                        
+                        <!-- Top Meta Header -->
+                        <div class="flex justify-between items-center pb-1">
+                            <!-- Right Pill (In RTL: right side) -->
+                            <div class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-black bg-[#031525] text-cyan-300 border border-cyan-500/50 shadow-sm" id="exit-badge-text">
+                                <span>المبلغ الإجمالي المستحق للدفع</span>
+                            </div>
+
+                            <!-- Left Pill (In RTL: left side) -->
+                            <div class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm text-slate-300 font-bold bg-[#030712] border border-slate-700/80">
+                                <span>كارت رقم:</span>
+                                <span class="text-white font-digital text-base font-black" id="exit-card-code">—</span>
+                            </div>
+                        </div>
+
+                        <!-- THE GIANT CRISP PRICE (NO GLOW HALO) -->
+                        <div class="flex flex-col items-center justify-center my-auto py-2 text-center">
+                            <span class="text-sm sm:text-base font-black text-slate-300 mb-1">
+                                إجمالي الحساب المطلوب
+                            </span>
+                            
+                            <div class="flex items-center justify-center gap-3" dir="ltr">
+                                <div class="flex flex-col items-end">
+                                    <span class="text-xl sm:text-2xl font-black text-emerald-400 tracking-tight">ج.م</span>
+                                    <span class="text-xs text-slate-400 font-bold font-digital">EGP CASH</span>
+                                </div>
+                                <span id="exit-huge-price" class="giant-clean-price">
+                                    0.00
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- 4 Details Micro-Cards -->
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            
+                            <div class="bg-[#030712] border border-slate-800 rounded-2xl p-3 text-center flex flex-col justify-center gap-1 shadow-md">
+                                <span class="text-xs text-slate-400 font-bold">وقت الدخول</span>
+                                <span id="exit-entry-time" class="font-digital text-sm font-bold text-slate-200">—</span>
+                            </div>
+
+                            <div class="bg-[#030712] border border-slate-800 rounded-2xl p-3 text-center flex flex-col justify-center gap-1 shadow-md">
+                                <span class="text-xs text-slate-400 font-bold">مدة الانتظار</span>
+                                <span id="exit-duration" class="font-digital text-base font-black text-cyan-400">—</span>
+                            </div>
+
+                            <div class="bg-[#030712] border border-slate-800 rounded-2xl p-3 text-center flex flex-col justify-center gap-1 shadow-md">
+                                <span class="text-xs text-slate-400 font-bold">التعرفة المحتسبة</span>
+                                <span id="exit-rate-label" class="text-xs sm:text-sm font-bold text-amber-300 truncate">—</span>
+                            </div>
+
+                            <div class="bg-[#030712] border border-slate-800 rounded-2xl p-3 text-center flex flex-col justify-center gap-1 shadow-md">
+                                <span class="text-xs text-slate-400 font-bold">رقم اللوحة</span>
+                                <span id="exit-plate-number" class="font-digital text-sm font-bold text-cyan-300">—</span>
+                            </div>
+
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="flex flex-col gap-2.5 pt-1">
+                            
+                            <!-- Big Green Optional Print Button -->
+                            <button
+                                id="btn-print-receipt"
+                                onclick="printLastReceipt()"
+                                class="w-full bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black py-3.5 px-6 rounded-2xl text-lg sm:text-xl flex items-center justify-center gap-3 border border-emerald-400/50 shadow-lg transition duration-200 cursor-pointer"
+                            >
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+                                </svg>
+                                <span>طباعة الإيصال (اضغط Enter ↵ أو P)</span>
+                            </button>
+
+                            <!-- Cancel & Scan Next Card Button -->
+                            <button
+                                onclick="resetCustomerDisplay()"
+                                class="w-full bg-[#030712] hover:bg-slate-900 text-slate-300 hover:text-white font-bold py-2.5 px-4 rounded-xl border border-slate-800 transition text-sm flex items-center justify-center gap-2 cursor-pointer"
+                            >
+                                <span>إلغاء ومسح كارت آخر</span>
+                                <span class="font-digital text-xs bg-slate-800 px-2 py-0.5 rounded border border-slate-700">Esc</span>
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                    <!-- 3. ENTRY SUCCESS DISPLAY -->
+                    <div id="entry-display-box" class="hidden flex flex-col items-center justify-center text-center gap-4 w-full h-full my-auto py-4">
+                        
+                        <div class="w-20 h-20 rounded-3xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center text-4xl shadow-[0_0_35px_rgba(16,185,129,0.3)]">
+                            ✓
+                        </div>
+
+                        <div>
+                            <h3 class="text-2xl sm:text-3xl font-black text-white" id="entry-title-text">تم تسجيل الدخول بنجاح</h3>
+                            <p class="text-sm sm:text-base text-emerald-400 font-bold mt-1">تفضل بالدخول إلى الجراج — بوابات الدخول مفتوحة</p>
+                        </div>
+
+                        <!-- License Plate Presentation Box -->
+                        <div id="entry-plate-container" class="hidden w-full max-w-sm bg-white text-black rounded-2xl border-4 border-slate-950 shadow-2xl overflow-hidden my-1">
+                            <div class="bg-blue-700 text-white text-xs font-black tracking-widest py-1 px-4 flex justify-between items-center border-b-2 border-black">
+                                <span>مـصـر</span>
+                                <span class="tracking-widest font-digital">EGYPT</span>
+                            </div>
+                            <div class="py-2.5 px-3 flex items-center justify-center">
+                                <span id="entry-plate-text" class="text-2xl sm:text-3xl font-black font-digital tracking-widest text-black" dir="rtl">
+                                    —
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Entry Details Micro-Row -->
+                        <div class="w-full max-w-md bg-slate-950/90 border border-slate-800 rounded-2xl p-3.5 flex justify-around text-sm shadow-inner">
+                            <div>
+                                <span class="text-slate-400 block mb-0.5 text-xs">رقم الكارت</span>
+                                <strong id="entry-card-code" class="font-digital text-base text-white font-bold">—</strong>
+                            </div>
+                            <div>
+                                <span class="text-slate-400 block mb-0.5 text-xs">وقت الدخول</span>
+                                <strong id="entry-time" class="font-digital text-sm text-cyan-300 font-bold">—</strong>
+                            </div>
+                            <div id="entry-subscriber-box" class="hidden">
+                                <span class="text-slate-400 block mb-0.5 text-xs">نوع الاشتراك</span>
+                                <strong id="entry-subscriber-name" class="text-purple-300 font-bold text-xs sm:text-sm">—</strong>
+                            </div>
+                        </div>
+
+                        <button
+                            onclick="resetCustomerDisplay()"
+                            class="w-full max-w-md bg-emerald-600 hover:bg-emerald-500 text-white font-black py-3 rounded-xl shadow-lg transition text-base cursor-pointer"
+                        >
+                            جاهز للكارت التالي (Enter ↵)
+                        </button>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- ========================================================= -->
+            <!-- LEFT COLUMN: COUNTER & SCANNER CARD (~42%)                -->
+            <!-- ========================================================= -->
+            <div class="pos-sidebar-column">
+
+                <!-- 1. Operations Counter Widget -->
+                <div class="glass-card p-5 shadow-xl flex justify-between items-center relative overflow-hidden">
+                    <div class="relative z-10">
+                        <span class="text-sm text-slate-300 font-bold block mb-1">إجمالي العمليات المنجزة بالوردية</span>
+                        <div class="text-5xl sm:text-6xl font-black font-digital text-white" id="session-count">
+                            {{ session_total }}
+                        </div>
+                    </div>
+                    
+                    {% if user.gate_number == 2 %}
+                    <a href="/ui/operator/lost-card"
+                       class="relative z-10 bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/40 px-4 py-3 rounded-2xl text-sm font-black transition flex items-center gap-2 shadow-sm">
+                        <span>⚠️ كارت مفقود</span>
+                    </a>
+                    {% endif %}
+                </div>
+
+                <!-- 2. SCANNER CARD (Placed on left column as requested) -->
+                <div class="glass-card p-5 shadow-2xl flex flex-col justify-between flex-grow relative border border-cyan-500/30">
+                    
+                    <div>
+                        <div class="flex justify-between items-center mb-3">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm sm:text-base font-black text-slate-200 tracking-wide">
+                                    الماسح الضوئي (POS Scanner) متصل وجاهز للعمل
+                                </span>
+                            </div>
+                            <div class="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold px-3.5 py-1.5 rounded-full bg-[#031525] border border-cyan-500/60 text-cyan-300">
+                                <span>⚡</span>
+                                <span>{% if user.gate_number == 1 %}تسجيل دخول فوري{% else %}حساب وتأكيد خروج فوري{% endif %}</span>
+                            </div>
+                        </div>
+
+                        <!-- Direct Form Input -->
+                        <form id="direct-scan-form" onsubmit="handleDirectScan(event)" class="relative mt-3">
+                            <div class="relative flex items-center">
+                                
+                                <input
+                                    id="card-code-input"
+                                    type="text"
+                                    name="card_code"
+                                    autocomplete="off"
+                                    autocorrect="off"
+                                    autocapitalize="off"
+                                    spellcheck="false"
+                                    autofocus
+                                    placeholder="مرر الكارت أمام الاسكانر (أو اكتب الكود واضغط Enter)..."
+                                    class="w-full scanner-dark-input rounded-2xl py-4 px-12 text-center text-white placeholder-slate-400 text-lg sm:text-2xl font-digital font-bold tracking-wider outline-none transition-all duration-200 select-none"
+                                >
+
+                                <!-- Scanner Icon on Left -->
+                                <div class="absolute left-4 pointer-events-none text-cyan-400/80">
+                                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path>
+                                    </svg>
+                                </div>
+
+                                <!-- Spinner Indicator -->
+                                <div id="scan-spinner" class="hidden absolute right-4 text-cyan-400">
+                                    <svg class="animate-spin h-7 w-7" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                                    </svg>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Error Notification Box -->
+                    <div id="status-error-box" class="hidden glass-card p-4 mt-3 border-2 border-rose-500/80 bg-rose-950/70 text-rose-100 shadow-2xl flex items-center justify-between gap-4 transition-all duration-200">
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 rounded-xl bg-rose-600/30 border border-rose-500/50 flex items-center justify-center text-xl">
+                                ⚠️
+                            </div>
+                            <div>
+                                <strong class="block text-white text-sm font-black" id="error-title">تعذر إتمام العملية</strong>
+                                <p class="text-xs text-rose-200 mt-0.5" id="error-message">الرجاء التأكد من رقم الكارت وإعادة المحاولة.</p>
+                            </div>
+                        </div>
+                        <button onclick="dismissError()" class="bg-rose-800/80 hover:bg-rose-700 text-white px-3.5 py-1.5 rounded-xl font-bold text-xs transition">
+                            إغلاق
+                        </button>
+                    </div>
+
+                    <div class="text-xs text-slate-400 mt-3 flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                        <span>الماسح متصل بنجاح — يقوم بالمعالجة الفورية بمجرد قراءة الباركود</span>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- 3. LOWER SECTION: FULL-WIDTH RECENT TRANSACTIONS TABLE (100% WIDTH) -->
+        <div class="w-full glass-card p-5 shadow-2xl flex flex-col min-h-[260px] border border-cyan-500/20">
+            
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3 mb-3">
+                <div class="flex items-center gap-2.5">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <h3 class="font-black text-base sm:text-lg text-white">سجل العمليات الأحدث بالوردية</h3>
+                </div>
+                <span class="text-xs font-bold text-emerald-400 bg-emerald-950/90 px-3 py-1 rounded-full border border-emerald-500/40">
+                    تحديث فوري
+                </span>
+            </div>
+
+            <div class="overflow-x-auto overflow-y-auto flex-grow max-h-[360px]">
+                <table class="w-full text-right border-collapse">
+                    <thead>
+                        <tr class="text-sm text-slate-300 font-bold border-b border-slate-800 bg-slate-950/80 sticky top-0 backdrop-blur">
+                            <th class="py-3 px-4">الكارت</th>
+                            <th class="py-3 px-4">وقت الدخول</th>
+                            <th class="py-3 px-4">وقت الخروج</th>
+                            <th class="py-3 px-4">المبلغ المستحق</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recent-sessions-tbody" class="text-sm sm:text-base">
+                        {% for s in sessions %}
+                        <tr class="border-b border-slate-800/60 hover:bg-slate-800/40 transition">
+                            <td class="py-3 px-4 font-digital text-slate-200 font-bold text-base">{{ s.card_code }}</td>
+                            <td class="py-3 px-4 text-slate-300 font-digital text-sm">{{ s.entry_time | format_datetime }}</td>
+                            <td class="py-3 px-4 text-slate-300 font-digital text-sm">
+                                {% if s.exit_time %}
+                                    {{ s.exit_time | format_datetime }}
+                                {% else %}
+                                    <span class="text-emerald-400 font-bold bg-emerald-950/80 px-3 py-1 rounded-full border border-emerald-500/40 text-xs">داخل الجراج</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-3 px-4 font-digital">
+                                {% if s.amount_charged is not none %}
+                                    <span class="font-black text-emerald-400 font-digital text-base sm:text-lg">{{ s.amount_charged | format_egp }}</span>
+                                {% else %}
+                                    <span class="text-slate-500 font-bold">—</span>
+                                {% endif %}
+                            </td>
+                        </tr>
                         {% else %}
-                            <span class="text-green-500 font-bold">داخل</span>
-                        {% endif %}
-                    </td>
-                    <td class="p-3 font-medium">
-                        {% if s.amount_charged is not none %}
-                            {{ s.amount_charged | format_egp }}
-                        {% else %}
-                            —
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+                        <tr>
+                            <td colspan="4" class="py-8 text-center text-sm text-slate-400">لا توجد عمليات مسجلة بعد في هذه الوردية.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
     </div>
     {% endif %}
 
@@ -116,11 +528,11 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/dashboard.js?v=2"></script>
+<script src="/static/js/dashboard.js?v=12"></script>
 <script>
     startClock();
     {% if shift %}
-    startSessionRefresh('/api/v1/shifts/{{ shift.id }}/sessions');
+    initDirectPOSScanner();
     {% endif %}
 </script>
 {% endblock %}

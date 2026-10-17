@@ -1,8 +1,10 @@
 from datetime import datetime
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from utils.jinja import format_cairo_12h
 
 from config import get_settings
 from database import get_db
@@ -220,11 +222,16 @@ async def entry_scan_page(
     request: Request,
     current_user: User = Depends(require_operator),
 ):
+    # Exit operators (gate_number == 2) cannot access entry
+    if current_user.gate_number == 2:
+        return RedirectResponse("/ui/operator/exit", status_code=303)
+
     templates = request.app.state.templates
     return templates.TemplateResponse(
         "operator/entry.html",
         {"request": request, "user": current_user, "error": None},
     )
+
 
 
 @router.post("/entry")
@@ -237,6 +244,10 @@ async def process_entry(
     session_service: SessionService = Depends(get_session_service),
     db: AsyncSession = Depends(get_db),
 ):
+    # Exit operators cannot process entry
+    if current_user.gate_number == 2:
+        return RedirectResponse("/ui/operator/exit", status_code=303)
+
     templates = request.app.state.templates
     cleaned_card_code = card_code.strip()
 
@@ -344,6 +355,10 @@ async def exit_scan_page(
     error: str | None = None,
     current_user: User = Depends(require_operator),
 ):
+    # Entry operators (gate_number == 1) cannot access exit
+    if current_user.gate_number == 1:
+        return RedirectResponse("/ui/operator/entry", status_code=303)
+
     err_msg = None
     if error:
         err_msg = translations.get(f"errors.{error.lower()}", error)
@@ -364,6 +379,10 @@ async def exit_lookup(
     session_repo: ParkingSessionRepository = Depends(get_session_repo),
     pricing_service: PricingService = Depends(get_pricing_service),
 ):
+    # Entry operators cannot process exit
+    if current_user.gate_number == 1:
+        return RedirectResponse("/ui/operator/entry", status_code=303)
+
     card_service = CardService(db)
     sub_repo = SubscriptionRepository(db)
     try:
@@ -408,6 +427,9 @@ async def exit_confirm_session(
     current_user: User = Depends(require_operator),
     session_service: SessionService = Depends(get_session_service),
 ):
+    if current_user.gate_number == 1:
+        return RedirectResponse("/ui/operator/entry", status_code=303)
+
     try:
         res = await session_service.close_session(session_id, current_user.id)
         session = res.session if hasattr(res, "session") else res[0] if isinstance(res, tuple) else res
@@ -437,6 +459,9 @@ async def lost_card_page(
     request: Request,
     current_user: User = Depends(require_operator),
 ):
+    if current_user.gate_number == 1:
+        return RedirectResponse("/ui/operator/entry", status_code=303)
+
     templates = request.app.state.templates
     return templates.TemplateResponse(
         "operator/lost_card.html",
@@ -452,6 +477,9 @@ async def process_lost_card_lookup(
     current_user: User = Depends(require_operator),
     session_service: SessionService = Depends(get_session_service),
 ):
+    if current_user.gate_number == 1:
+        return RedirectResponse("/ui/operator/entry", status_code=303)
+
     sessions = await session_service.find_active_by_plate(plate_number)
     templates = request.app.state.templates
     if not sessions:
@@ -478,6 +506,9 @@ async def lost_card_confirm_page(
     session_repo: ParkingSessionRepository = Depends(get_session_repo),
     pricing_service: PricingService = Depends(get_pricing_service),
 ):
+    if current_user.gate_number == 1:
+        return RedirectResponse("/ui/operator/entry", status_code=303)
+
     session = await session_repo.get_by_id(session_id)
     if not session:
         return RedirectResponse("/ui/operator/lost-card", status_code=303)
@@ -499,6 +530,9 @@ async def resolve_lost_card_confirm(
     current_user: User = Depends(require_operator),
     session_service: SessionService = Depends(get_session_service),
 ):
+    if current_user.gate_number == 1:
+        return RedirectResponse("/ui/operator/entry", status_code=303)
+
     await session_service.resolve_lost_card(
         session_id=session_id,
         operator_id=current_user.id,
@@ -636,6 +670,221 @@ async def print_receipt_page(
             "garage_name": settings.APP_NAME,
         },
     )
+
+
+# ===========================================================================
+# Unified Dashboard Fast POS APIs (Scan & One-Click Customer Exit Display)
+# ===========================================================================
+
+
+@router.post("/api/scan")
+async def api_operator_scan(
+    request: Request,
+    current_user: User = Depends(require_operator),
+    db: AsyncSession = Depends(get_db),
+    session_service: SessionService = Depends(get_session_service),
+    session_repo: ParkingSessionRepository = Depends(get_session_repo),
+    pricing_service: PricingService = Depends(get_pricing_service),
+    shift_service: ShiftService = Depends(get_shift_service),
+):
+    shift = await shift_service.get_active_shift(current_user.id)
+    if not shift:
+        return JSONResponse(
+            {"success": False, "error": "لا يوجد شيفت مفتوح حالياً. يرجى بدء الشيفت أولاً للتمكن من تسجيل العمليات."},
+            status_code=400,
+        )
+
+    try:
+        content_type = request.headers.get("content-type", "")
+        if "application/json" in content_type:
+            body = await request.json()
+        else:
+            form = await request.form()
+            body = dict(form)
+    except Exception:
+        body = {}
+
+    card_code = str(body.get("card_code") or "").strip()
+    if not card_code:
+        return JSONResponse({"success": False, "error": "يرجى مسح أو إدخال كود الكارت."}, status_code=400)
+
+    # ----------------------------------------------------
+    # GATE 1: ENTRY OPERATOR
+    # ----------------------------------------------------
+    if current_user.gate_number == 1:
+        try:
+            # Check expired subscription warning
+            card_res = await db.execute(select(ParkingCard).where(ParkingCard.card_code == card_code).limit(1))
+            card_obj = card_res.scalars().first()
+            if card_obj:
+                from models.subscription import Subscription, SubscriptionStatus
+                sub_res = await db.execute(
+                    select(Subscription)
+                    .where(Subscription.card_id == card_obj.id)
+                    .order_by(Subscription.id.desc())
+                    .limit(1)
+                )
+                latest_sub = sub_res.scalars().first()
+                if latest_sub and latest_sub.status == SubscriptionStatus.EXPIRED and not body.get("force_regular"):
+                    sub_repo_local = SubscriberRepository(db)
+                    plan_repo_local = SubscriptionPlanRepository(db)
+                    subscriber_obj = await sub_repo_local.get_by_id(latest_sub.subscriber_id)
+                    plan_obj = await plan_repo_local.get_by_id(latest_sub.plan_id)
+                    return JSONResponse({
+                        "success": False,
+                        "expired_subscription": True,
+                        "error": "تنبيه: هذا الاشتراك منتهي الصلاحية! يمكنك المتابعة كجلسة عادية.",
+                        "subscriber_name": subscriber_obj.full_name if subscriber_obj else "غير محدد",
+                        "plan_label": plan_obj.label if plan_obj else "اشتراك",
+                    })
+
+            res = await session_service.open_session(
+                card_code=card_code,
+                operator_id=current_user.id,
+                plate_number=body.get("plate_number") or None,
+            )
+            session = res.session if hasattr(res, "session") else res[0] if isinstance(res, tuple) else res
+
+            sub_info = None
+            if session.subscription_id:
+                sub_repo = SubscriptionRepository(db)
+                sub_obj = await sub_repo.get_by_id(session.subscription_id)
+                if sub_obj:
+                    subscriber_repo = SubscriberRepository(db)
+                    plan_repo = SubscriptionPlanRepository(db)
+                    subscriber = await subscriber_repo.get_by_id(sub_obj.subscriber_id)
+                    plan = await plan_repo.get_by_id(sub_obj.plan_id)
+                    sub_info = {
+                        "subscriber_name": subscriber.full_name if subscriber else "مشترك",
+                        "plate_number": sub_obj.plate_number or (subscriber.plate_number if subscriber else ""),
+                        "plan_label": plan.label if plan else "اشتراك معتمد",
+                        "end_date": format_cairo_12h(sub_obj.end_date, "%Y/%m/%d") if sub_obj.end_date else "—",
+                    }
+
+            return JSONResponse({
+                "success": True,
+                "type": "entry",
+                "session_id": session.id,
+                "card_code": session.card_code,
+                "plate_number": session.plate_number or (sub_info["plate_number"] if sub_info else ""),
+                "entry_time": format_cairo_12h(session.entry_time),
+                "is_subscribed": bool(session.subscription_id),
+                "subscription": sub_info,
+                "message": "تم تسجيل الدخول بنجاح",
+            })
+        except Exception as e:
+            key = get_error_translation_key(e)
+            err_msg = translations.get(key, getattr(e, "message", str(e)))
+            return JSONResponse({"success": False, "error": err_msg}, status_code=400)
+
+    # ----------------------------------------------------
+    # GATE 2: EXIT OPERATOR (AUTOMATIC 1-STEP EXIT & CALCULATION)
+    # ----------------------------------------------------
+    else:
+        card_service = CardService(db)
+        sub_repo = SubscriptionRepository(db)
+        try:
+            # 1. Validate session
+            session = await card_service.validate_for_exit(card_code, session_repo)
+            
+            # 2. Close session automatically
+            res = await session_service.close_session(session.id, current_user.id)
+            closed_session = res[0] if isinstance(res, tuple) else (res.session if hasattr(res, "session") else res)
+            calc = res[1] if isinstance(res, tuple) and len(res) > 1 else None
+
+            # 3. Format response details
+            is_sub = getattr(closed_session, "is_subscribed", False)
+            total_egp = f"{(closed_session.amount_charged or 0) / 100:.2f}"
+            total_formatted = format_egp(closed_session.amount_charged or 0)
+            
+            rate_label = "عادي"
+            rate_per_hour = ""
+            if calc and hasattr(calc, 'rate_per_hour'):
+                rate_per_hour = format_egp(calc.rate_per_hour)
+            else:
+                try:
+                    rule = await pricing_service.get_active_rule()
+                    if rule:
+                        rate_label = rule.label
+                        rate_per_hour = format_egp(rule.rate_per_hour)
+                except Exception:
+                    pass
+
+            return JSONResponse({
+                "success": True,
+                "type": "exit_completed",
+                "session_id": closed_session.id,
+                "card_code": closed_session.card_code,
+                "plate_number": closed_session.plate_number or "",
+                "is_subscribed": is_sub,
+                "total_egp": total_egp,
+                "total_formatted": total_formatted,
+                "entry_time": format_cairo_12h(closed_session.entry_time),
+                "duration_display": format_duration(closed_session.duration_minutes or 0),
+                "rate_label": "اشتراك معتمد (مجاني)" if is_sub else rate_label,
+                "rate_per_hour": "" if is_sub else rate_per_hour,
+                "receipt_url": f"/ui/operator/receipt/{closed_session.id}",
+                "message": "تم تأكيد خروج السيارة وحساب المبلغ بنجاح",
+            })
+        except Exception as e:
+            key = get_error_translation_key(e)
+            err_msg = translations.get(key, getattr(e, "message", str(e)))
+            return JSONResponse({"success": False, "error": err_msg}, status_code=400)
+
+
+@router.post("/api/exit/confirm")
+async def api_operator_exit_confirm(
+    request: Request,
+    current_user: User = Depends(require_operator),
+    session_service: SessionService = Depends(get_session_service),
+):
+    try:
+        content_type = request.headers.get("content-type", "")
+        if "application/json" in content_type:
+            body = await request.json()
+        else:
+            form = await request.form()
+            body = dict(form)
+        session_id = int(body.get("session_id"))
+    except Exception:
+        return JSONResponse({"success": False, "error": "معرف الجلسة غير صحيح."}, status_code=400)
+
+    try:
+        res = await session_service.close_session(session_id, current_user.id)
+        session = res.session if hasattr(res, "session") else res[0] if isinstance(res, tuple) else res
+        return JSONResponse({
+            "success": True,
+            "session_id": session.id,
+            "receipt_url": f"/ui/operator/receipt/{session.id}",
+            "message": "تم تأكيد الخروج بنجاح",
+        })
+    except Exception as e:
+        key = get_error_translation_key(e)
+        err_msg = translations.get(key, getattr(e, "message", str(e)))
+        return JSONResponse({"success": False, "error": err_msg}, status_code=400)
+
+
+@router.get("/api/recent-sessions")
+async def api_operator_recent_sessions(
+    current_user: User = Depends(require_operator),
+    shift_service: ShiftService = Depends(get_shift_service),
+    session_repo: ParkingSessionRepository = Depends(get_session_repo),
+):
+    shift = await shift_service.get_active_shift(current_user.id)
+    if not shift:
+        return JSONResponse({"sessions": [], "total": 0})
+    sessions, total = await session_repo.get_by_shift_combined(shift.id, page=1, size=10)
+    rows = []
+    for s in sessions:
+        rows.append({
+            "card_code": s.card_code,
+            "entry_time": format_cairo_12h(s.entry_time),
+            "exit_time": format_cairo_12h(s.exit_time) if s.exit_time else None,
+            "amount_formatted": format_egp(s.amount_charged) if s.amount_charged is not None else None,
+            "status": "inside" if not s.exit_time else "exited",
+        })
+    return JSONResponse({"sessions": rows, "total": total})
+
 
 
 

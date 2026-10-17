@@ -41,10 +41,11 @@ class ParkingCardRepository:
     async def get_all(
         self,
         status: CardStatus | None = None,
+        search: str | None = None,
         page: int = 1,
         size: int = 20,
     ) -> tuple[list[ParkingCard], int]:
-        """Returns a paginated list of cards (with optional status filter) and the total count."""
+        """Returns a paginated list of cards (with optional status & search filter) and the total count."""
         query = select(ParkingCard)
         count_query = select(func.count()).select_from(ParkingCard)
 
@@ -52,15 +53,35 @@ class ParkingCardRepository:
             query = query.where(ParkingCard.status == status)
             count_query = count_query.where(ParkingCard.status == status)
 
+        if search:
+            search_clean = f"%{search.strip().upper()}%"
+            query = query.where(ParkingCard.card_code.ilike(search_clean))
+            count_query = count_query.where(ParkingCard.card_code.ilike(search_clean))
+
         count_result = await self.db.execute(count_query)
         total_count = count_result.scalar_one()
 
         offset_val = (page - 1) * size
-        query = query.offset(offset_val).limit(size)
+        query = query.order_by(ParkingCard.id.desc()).offset(offset_val).limit(size)
         result = await self.db.execute(query)
         cards = list(result.scalars().all())
 
         return cards, total_count
+
+    async def get_counts(self) -> dict[str, int]:
+        """Returns total counts grouped by status."""
+        result = await self.db.execute(
+            select(ParkingCard.status, func.count(ParkingCard.id)).group_by(ParkingCard.status)
+        )
+        counts = {status.value: count for status, count in result.all()}
+        total = sum(counts.values())
+        return {
+            "total": total,
+            "available": counts.get(CardStatus.AVAILABLE.value, 0),
+            "in_use": counts.get(CardStatus.IN_USE.value, 0),
+            "lost": counts.get(CardStatus.LOST.value, 0),
+            "damaged": counts.get(CardStatus.DAMAGED.value, 0),
+        }
 
     async def get_existing_codes(self, codes: list[str]) -> list[str]:
         """Queries for existing card codes in the given list of codes."""
@@ -73,3 +94,4 @@ class ParkingCardRepository:
 
 
 __all__ = ["ParkingCardRepository"]
+

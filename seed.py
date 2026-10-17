@@ -52,9 +52,19 @@ async def seed_admin_user(db, settings, auth_service) -> dict:
     return {"created": True, "reason": "-", "user": admin}
 
 async def seed_operator_user(db, settings, auth_service, gate: int) -> dict:
-    username = os.environ.get(f"SEED_OP_{gate}_USERNAME", f"op{gate}")
+    if gate == 1:
+        default_username = "op_entry"
+        default_name = "عامل الدخول"
+    elif gate == 2:
+        default_username = "op_exit"
+        default_name = "عامل الخروج"
+    else:
+        default_username = f"op{gate}"
+        default_name = f"مشغل بوابة {gate}"
+
+    username = os.environ.get(f"SEED_OP_{gate}_USERNAME", default_username)
     password = os.environ.get(f"SEED_OP_{gate}_PASSWORD", f"op{gate}password")
-    full_name = os.environ.get(f"SEED_OP_{gate}_FULL_NAME", f"مشغل بوابة {gate}")
+    full_name = os.environ.get(f"SEED_OP_{gate}_FULL_NAME", default_name)
 
     result = await db.execute(select(User).where(User.username == username))
     existing = result.scalars().first()

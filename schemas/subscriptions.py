@@ -135,12 +135,16 @@ class SubscriberCreate(BaseModel):
     full_name: str = Field(min_length=1, max_length=120)
     phone_number: str | None = Field(None, max_length=20)
     plate_number: str = Field(min_length=1, max_length=30)
+    company_name: str | None = Field(None, max_length=150)
+    card_code: str | None = Field(None, max_length=50)
     notes: str | None = None
 
 
 class SubscriberUpdate(BaseModel):
     full_name: str | None = Field(None, min_length=1, max_length=120)
     phone_number: str | None = Field(None, max_length=20)
+    company_name: str | None = Field(None, max_length=150)
+    card_code: str | None = Field(None, max_length=50)
     notes: str | None = None
 
 
@@ -149,6 +153,8 @@ class SubscriberResponse(BaseModel):
     full_name: str
     phone_number: str | None
     plate_number: str
+    company_name: str | None = None
+    card_code: str | None = None
     notes: str | None
     created_at: datetime
     updated_at: datetime

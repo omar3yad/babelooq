@@ -58,11 +58,10 @@
 
         <!-- Gate Number (only for operator) -->
         <div id="gate-number-field">
-          <label class="block text-xs font-medium text-gray-300 mb-1">رقم البوابة الافتراضية *</label>
+          <label class="block text-xs font-medium text-gray-300 mb-1">نوع العامل والصلاحية *</label>
           <select id="user-gate" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500">
-            {% for g in range(1, 6) %}
-            <option value="{{ g }}">بوابة {{ g | to_arabic_indic }}</option>
-            {% endfor %}
+            <option value="1">🟢 عامل دخول (تسجيل دخول السيارات فقط)</option>
+            <option value="2">🔵 عامل خروج (تسجيل خروج وحساب التكلفة)</option>
           </select>
         </div>
       </div>
@@ -87,7 +86,7 @@
             <th class="p-3">الاسم بالكامل</th>
             <th class="p-3">اسم المستخدم</th>
             <th class="p-3">الدور</th>
-            <th class="p-3">البوابة</th>
+            <th class="p-3">نوع العامل / الصلاحية</th>
             <th class="p-3">حالة الحساب</th>
             <th class="p-3">حالة الشيفت</th>
             <th class="p-3">آخر شيفت</th>
@@ -105,8 +104,22 @@
                 {{ "مسؤول" if u.role.value == 'admin' or u.role == 'admin' else "عامل" }}
               </span>
             </td>
-            <td class="p-3 text-gray-300">
-              {{ ("بوابة " + (u.gate_number | to_arabic_indic)) if u.gate_number else "—" }}
+            <td class="p-3">
+              {% if u.role.value == 'admin' or u.role == 'admin' %}
+                <span class="text-gray-500">—</span>
+              {% elif u.gate_number == 1 %}
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 shadow-sm">
+                  <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                  🟢 عامل دخول
+                </span>
+              {% elif u.gate_number == 2 %}
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-blue-950/80 text-blue-300 border border-blue-500/40 shadow-sm">
+                  <span class="w-2 h-2 rounded-full bg-blue-400"></span>
+                  🔵 عامل خروج
+                </span>
+              {% else %}
+                <span class="text-gray-400">بوابة {{ u.gate_number | to_arabic_indic }}</span>
+              {% endif %}
             </td>
             <td class="p-3">
               <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium {{ 'bg-emerald-900/60 text-emerald-300 border border-emerald-700/50' if u.is_active else 'bg-red-900/60 text-red-300 border border-red-700/50' }}">

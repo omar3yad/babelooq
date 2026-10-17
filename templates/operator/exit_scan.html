@@ -5,35 +5,40 @@
 {% block head %}
 <style>
   @keyframes pulse-border {
-    0% { border-color: rgba(79, 70, 229, 0.4); box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.4); }
-    70% { border-color: rgba(79, 70, 229, 1); box-shadow: 0 0 0 6px rgba(79, 70, 229, 0); }
-    100% { border-color: rgba(79, 70, 229, 0.4); box-shadow: 0 0 0 0 rgba(79, 70, 229, 0); }
+    0%   { border-color: rgba(16, 185, 129, 0.4); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+    70%  { border-color: rgba(16, 185, 129, 1);   box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+    100% { border-color: rgba(16, 185, 129, 0.4); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
   }
-  .pulse-focus {
-    animation: pulse-border 2s infinite;
+  .pulse-focus-green {
+    animation: pulse-border 1.8s infinite;
   }
-  @keyframes scan-line {
-    0% { top: 10%; }
-    50% { top: 90%; }
-    100% { top: 10%; }
+
+  @keyframes scan-sweep {
+    0%   { background-position: 0% 50%; }
+    50%  { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
   }
-  .laser-line {
-    position: absolute;
-    left: 10%;
-    top: 50%;
-    width: 80%;
-    height: 3px;
-    background: #ef4444;
-    box-shadow: 0 0 10px 3px rgba(239, 68, 68, 0.8);
-    animation: scan-line 2s infinite linear;
-    z-index: 10;
+  .scanner-ready-indicator {
+    height: 4px;
+    border-radius: 2px;
+    background: linear-gradient(90deg, #059669, #34d399, #059669);
+    background-size: 200% 200%;
+    animation: scan-sweep 2s ease infinite;
+  }
+
+  @keyframes blink-dot {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.2; }
+  }
+  .blink-dot {
+    animation: blink-dot 1.2s ease-in-out infinite;
   }
 </style>
 {% endblock %}
 
 {% block nav %}
 <nav class="bg-gray-800 border-b border-gray-700 px-4 py-3 flex items-center">
-    <a href="/ui/operator/dashboard" class="text-indigo-400 hover:text-indigo-300 font-bold flex items-center gap-2">
+    <a href="/ui/operator/dashboard" class="text-green-400 hover:text-green-300 font-bold flex items-center gap-2">
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
         </svg>
@@ -44,88 +49,63 @@
 
 {% block content %}
 <div class="container mx-auto px-4 py-8 max-w-md flex flex-col justify-center flex-grow">
-    
+
     {% if error %}
-    <!-- Red error banner -->
-    <div class="bg-red-900 border-l-4 border-red-500 text-white p-4 rounded-lg mb-6 shadow-md">
-        <div class="font-bold mb-1">حاول تاني!</div>
-        <p class="text-sm">{{ error }}</p>
+    <!-- Error banner -->
+    <div id="error-banner" class="bg-red-900 border-l-4 border-red-500 text-white p-4 rounded-lg mb-6 shadow-md flex items-start gap-3">
+        <svg class="w-5 h-5 text-red-300 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        <div>
+            <div class="font-bold mb-0.5">خطأ — حاول تاني</div>
+            <p class="text-sm">{{ error }}</p>
+        </div>
     </div>
     {% endif %}
 
-    <!-- Card Scan Container -->
+    <!-- Main Scanner Card -->
     <div class="bg-gray-800 border border-gray-700 rounded-2xl p-6 shadow-xl text-center">
-        <h2 class="text-2xl font-bold mb-5 text-indigo-300">{{ t("operator.exit.scan_label") }}</h2>
-        
-        <!-- Open Camera Button (Visible by default) -->
-        <button type="button" 
-                id="btn-start-camera" 
-                class="w-full bg-gray-900/90 hover:bg-gray-900 border-2 border-dashed border-indigo-500/40 hover:border-indigo-400 text-white font-bold py-3.5 px-4 rounded-xl mb-5 transition duration-200 flex items-center justify-center gap-3 cursor-pointer group active:scale-[0.99] shadow-inner">
-            <div class="bg-indigo-600 group-hover:bg-indigo-500 text-white p-2.5 rounded-lg shadow-md transition">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                </svg>
-            </div>
-            <div class="text-right">
-                <div class="text-base font-bold text-white">مسح بالكاميرا</div>
-                <div class="text-xs text-indigo-300/80">اضغط لفتح كاميرا الجهاز لمسح الباركود</div>
-            </div>
-        </button>
 
-        <!-- Camera Scanner Element (Hidden by default) -->
-        <div class="relative w-full aspect-[4/3] bg-gray-900 border border-gray-700 rounded-xl overflow-hidden mb-6 hidden" id="scanner-wrapper">
-            <!-- Loading indicator -->
-            <div id="scanner-loading" class="absolute inset-0 flex flex-col items-center justify-center bg-gray-900 z-20 text-gray-400">
-                <svg class="animate-spin h-8 w-8 text-indigo-500 mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                <span>جاري تشغيل الكاميرا...</span>
-            </div>
-            
-            <!-- Camera Feed -->
-            <div id="qr-reader" class="w-full h-full"></div>
-            
-            <!-- Custom Scanning Overlay -->
-            <div class="absolute inset-0 pointer-events-none border border-indigo-500/20 z-10">
-                <!-- Glowing laser line -->
-                <div class="laser-line"></div>
-                <!-- Framing corner guides -->
-                <div class="absolute top-4 left-4 w-4 h-4 border-t-2 border-l-2 border-indigo-500"></div>
-                <div class="absolute top-4 right-4 w-4 h-4 border-t-2 border-r-2 border-indigo-500"></div>
-                <div class="absolute bottom-4 left-4 w-4 h-4 border-b-2 border-l-2 border-indigo-500"></div>
-                <div class="absolute bottom-4 right-4 w-4 h-4 border-b-2 border-r-2 border-indigo-500"></div>
-            </div>
-
-            <!-- Controls overlay -->
-            <div class="absolute bottom-2 left-2 right-2 flex justify-between z-20 pointer-events-auto">
-                <button type="button" id="btn-toggle-torch" class="hidden bg-gray-800/85 hover:bg-gray-700/85 text-white text-xs px-3 py-1.5 rounded-lg border border-gray-700 backdrop-blur-sm transition duration-200">
-                    تشغيل الكشاف
-                </button>
-                <button type="button" id="btn-stop-camera" class="bg-red-950/85 hover:bg-red-900/85 text-red-300 text-xs px-3 py-1.5 rounded-lg border border-red-900/50 backdrop-blur-sm transition duration-200">
-                    إيقاف الكاميرا
-                </button>
-            </div>
+        <!-- Header with blinking indicator -->
+        <div class="flex items-center justify-center gap-2 mb-5">
+            <span class="blink-dot w-2.5 h-2.5 rounded-full bg-green-400 inline-block"></span>
+            <h2 class="text-2xl font-bold text-green-300">{{ t("operator.exit.scan_label") }}</h2>
         </div>
 
+        <!-- Scanner status badge -->
+        <div class="flex items-center justify-center gap-2 mb-4">
+            <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M9 3H5a2 2 0 00-2 2v4m0 0a9 9 0 0018 0M3 9a9 9 0 0018 0m0 0v4a2 2 0 01-2 2h-4M3 9v4a2 2 0 002 2h4"/>
+            </svg>
+            <span class="text-sm text-emerald-300 font-semibold">الماسح جاهز — ضع الكارت أمام الاسكانر</span>
+        </div>
+
+        <!-- Animated scanner-ready bar -->
+        <div class="scanner-ready-indicator mb-5 mx-2"></div>
+
         <form id="scan-form" method="POST" action="/ui/operator/exit/lookup" class="flex flex-col">
-            <!-- Card Code Input (Manual / Barcoded Scanner Target) -->
-            <div class="mb-4">
-                <label class="block text-sm text-gray-400 mb-1 text-right">أدخل كود الكرت يدوياً أو امسحه</label>
-                <input id="scan-input" 
-                       type="text" 
-                       inputmode="numeric" 
-                       pattern="[0-9]*" 
-                       name="card_code" 
-                       autocomplete="off" 
-                       autocorrect="off" 
-                       autocapitalize="off" 
-                       spellcheck="false" 
-                       autofocus 
-                       placeholder="كود الكرت..."
-                       class="w-full bg-gray-900 border border-gray-700 rounded-lg p-4 text-center text-white text-xl font-mono focus:outline-none pulse-focus transition duration-200">
+            <!-- THE SCAN INPUT — always focused, always listening -->
+            <div class="mb-5">
+                <label class="block text-xs text-gray-400 mb-2 text-center tracking-wide uppercase">كود الكارت</label>
+                <input
+                    id="scan-input"
+                    type="text"
+                    name="card_code"
+                    autocomplete="off"
+                    autocorrect="off"
+                    autocapitalize="off"
+                    spellcheck="false"
+                    autofocus
+                    placeholder="في انتظار مسح الكارت..."
+                    class="w-full bg-gray-900 border-2 border-green-500/60 rounded-xl p-5 text-center text-white text-2xl font-mono focus:outline-none pulse-focus-green transition duration-200 cursor-default select-none"
+                >
             </div>
+
+            <!-- Hint -->
+            <p class="text-xs text-gray-500 text-center">
+                الصفحة جاهزة تلقائياً — لا تحتاج أي ضغط على أزرار
+            </p>
 
             <button type="submit" class="hidden">إرسال</button>
         </form>
@@ -135,8 +115,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/html5-qrcode.min.js"></script>
-<script src="/static/js/scan.js?v=2"></script>
-<script src="/static/js/camera-scan.js?v=2"></script>
+<script src="/static/js/scan.js?v=3"></script>
 {% endblock %}
-

@@ -1,7 +1,10 @@
+import os
 from typing import Literal
 import functools
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_ENV_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
 
 class Settings(BaseSettings):
     DATABASE_URL: str
@@ -19,7 +22,7 @@ class Settings(BaseSettings):
     SEED_ADMIN_FULL_NAME: str | None = None
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=_ENV_PATH,
         env_file_encoding="utf-8",
         case_sensitive=True,
         extra="ignore",
