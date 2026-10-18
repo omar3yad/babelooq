@@ -39,7 +39,7 @@
 {% block nav %}
 <nav class="bg-gray-800 border-b border-gray-700 px-4 py-3 flex items-center">
     <a href="/ui/operator/dashboard" class="text-green-400 hover:text-green-300 font-bold flex items-center gap-2">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <svg class="w-6 h-6" width="24" height="24" style="width: 24px; height: 24px; display: block; flex-shrink: 0;" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
         </svg>
         <span>رجوع لوحة التحكم</span>
@@ -53,7 +53,7 @@
     {% if error %}
     <!-- Error banner -->
     <div id="error-banner" class="bg-red-900 border-l-4 border-red-500 text-white p-4 rounded-lg mb-6 shadow-md flex items-start gap-3">
-        <svg class="w-5 h-5 text-red-300 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg class="w-5 h-5 text-red-300 shrink-0 mt-0.5" width="20" height="20" style="width: 20px; height: 20px; display: block; flex-shrink: 0;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
         </svg>
         <div>
@@ -74,7 +74,7 @@
 
         <!-- Scanner status badge -->
         <div class="flex items-center justify-center gap-2 mb-4">
-            <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-5 h-5 text-emerald-400" width="20" height="20" style="width: 20px; height: 20px; display: block; flex-shrink: 0;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M9 3H5a2 2 0 00-2 2v4m0 0a9 9 0 0018 0M3 9a9 9 0 0018 0m0 0v4a2 2 0 01-2 2h-4M3 9v4a2 2 0 002 2h4"/>
             </svg>

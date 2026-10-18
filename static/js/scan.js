@@ -65,7 +65,11 @@
     if (!val) return;          // empty — scanner not finished typing yet
 
     lastSubmit = now;
-    form.requestSubmit();
+    if (typeof form.requestSubmit === "function") {
+      form.requestSubmit();
+    } else {
+      form.submit();
+    }
 
     /* Clear the field so the scanner doesn't double-submit if the page
        stays open (e.g. an error was returned). */

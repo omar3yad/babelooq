@@ -11,11 +11,12 @@
 
 <style>
   :root {
-    --font-ar: 'Cairo', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --font-ar: 'Cairo', 'Segoe UI', Tahoma, Arial, sans-serif;
     --font-num: 'Outfit', 'Cairo', monospace, sans-serif;
   }
 
   body {
+    font-family: 'Cairo', 'Segoe UI', Tahoma, Arial, sans-serif;
     font-family: var(--font-ar);
     background-color: #060911;
     color: #f8fafc;
@@ -23,56 +24,138 @@
   }
 
   .font-digital {
+    font-family: 'Outfit', 'Cairo', monospace, sans-serif;
     font-family: var(--font-num);
   }
 
-  /* Two-Column Side-By-Side POS Layout */
+  /* Explicit Fixed SVG Sizing for IE11 and Modern Browsers */
+  svg {
+    display: block;
+    flex-shrink: 0;
+  }
+
+  .ie-svg-48 {
+    width: 48px !important;
+    height: 48px !important;
+    max-width: 48px !important;
+    max-height: 48px !important;
+    min-width: 48px !important;
+    min-height: 48px !important;
+    display: block !important;
+    flex-shrink: 0 !important;
+  }
+
+  .ie-svg-28 {
+    width: 28px !important;
+    height: 28px !important;
+    max-width: 28px !important;
+    max-height: 28px !important;
+    min-width: 28px !important;
+    min-height: 28px !important;
+    display: block !important;
+    flex-shrink: 0 !important;
+  }
+
+  .ie-svg-24 {
+    width: 24px !important;
+    height: 24px !important;
+    max-width: 24px !important;
+    max-height: 24px !important;
+    min-width: 24px !important;
+    min-height: 24px !important;
+    display: block !important;
+    flex-shrink: 0 !important;
+  }
+
+  .ie-svg-20 {
+    width: 20px !important;
+    height: 20px !important;
+    max-width: 20px !important;
+    max-height: 20px !important;
+    min-width: 20px !important;
+    min-height: 20px !important;
+    display: block !important;
+    flex-shrink: 0 !important;
+  }
+
+  /* Two-Column Side-By-Side POS Layout with IE11 Fallback */
   .pos-layout-row {
+    display: -ms-flexbox;
     display: flex;
+    -ms-flex-direction: row;
     flex-direction: row;
-    gap: 18px;
     width: 100%;
+    -ms-flex-align: stretch;
     align-items: stretch;
   }
 
-  @media (max-width: 960px) {
-    .pos-layout-row {
-      flex-direction: column;
-    }
-  }
-
   .pos-main-column {
-    flex: 1.35; /* Right area (~58%) */
+    -ms-flex: 1 1 57%;
+    flex: 1.35 1 0%;
+    width: 57%;
+    display: -ms-flexbox;
     display: flex;
+    -ms-flex-direction: column;
     flex-direction: column;
-    gap: 16px;
     min-width: 0;
   }
 
   .pos-sidebar-column {
-    flex: 1.0; /* Left area (~42%) */
+    -ms-flex: 1 1 41%;
+    flex: 1 1 0%;
+    width: 41%;
+    display: -ms-flexbox;
     display: flex;
+    -ms-flex-direction: column;
     flex-direction: column;
-    gap: 16px;
     min-width: 0;
+    margin-right: 14px; /* RTL column spacing fallback for IE11 */
   }
 
-  /* Ambient Glass Cards */
+  /* Flex gap fallbacks for IE11 */
+  .pos-main-column > * + *,
+  .pos-sidebar-column > * + * {
+    margin-top: 10px;
+  }
+
+  .flex-rtl-spaced > * + * {
+    margin-right: 10px;
+  }
+
+  @media (max-width: 960px) {
+    .pos-layout-row {
+      -ms-flex-direction: column;
+      flex-direction: column;
+    }
+    .pos-main-column,
+    .pos-sidebar-column {
+      width: 100%;
+      -ms-flex: 1 1 auto;
+      flex: 1 1 auto;
+    }
+    .pos-sidebar-column {
+      margin-right: 0;
+      margin-top: 10px;
+    }
+  }
+
+  /* Ambient Glass Cards with Solid Fallback for IE11 */
   .glass-card {
+    background-color: #0d1424; /* Solid IE11 fallback */
     background: rgba(13, 20, 36, 0.95);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid #1e3a5f;
     border: 1px solid rgba(56, 189, 248, 0.2);
-    box-shadow: 0 16px 36px -8px rgba(0, 0, 0, 0.65);
-    border-radius: 18px;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.6);
+    border-radius: 14px;
   }
 
-  /* Guaranteed Dark Scanner Input */
+  /* Guaranteed Dark Scanner Input with Fallbacks */
   .scanner-dark-input {
     background-color: #030712 !important;
     color: #ffffff !important;
+    border: 2px solid #0284c7 !important;
     border: 2px solid rgba(56, 189, 248, 0.55) !important;
-    box-shadow: inset 0 4px 14px rgba(0, 0, 0, 0.95) !important;
+    box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.95) !important;
   }
   .scanner-dark-input::placeholder {
     color: #94a3b8 !important;
@@ -80,20 +163,45 @@
   }
   .scanner-dark-input:focus {
     border-color: #38bdf8 !important;
-    box-shadow: inset 0 4px 14px rgba(0, 0, 0, 0.95), 0 0 20px rgba(56, 189, 248, 0.35) !important;
+    box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.95), 0 0 16px rgba(56, 189, 248, 0.35) !important;
   }
 
-  /* Giant Crisp Clean Price (NO GLOW / NO BLUR) */
+  /* Giant Crisp Clean Price with Clamp Fallback for IE11 */
   .giant-clean-price {
+    font-family: 'Outfit', 'Cairo', monospace, sans-serif;
     font-family: var(--font-num);
-    font-size: clamp(5.5rem, 9.5vw, 8.5rem);
-    line-height: 0.92;
+    font-size: 5rem; /* IE11 fallback */
+    font-size: clamp(4rem, 7.5vw, 6.5rem);
+    line-height: 0.95;
     font-weight: 900;
     letter-spacing: -0.03em;
     color: #34d399;
     filter: none !important;
     text-shadow: none !important;
     box-shadow: none !important;
+  }
+
+  /* Compact Viewport Tuning for 1366x768 & 1280x1024 Monitors */
+  .pos-hero-box {
+    min-height: 320px;
+    padding: 1.25rem;
+  }
+
+  .pos-table-card {
+    min-height: 190px;
+  }
+
+  @media (max-height: 800px) {
+    .pos-hero-box {
+      min-height: 280px;
+      padding: 0.85rem;
+    }
+    .giant-clean-price {
+      font-size: 4rem;
+    }
+    .pos-table-card {
+      min-height: 170px !important;
+    }
   }
 
   /* Smooth Custom Scrollbar */
@@ -112,25 +220,25 @@
 {% endblock %}
 
 {% block content %}
-<div class="w-full min-h-[calc(100vh-60px)] bg-[#060911] text-slate-100 p-3 sm:p-5 flex flex-col justify-between gap-4">
+<div class="w-full bg-[#060911] text-slate-100 p-2 sm:p-3 flex flex-col justify-between" style="min-height: 600px; background-color: #060911;">
 
     {% if not shift %}
     <!-- ================================================================= -->
     <!-- NO ACTIVE SHIFT MODAL                                            -->
     <!-- ================================================================= -->
-    <div class="max-w-xl mx-auto my-auto w-full glass-card p-8 sm:p-10 text-center flex flex-col items-center gap-5 border border-amber-500/30">
-        <div class="w-24 h-24 rounded-3xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-5xl shadow-[0_0_40px_rgba(245,158,11,0.2)]">
+    <div class="max-w-xl mx-auto my-auto w-full glass-card p-6 sm:p-8 text-center flex flex-col items-center gap-4 border border-amber-500/30" style="margin-top: 30px;">
+        <div class="w-20 h-20 rounded-3xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-4xl shadow-[0_0_30px_rgba(245,158,11,0.2)]">
             ⚠️
         </div>
         <div>
-            <h1 class="text-3xl font-black text-white tracking-tight">{{ t("operator.dashboard.no_shift_banner") }}</h1>
-            <p class="text-slate-300 text-base mt-2 leading-relaxed">
+            <h1 class="text-2xl sm:text-3xl font-black text-white tracking-tight">{{ t("operator.dashboard.no_shift_banner") }}</h1>
+            <p class="text-slate-300 text-sm sm:text-base mt-2 leading-relaxed">
                 لا توجد وردية مفتوحة حالياً. يرجى فتح وردية جديدة لتتمكن من مسح كروت الجراج وحساب تكلفة الخروج وإصدار الإيصالات.
             </p>
         </div>
-        <a href="/ui/operator/shift/start" class="mt-3 w-full bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:to-teal-500 text-white font-black py-4 px-6 rounded-2xl shadow-xl transition-all duration-200 text-xl flex items-center justify-center gap-2">
+        <a href="/ui/operator/shift/start" class="mt-2 w-full bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:to-teal-500 text-white font-black py-3 px-6 rounded-xl shadow-xl transition-all duration-200 text-lg flex items-center justify-center gap-2" style="background-color: #059669;">
             <span>{{ t("operator.shift.start_button") }}</span>
-            <span class="text-2xl">➔</span>
+            <span class="text-xl">➔</span>
         </a>
     </div>
 
@@ -138,24 +246,24 @@
     <!-- ================================================================= -->
     <!-- FULL-SCREEN LUXURY POS TERMINAL                                   -->
     <!-- ================================================================= -->
-    <div class="w-full flex-grow flex flex-col gap-4 max-w-[1900px] mx-auto">
+    <div class="w-full flex-grow flex flex-col max-w-[1900px] mx-auto" style="margin-bottom: 6px;">
 
         <!-- 1. TOP COMMAND BAR -->
-        <header class="glass-card p-3.5 sm:p-4 flex flex-wrap justify-between items-center gap-4">
+        <header class="glass-card p-2.5 sm:p-3 flex flex-wrap justify-between items-center" style="margin-bottom: 10px;">
             
             <!-- Operator Profile & Shift Info (Right side in RTL) -->
-            <div class="flex items-center gap-3.5">
-                <div class="w-12 h-12 rounded-2xl bg-[#0b1329] border border-cyan-500/40 flex items-center justify-center text-2xl shadow-md text-white font-bold">
+            <div class="flex items-center flex-rtl-spaced">
+                <div class="w-10 h-10 rounded-xl bg-[#0b1329] border border-cyan-500/40 flex items-center justify-center text-xl shadow-md text-white font-bold" style="width: 40px; height: 40px; min-width: 40px;">
                     👤
                 </div>
                 <div>
-                    <div class="flex items-center gap-2">
-                        <span class="text-sm text-slate-400 font-semibold">المشغل الحالي:</span>
-                        <h2 class="text-white text-base sm:text-lg font-black tracking-tight">{{ user.full_name }}</h2>
+                    <div class="flex items-center flex-rtl-spaced">
+                        <span class="text-xs text-slate-400 font-semibold">المشغل:</span>
+                        <h2 class="text-white text-sm sm:text-base font-black tracking-tight">{{ user.full_name }}</h2>
                     </div>
-                    <div class="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
+                    <div class="flex items-center flex-rtl-spaced text-xs text-slate-400 mt-0.5">
                         <span>بدء الوردية:</span>
-                        <span class="font-digital text-slate-200 font-bold bg-[#030712] px-2.5 py-0.5 rounded-md border border-slate-700/80">
+                        <span class="font-digital text-slate-200 font-bold bg-[#030712] px-2 py-0.5 rounded border border-slate-700/80">
                             {{ shift.started_at | format_datetime }}
                         </span>
                     </div>
@@ -163,34 +271,34 @@
             </div>
 
             <!-- Gate Identity & Clock & Shift Controls (Left side in RTL) -->
-            <div class="flex items-center gap-3 flex-wrap">
+            <div class="flex items-center flex-wrap flex-rtl-spaced mt-1 sm:mt-0">
                 
                 <!-- Gate Indicator Pill -->
                 {% if user.gate_number == 1 %}
-                <div class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-black bg-emerald-950/80 text-emerald-300 border border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.15)]">
-                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+                <div class="inline-flex items-center px-3 py-1.5 rounded-lg text-xs sm:text-sm font-black bg-emerald-950/80 text-emerald-300 border border-emerald-500/50 shadow-sm" style="background-color: #022c22; color: #6ee7b7;">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block" style="width: 8px; height: 8px; margin-left: 6px;"></span>
                     <span>بوابة الدخول الرئيسية (#1)</span>
                 </div>
                 {% else %}
-                <div class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-black bg-[#031525] text-cyan-300 border border-cyan-500/60 shadow-[0_0_15px_rgba(6,182,212,0.15)]">
-                    <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping"></span>
+                <div class="inline-flex items-center px-3 py-1.5 rounded-lg text-xs sm:text-sm font-black bg-[#031525] text-cyan-300 border border-cyan-500/60 shadow-sm" style="background-color: #031525; color: #67e8f9;">
+                    <span class="w-2 h-2 rounded-full bg-cyan-400 inline-block" style="width: 8px; height: 8px; margin-left: 6px;"></span>
                     <span>بوابة الخروج والمحاسبة (2B)</span>
                 </div>
                 {% endif %}
 
                 <!-- Digital LCD Live Clock -->
-                <div class="bg-[#030712] border border-cyan-500/40 px-4 py-2 rounded-xl font-digital text-base sm:text-lg font-black text-cyan-400 tracking-wider shadow-[inset_0_2px_8px_rgba(0,0,0,0.8)] flex items-center gap-2" id="live-clock">
-                    ٠٠:٠٠:٠٠
+                <div class="bg-[#030712] border border-cyan-500/40 px-3.5 py-1.5 rounded-lg font-digital text-sm sm:text-base font-black text-cyan-400 tracking-wider shadow-[inset_0_2px_8px_rgba(0,0,0,0.8)] flex items-center" id="live-clock" style="background-color: #030712; color: #22d3ee;">
+                    --:--:--
                 </div>
 
                 <!-- End Shift Button -->
-                <a href="/ui/operator/shift/end" class="bg-rose-950/70 hover:bg-rose-900 text-rose-300 hover:text-white border border-rose-700/70 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition duration-150 flex items-center gap-2 shadow-sm">
-                    <span class="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse"></span>
+                <a href="/ui/operator/shift/end" class="bg-rose-950/70 hover:bg-rose-900 text-rose-300 hover:text-white border border-rose-700/70 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold transition duration-150 flex items-center shadow-sm" style="background-color: #4c0519; color: #fda4af;">
+                    <span class="w-2 h-2 rounded-full bg-rose-500 inline-block" style="width: 8px; height: 8px; margin-left: 6px;"></span>
                     <span>إنهاء الوردية</span>
                 </a>
 
                 <!-- Logout Button -->
-                <a href="/ui/logout" class="bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/80 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition duration-150">
+                <a href="/ui/logout" class="bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/80 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold transition duration-150" style="background-color: #0f172a; color: #cbd5e1;">
                     تسجيل الخروج
                 </a>
             </div>
@@ -200,61 +308,60 @@
         <div class="pos-layout-row">
 
             <!-- ========================================================= -->
-            <!-- RIGHT COLUMN: HERO CUSTOMER DISPLAY (~58%)                -->
+            <!-- RIGHT COLUMN: HERO CUSTOMER DISPLAY (~57%)                -->
             <!-- ========================================================= -->
             <div class="pos-main-column">
 
                 <!-- HERO CUSTOMER DISPLAY VIEWPORT -->
-                <div class="glass-card p-6 sm:p-7 shadow-2xl flex flex-col justify-between relative min-h-[440px] overflow-hidden border border-cyan-500/30">
+                <div class="glass-card pos-hero-box shadow-2xl flex flex-col justify-between relative overflow-hidden border border-cyan-500/30">
                     
                     <!-- 1. STANDBY SCREEN -->
-                    <div id="standby-display" class="flex flex-col items-center justify-center text-center gap-4 my-auto py-8">
-                        <div class="w-24 h-24 rounded-3xl bg-slate-900/80 border border-cyan-500/30 flex items-center justify-center shadow-inner relative">
-                            <svg class="w-12 h-12 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div id="standby-display" class="flex flex-col items-center justify-center text-center my-auto py-4">
+                        <div class="w-20 h-20 rounded-2xl bg-slate-900/80 border border-cyan-500/30 flex items-center justify-center shadow-inner relative" style="width: 80px; height: 80px; min-width: 80px; margin-bottom: 12px;">
+                            <svg class="w-12 h-12 text-cyan-400 ie-svg-48" width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: #22d3ee;">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path>
                             </svg>
-                            <span class="absolute -bottom-1 -right-1 flex h-4 w-4">
-                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                <span class="relative inline-flex rounded-full h-4 w-4 bg-emerald-500 border-2 border-slate-900"></span>
+                            <span class="absolute -bottom-1 -right-1 flex h-3.5 w-3.5" style="width: 14px; height: 14px; bottom: -4px; right: -4px;">
+                                <span class="relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-500 border border-slate-900" style="width: 14px; height: 14px; background-color: #10b981;"></span>
                             </span>
                         </div>
                         <div>
-                            <h3 class="text-2xl sm:text-3xl font-black text-white tracking-tight">
+                            <h3 class="text-xl sm:text-2xl font-black text-white tracking-tight">
                                 {% if user.gate_number == 1 %}شاشة تسجيل الدخول التلقائي{% else %}شاشة الحساب والخروج الذكي{% endif %}
                             </h3>
-                            <p class="text-sm sm:text-base text-slate-300 max-w-md mt-2 leading-relaxed">
+                            <p class="text-xs sm:text-sm text-slate-300 max-w-md mt-1.5 leading-relaxed">
                                 مرر كارت الجراج أمام الماسح الضوئي وسيتم تأكيد الخروج فورياً وإظهار المبلغ للعميل.
                             </p>
                         </div>
                     </div>
 
                     <!-- 2. EXIT CUSTOMER DISPLAY (CLEAN SOLID PRICE WITHOUT GLOW + AUTO CONFIRM + OPTIONAL PRINT) -->
-                    <div id="exit-display-box" class="hidden flex flex-col justify-between gap-4 w-full h-full my-auto">
+                    <div id="exit-display-box" class="hidden flex flex-col justify-between w-full h-full my-auto">
                         
                         <!-- Top Meta Header -->
                         <div class="flex justify-between items-center pb-1">
                             <!-- Right Pill (In RTL: right side) -->
-                            <div class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-black bg-[#031525] text-cyan-300 border border-cyan-500/50 shadow-sm" id="exit-badge-text">
+                            <div class="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-black bg-[#031525] text-cyan-300 border border-cyan-500/50 shadow-sm" id="exit-badge-text" style="background-color: #031525; color: #67e8f9;">
                                 <span>المبلغ الإجمالي المستحق للدفع</span>
                             </div>
 
                             <!-- Left Pill (In RTL: left side) -->
-                            <div class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm text-slate-300 font-bold bg-[#030712] border border-slate-700/80">
+                            <div class="inline-flex items-center px-3 py-1.5 rounded-lg text-xs text-slate-300 font-bold bg-[#030712] border border-slate-700/80 flex-rtl-spaced" style="background-color: #030712;">
                                 <span>كارت رقم:</span>
-                                <span class="text-white font-digital text-base font-black" id="exit-card-code">—</span>
+                                <span class="text-white font-digital text-sm font-black" id="exit-card-code">—</span>
                             </div>
                         </div>
 
                         <!-- THE GIANT CRISP PRICE (NO GLOW HALO) -->
-                        <div class="flex flex-col items-center justify-center my-auto py-2 text-center">
-                            <span class="text-sm sm:text-base font-black text-slate-300 mb-1">
+                        <div class="flex flex-col items-center justify-center my-auto py-1 text-center">
+                            <span class="text-xs sm:text-sm font-black text-slate-300 mb-0.5">
                                 إجمالي الحساب المطلوب
                             </span>
                             
-                            <div class="flex items-center justify-center gap-3" dir="ltr">
+                            <div class="flex items-center justify-center flex-rtl-spaced" dir="ltr">
                                 <div class="flex flex-col items-end">
-                                    <span class="text-xl sm:text-2xl font-black text-emerald-400 tracking-tight">ج.م</span>
-                                    <span class="text-xs text-slate-400 font-bold font-digital">EGP CASH</span>
+                                    <span class="text-lg sm:text-xl font-black text-emerald-400 tracking-tight" style="color: #34d399;">ج.م</span>
+                                    <span class="text-[10px] text-slate-400 font-bold font-digital">EGP CASH</span>
                                 </div>
                                 <span id="exit-huge-price" class="giant-clean-price">
                                     0.00
@@ -263,40 +370,42 @@
                         </div>
 
                         <!-- 4 Details Micro-Cards -->
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-2" style="margin-top: 6px;">
                             
-                            <div class="bg-[#030712] border border-slate-800 rounded-2xl p-3 text-center flex flex-col justify-center gap-1 shadow-md">
-                                <span class="text-xs text-slate-400 font-bold">وقت الدخول</span>
-                                <span id="exit-entry-time" class="font-digital text-sm font-bold text-slate-200">—</span>
+                            <div class="bg-[#030712] border border-slate-800 rounded-xl p-2 text-center flex flex-col justify-center shadow-md" style="background-color: #030712;">
+                                <span class="text-[11px] text-slate-400 font-bold">وقت الدخول</span>
+                                <span id="exit-entry-time" class="font-digital text-xs font-bold text-slate-200">—</span>
                             </div>
 
-                            <div class="bg-[#030712] border border-slate-800 rounded-2xl p-3 text-center flex flex-col justify-center gap-1 shadow-md">
-                                <span class="text-xs text-slate-400 font-bold">مدة الانتظار</span>
-                                <span id="exit-duration" class="font-digital text-base font-black text-cyan-400">—</span>
+                            <div class="bg-[#030712] border border-slate-800 rounded-xl p-2 text-center flex flex-col justify-center shadow-md" style="background-color: #030712;">
+                                <span class="text-[11px] text-slate-400 font-bold">مدة الانتظار</span>
+                                <span id="exit-duration" class="font-digital text-sm font-black text-cyan-400" style="color: #22d3ee;">—</span>
                             </div>
 
-                            <div class="bg-[#030712] border border-slate-800 rounded-2xl p-3 text-center flex flex-col justify-center gap-1 shadow-md">
-                                <span class="text-xs text-slate-400 font-bold">التعرفة المحتسبة</span>
-                                <span id="exit-rate-label" class="text-xs sm:text-sm font-bold text-amber-300 truncate">—</span>
+                            <div class="bg-[#030712] border border-slate-800 rounded-xl p-2 text-center flex flex-col justify-center shadow-md" style="background-color: #030712;">
+                                <span class="text-[11px] text-slate-400 font-bold">التعرفة المحتسبة</span>
+                                <span id="exit-rate-label" class="text-[11px] font-bold text-amber-300 truncate" style="color: #fcd34d;">—</span>
                             </div>
 
-                            <div class="bg-[#030712] border border-slate-800 rounded-2xl p-3 text-center flex flex-col justify-center gap-1 shadow-md">
-                                <span class="text-xs text-slate-400 font-bold">رقم اللوحة</span>
-                                <span id="exit-plate-number" class="font-digital text-sm font-bold text-cyan-300">—</span>
+                            <div class="bg-[#030712] border border-slate-800 rounded-xl p-2 text-center flex flex-col justify-center shadow-md" style="background-color: #030712;">
+                                <span class="text-[11px] text-slate-400 font-bold">رقم اللوحة</span>
+                                <span id="exit-plate-number" class="font-digital text-xs font-bold text-cyan-300" style="color: #67e8f9;">—</span>
                             </div>
 
                         </div>
 
                         <!-- Action Buttons -->
-                        <div class="flex flex-col gap-2.5 pt-1">
+                        <div class="flex flex-col gap-2 pt-2">
                             
                             <!-- Big Green Optional Print Button -->
                             <button
                                 id="btn-print-receipt"
+                                type="button"
                                 onclick="printLastReceipt()"
-                                class="w-full bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black py-3.5 px-6 rounded-2xl text-lg sm:text-xl flex items-center justify-center gap-3 border border-emerald-400/50 shadow-lg transition duration-200 cursor-pointer"
+                                class="w-full bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black py-2.5 px-4 rounded-xl text-base flex items-center justify-center gap-2 border border-emerald-400/50 shadow-lg transition duration-200 cursor-pointer"
+                                style="background-color: #059669;"
                             >
-                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg class="w-5 h-5 text-white ie-svg-20" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
                                 </svg>
                                 <span>طباعة الإيصال (اضغط Enter ↵ أو P)</span>
@@ -304,11 +413,13 @@
 
                             <!-- Cancel & Scan Next Card Button -->
                             <button
+                                type="button"
                                 onclick="resetCustomerDisplay()"
-                                class="w-full bg-[#030712] hover:bg-slate-900 text-slate-300 hover:text-white font-bold py-2.5 px-4 rounded-xl border border-slate-800 transition text-sm flex items-center justify-center gap-2 cursor-pointer"
+                                class="w-full bg-[#030712] hover:bg-slate-900 text-slate-300 hover:text-white font-bold py-2 px-3 rounded-lg border border-slate-800 transition text-xs flex items-center justify-center gap-2 cursor-pointer"
+                                style="background-color: #030712;"
                             >
                                 <span>إلغاء ومسح كارت آخر</span>
-                                <span class="font-digital text-xs bg-slate-800 px-2 py-0.5 rounded border border-slate-700">Esc</span>
+                                <span class="font-digital text-[10px] bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700">Esc</span>
                             </button>
 
                         </div>
@@ -316,49 +427,51 @@
                     </div>
 
                     <!-- 3. ENTRY SUCCESS DISPLAY -->
-                    <div id="entry-display-box" class="hidden flex flex-col items-center justify-center text-center gap-4 w-full h-full my-auto py-4">
+                    <div id="entry-display-box" class="hidden flex flex-col items-center justify-center text-center my-auto py-2">
                         
-                        <div class="w-20 h-20 rounded-3xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center text-4xl shadow-[0_0_35px_rgba(16,185,129,0.3)]">
+                        <div class="w-16 h-16 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center text-3xl shadow-[0_0_25px_rgba(16,185,129,0.3)]" style="width: 64px; height: 64px; min-width: 64px; margin-bottom: 10px;">
                             ✓
                         </div>
 
                         <div>
-                            <h3 class="text-2xl sm:text-3xl font-black text-white" id="entry-title-text">تم تسجيل الدخول بنجاح</h3>
-                            <p class="text-sm sm:text-base text-emerald-400 font-bold mt-1">تفضل بالدخول إلى الجراج — بوابات الدخول مفتوحة</p>
+                            <h3 class="text-xl sm:text-2xl font-black text-white" id="entry-title-text">تم تسجيل الدخول بنجاح</h3>
+                            <p class="text-xs sm:text-sm text-emerald-400 font-bold mt-1">تفضل بالدخول إلى الجراج — بوابات الدخول مفتوحة</p>
                         </div>
 
                         <!-- License Plate Presentation Box -->
-                        <div id="entry-plate-container" class="hidden w-full max-w-sm bg-white text-black rounded-2xl border-4 border-slate-950 shadow-2xl overflow-hidden my-1">
-                            <div class="bg-blue-700 text-white text-xs font-black tracking-widest py-1 px-4 flex justify-between items-center border-b-2 border-black">
+                        <div id="entry-plate-container" class="hidden w-full max-w-sm bg-white text-black rounded-xl border-4 border-slate-950 shadow-2xl overflow-hidden my-1">
+                            <div class="bg-blue-700 text-white text-[11px] font-black tracking-widest py-0.5 px-3 flex justify-between items-center border-b-2 border-black" style="background-color: #1d4ed8;">
                                 <span>مـصـر</span>
                                 <span class="tracking-widest font-digital">EGYPT</span>
                             </div>
-                            <div class="py-2.5 px-3 flex items-center justify-center">
-                                <span id="entry-plate-text" class="text-2xl sm:text-3xl font-black font-digital tracking-widest text-black" dir="rtl">
+                            <div class="py-2 px-3 flex items-center justify-center">
+                                <span id="entry-plate-text" class="text-2xl font-black font-digital tracking-widest text-black" dir="rtl">
                                     —
                                 </span>
                             </div>
                         </div>
 
                         <!-- Entry Details Micro-Row -->
-                        <div class="w-full max-w-md bg-slate-950/90 border border-slate-800 rounded-2xl p-3.5 flex justify-around text-sm shadow-inner">
+                        <div class="w-full max-w-md bg-slate-950/90 border border-slate-800 rounded-xl p-2.5 flex justify-around text-xs shadow-inner mt-2" style="background-color: #030712;">
                             <div>
-                                <span class="text-slate-400 block mb-0.5 text-xs">رقم الكارت</span>
-                                <strong id="entry-card-code" class="font-digital text-base text-white font-bold">—</strong>
+                                <span class="text-slate-400 block mb-0.5 text-[11px]">رقم الكارت</span>
+                                <strong id="entry-card-code" class="font-digital text-sm text-white font-bold">—</strong>
                             </div>
                             <div>
-                                <span class="text-slate-400 block mb-0.5 text-xs">وقت الدخول</span>
-                                <strong id="entry-time" class="font-digital text-sm text-cyan-300 font-bold">—</strong>
+                                <span class="text-slate-400 block mb-0.5 text-[11px]">وقت الدخول</span>
+                                <strong id="entry-time" class="font-digital text-xs text-cyan-300 font-bold">—</strong>
                             </div>
                             <div id="entry-subscriber-box" class="hidden">
-                                <span class="text-slate-400 block mb-0.5 text-xs">نوع الاشتراك</span>
-                                <strong id="entry-subscriber-name" class="text-purple-300 font-bold text-xs sm:text-sm">—</strong>
+                                <span class="text-slate-400 block mb-0.5 text-[11px]">نوع الاشتراك</span>
+                                <strong id="entry-subscriber-name" class="text-purple-300 font-bold text-xs">—</strong>
                             </div>
                         </div>
 
                         <button
+                            type="button"
                             onclick="resetCustomerDisplay()"
-                            class="w-full max-w-md bg-emerald-600 hover:bg-emerald-500 text-white font-black py-3 rounded-xl shadow-lg transition text-base cursor-pointer"
+                            class="w-full max-w-md bg-emerald-600 hover:bg-emerald-500 text-white font-black py-2.5 rounded-lg shadow-lg transition text-sm cursor-pointer mt-3"
+                            style="background-color: #059669;"
                         >
                             جاهز للكارت التالي (Enter ↵)
                         </button>
@@ -369,46 +482,46 @@
             </div>
 
             <!-- ========================================================= -->
-            <!-- LEFT COLUMN: COUNTER & SCANNER CARD (~42%)                -->
+            <!-- LEFT COLUMN: COUNTER & SCANNER CARD (~41%)                -->
             <!-- ========================================================= -->
             <div class="pos-sidebar-column">
 
                 <!-- 1. Operations Counter Widget -->
-                <div class="glass-card p-5 shadow-xl flex justify-between items-center relative overflow-hidden">
+                <div class="glass-card p-3.5 sm:p-4 shadow-xl flex justify-between items-center relative overflow-hidden">
                     <div class="relative z-10">
-                        <span class="text-sm text-slate-300 font-bold block mb-1">إجمالي العمليات المنجزة بالوردية</span>
-                        <div class="text-5xl sm:text-6xl font-black font-digital text-white" id="session-count">
+                        <span class="text-xs sm:text-sm text-slate-300 font-bold block mb-0.5">إجمالي العمليات المنجزة بالوردية</span>
+                        <div class="text-4xl sm:text-5xl font-black font-digital text-white" id="session-count">
                             {{ session_total }}
                         </div>
                     </div>
                     
                     {% if user.gate_number == 2 %}
                     <a href="/ui/operator/lost-card"
-                       class="relative z-10 bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/40 px-4 py-3 rounded-2xl text-sm font-black transition flex items-center gap-2 shadow-sm">
+                       class="relative z-10 bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/40 px-3 py-2 rounded-xl text-xs sm:text-sm font-black transition flex items-center gap-1.5 shadow-sm" style="background-color: #451a03; color: #fcd34d;">
                         <span>⚠️ كارت مفقود</span>
                     </a>
                     {% endif %}
                 </div>
 
-                <!-- 2. SCANNER CARD (Placed on left column as requested) -->
-                <div class="glass-card p-5 shadow-2xl flex flex-col justify-between flex-grow relative border border-cyan-500/30">
+                <!-- 2. SCANNER CARD (Left Column) -->
+                <div class="glass-card p-3.5 sm:p-4 shadow-2xl flex flex-col justify-between flex-grow relative border border-cyan-500/30">
                     
                     <div>
-                        <div class="flex justify-between items-center mb-3">
-                            <div class="flex items-center gap-2">
-                                <span class="text-sm sm:text-base font-black text-slate-200 tracking-wide">
+                        <div class="flex justify-between items-center mb-2">
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-xs sm:text-sm font-black text-slate-200 tracking-wide">
                                     الماسح الضوئي (POS Scanner) متصل وجاهز للعمل
                                 </span>
                             </div>
-                            <div class="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold px-3.5 py-1.5 rounded-full bg-[#031525] border border-cyan-500/60 text-cyan-300">
+                            <div class="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full bg-[#031525] border border-cyan-500/60 text-cyan-300" style="background-color: #031525; color: #67e8f9;">
                                 <span>⚡</span>
                                 <span>{% if user.gate_number == 1 %}تسجيل دخول فوري{% else %}حساب وتأكيد خروج فوري{% endif %}</span>
                             </div>
                         </div>
 
-                        <!-- Direct Form Input -->
-                        <form id="direct-scan-form" onsubmit="handleDirectScan(event)" class="relative mt-3">
-                            <div class="relative flex items-center">
+                        <!-- Direct Form Input with Explicitly Sized SVG to Prevent IE Expansion -->
+                        <form id="direct-scan-form" onsubmit="handleDirectScan(event)" class="relative mt-2">
+                            <div class="relative flex items-center" style="position: relative; width: 100%;">
                                 
                                 <input
                                     id="card-code-input"
@@ -420,19 +533,19 @@
                                     spellcheck="false"
                                     autofocus
                                     placeholder="مرر الكارت أمام الاسكانر (أو اكتب الكود واضغط Enter)..."
-                                    class="w-full scanner-dark-input rounded-2xl py-4 px-12 text-center text-white placeholder-slate-400 text-lg sm:text-2xl font-digital font-bold tracking-wider outline-none transition-all duration-200 select-none"
+                                    class="w-full scanner-dark-input rounded-xl py-3 px-11 text-center text-white placeholder-slate-400 text-base sm:text-xl font-digital font-bold tracking-wider outline-none transition-all duration-200 select-none"
                                 >
 
-                                <!-- Scanner Icon on Left -->
-                                <div class="absolute left-4 pointer-events-none text-cyan-400/80">
-                                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <!-- Scanner Icon on Left with Explicit Pixel Width/Height -->
+                                <div class="absolute pointer-events-none text-cyan-400/80 flex items-center justify-center" style="position: absolute; left: 12px; top: 50%; margin-top: -14px; width: 28px; height: 28px; z-index: 5;">
+                                    <svg class="w-7 h-7 text-cyan-400 ie-svg-28" width="28" height="28" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: #22d3ee;">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path>
                                     </svg>
                                 </div>
 
                                 <!-- Spinner Indicator -->
-                                <div id="scan-spinner" class="hidden absolute right-4 text-cyan-400">
-                                    <svg class="animate-spin h-7 w-7" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <div id="scan-spinner" class="hidden absolute text-cyan-400 flex items-center justify-center" style="position: absolute; right: 12px; top: 50%; margin-top: -14px; width: 28px; height: 28px; z-index: 5;">
+                                    <svg class="animate-spin h-7 w-7 ie-svg-28" width="28" height="28" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" style="color: #22d3ee;">
                                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
                                     </svg>
@@ -442,23 +555,23 @@
                     </div>
 
                     <!-- Error Notification Box -->
-                    <div id="status-error-box" class="hidden glass-card p-4 mt-3 border-2 border-rose-500/80 bg-rose-950/70 text-rose-100 shadow-2xl flex items-center justify-between gap-4 transition-all duration-200">
-                        <div class="flex items-center gap-3">
-                            <div class="w-9 h-9 rounded-xl bg-rose-600/30 border border-rose-500/50 flex items-center justify-center text-xl">
+                    <div id="status-error-box" class="hidden glass-card p-3 mt-2 border-2 border-rose-500/80 bg-rose-950/70 text-rose-100 shadow-xl flex items-center justify-between gap-3 transition-all duration-200" style="background-color: #4c0519; border-color: #f43f5e;">
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-8 h-8 rounded-lg bg-rose-600/30 border border-rose-500/50 flex items-center justify-center text-lg" style="width: 32px; height: 32px; min-width: 32px;">
                                 ⚠️
                             </div>
                             <div>
-                                <strong class="block text-white text-sm font-black" id="error-title">تعذر إتمام العملية</strong>
-                                <p class="text-xs text-rose-200 mt-0.5" id="error-message">الرجاء التأكد من رقم الكارت وإعادة المحاولة.</p>
+                                <strong class="block text-white text-xs sm:text-sm font-black" id="error-title">تعذر إتمام العملية</strong>
+                                <p class="text-[11px] text-rose-200 mt-0.5" id="error-message">الرجاء التأكد من رقم الكارت وإعادة المحاولة.</p>
                             </div>
                         </div>
-                        <button onclick="dismissError()" class="bg-rose-800/80 hover:bg-rose-700 text-white px-3.5 py-1.5 rounded-xl font-bold text-xs transition">
+                        <button type="button" onclick="dismissError()" class="bg-rose-800/80 hover:bg-rose-700 text-white px-3 py-1 rounded-lg font-bold text-xs transition" style="background-color: #9f1239;">
                             إغلاق
                         </button>
                     </div>
 
-                    <div class="text-xs text-slate-400 mt-3 flex items-center gap-2">
-                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <div class="text-[11px] text-slate-400 mt-2.5 flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block" style="width: 8px; height: 8px; background-color: #34d399;"></span>
                         <span>الماسح متصل بنجاح — يقوم بالمعالجة الفورية بمجرد قراءة الباركود</span>
                     </div>
 
@@ -469,43 +582,43 @@
         </div>
 
         <!-- 3. LOWER SECTION: FULL-WIDTH RECENT TRANSACTIONS TABLE (100% WIDTH) -->
-        <div class="w-full glass-card p-5 shadow-2xl flex flex-col min-h-[260px] border border-cyan-500/20">
+        <div class="w-full glass-card pos-table-card p-3.5 sm:p-4 shadow-xl flex flex-col border border-cyan-500/20" style="margin-top: 10px;">
             
-            <div class="flex justify-between items-center border-b border-slate-800 pb-3 mb-3">
-                <div class="flex items-center gap-2.5">
-                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                    <h3 class="font-black text-base sm:text-lg text-white">سجل العمليات الأحدث بالوردية</h3>
+            <div class="flex justify-between items-center border-b border-slate-800 pb-2 mb-2">
+                <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block" style="width: 8px; height: 8px; background-color: #34d399;"></span>
+                    <h3 class="font-black text-sm sm:text-base text-white">سجل العمليات الأحدث بالوردية</h3>
                 </div>
-                <span class="text-xs font-bold text-emerald-400 bg-emerald-950/90 px-3 py-1 rounded-full border border-emerald-500/40">
+                <span class="text-[11px] font-bold text-emerald-400 bg-emerald-950/90 px-2.5 py-0.5 rounded-full border border-emerald-500/40" style="background-color: #022c22; color: #34d399;">
                     تحديث فوري
                 </span>
             </div>
 
-            <div class="overflow-x-auto overflow-y-auto flex-grow max-h-[360px]">
+            <div class="overflow-x-auto overflow-y-auto flex-grow max-h-[220px]">
                 <table class="w-full text-right border-collapse">
                     <thead>
-                        <tr class="text-sm text-slate-300 font-bold border-b border-slate-800 bg-slate-950/80 sticky top-0 backdrop-blur">
-                            <th class="py-3 px-4">الكارت</th>
-                            <th class="py-3 px-4">وقت الدخول</th>
-                            <th class="py-3 px-4">وقت الخروج</th>
-                            <th class="py-3 px-4">المبلغ المستحق</th>
+                        <tr class="text-xs text-slate-300 font-bold border-b border-slate-800 bg-slate-950/80 sticky top-0" style="background-color: #030712;">
+                            <th class="py-2 px-3">الكارت</th>
+                            <th class="py-2 px-3">وقت الدخول</th>
+                            <th class="py-2 px-3">وقت الخروج</th>
+                            <th class="py-2 px-3">المبلغ المستحق</th>
                         </tr>
                     </thead>
-                    <tbody id="recent-sessions-tbody" class="text-sm sm:text-base">
+                    <tbody id="recent-sessions-tbody" class="text-xs sm:text-sm">
                         {% for s in sessions %}
                         <tr class="border-b border-slate-800/60 hover:bg-slate-800/40 transition">
-                            <td class="py-3 px-4 font-digital text-slate-200 font-bold text-base">{{ s.card_code }}</td>
-                            <td class="py-3 px-4 text-slate-300 font-digital text-sm">{{ s.entry_time | format_datetime }}</td>
-                            <td class="py-3 px-4 text-slate-300 font-digital text-sm">
+                            <td class="py-2 px-3 font-digital text-slate-200 font-bold text-sm">{{ s.card_code }}</td>
+                            <td class="py-2 px-3 text-slate-300 font-digital text-xs">{{ s.entry_time | format_datetime }}</td>
+                            <td class="py-2 px-3 text-slate-300 font-digital text-xs">
                                 {% if s.exit_time %}
                                     {{ s.exit_time | format_datetime }}
                                 {% else %}
-                                    <span class="text-emerald-400 font-bold bg-emerald-950/80 px-3 py-1 rounded-full border border-emerald-500/40 text-xs">داخل الجراج</span>
+                                    <span class="text-emerald-400 font-bold bg-emerald-950/80 px-2.5 py-0.5 rounded-full border border-emerald-500/40 text-[11px]" style="background-color: #022c22; color: #34d399;">داخل الجراج</span>
                                 {% endif %}
                             </td>
-                            <td class="py-3 px-4 font-digital">
+                            <td class="py-2 px-3 font-digital">
                                 {% if s.amount_charged is not none %}
-                                    <span class="font-black text-emerald-400 font-digital text-base sm:text-lg">{{ s.amount_charged | format_egp }}</span>
+                                    <span class="font-black text-emerald-400 font-digital text-sm sm:text-base" style="color: #34d399;">{{ s.amount_charged | format_egp }}</span>
                                 {% else %}
                                     <span class="text-slate-500 font-bold">—</span>
                                 {% endif %}
@@ -513,14 +626,14 @@
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="4" class="py-8 text-center text-sm text-slate-400">لا توجد عمليات مسجلة بعد في هذه الوردية.</td>
+                            <td colspan="4" class="py-4 text-center text-xs text-slate-400">لا توجد عمليات مسجلة بعد في هذه الوردية.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
         </div>
-
+        <div id="pos-app-meta" data-has-shift="1" style="display:none;"></div>
     </div>
     {% endif %}
 
@@ -528,11 +641,16 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/dashboard.js?v=12"></script>
+<script src="/static/js/dashboard.js?v=20"></script>
 <script>
-    startClock();
-    {% if shift %}
-    initDirectPOSScanner();
-    {% endif %}
+    if (typeof startClock === 'function') {
+        startClock();
+    }
+    var metaEl = document.getElementById('pos-app-meta');
+    if (metaEl && metaEl.getAttribute('data-has-shift') === '1') {
+        if (typeof initDirectPOSScanner === 'function') {
+            initDirectPOSScanner();
+        }
+    }
 </script>
 {% endblock %}

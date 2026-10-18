@@ -1,16 +1,15 @@
-import asyncio
-from datetime import datetime, timezone
 import os
 import sys
-from alembic.config import Config
+import asyncio
 from alembic import command
-from sqlalchemy import text, select
-
 from config import get_settings
-from database import engine, AsyncSessionLocal
+from alembic.config import Config
+from sqlalchemy import text, select
 from models.user import User, UserRole
+from datetime import datetime, timezone
 from models.pricing_rule import PricingRule
 from services.auth_service import AuthService
+from database import engine, AsyncSessionLocal
 
 def run_migrations():
     alembic_cfg = Config("alembic.ini")
@@ -29,9 +28,9 @@ async def verify_tables_exist():
         sys.exit(1)
 
 async def seed_admin_user(db, settings, auth_service) -> dict:
-    username = settings.SEED_ADMIN_USERNAME or os.environ.get("SEED_ADMIN_USERNAME", "admin")
-    password = settings.SEED_ADMIN_PASSWORD or os.environ.get("SEED_ADMIN_PASSWORD", "admin12345")
-    full_name = settings.SEED_ADMIN_FULL_NAME or os.environ.get("SEED_ADMIN_FULL_NAME", "مسؤول النظام")
+    username = settings.SEED_ADMIN_USERNAME or os.environ.get("SEED_ADMIN_USERNAME", "Mohamed_abdou")
+    password = settings.SEED_ADMIN_PASSWORD or os.environ.get("SEED_ADMIN_PASSWORD", "198245")
+    full_name = settings.SEED_ADMIN_FULL_NAME or os.environ.get("SEED_ADMIN_FULL_NAME", "محمد عبده")
 
     result = await db.execute(select(User).where(User.username == username))
     existing = result.scalars().first()

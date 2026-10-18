@@ -65,34 +65,38 @@
     </div>
 
 </div>
+<div id="shift-summary-data" data-computed-total="{{ summary.computed_total_piastres }}" style="display:none;"></div>
 {% endblock %}
 
 {% block scripts %}
 <script>
   function formatEgp(piastres) {
-    const isNegative = piastres < 0;
-    const absPiastres = Math.abs(piastres);
-    const egp = Math.floor(absPiastres / 100);
-    const fils = absPiastres % 100;
-    const filsStr = String(fils).padStart(2, '0');
-    const sign = isNegative ? "-" : "";
+    var isNegative = piastres < 0;
+    var absPiastres = Math.abs(piastres);
+    var egp = Math.floor(absPiastres / 100);
+    var fils = absPiastres % 100;
+    var filsStr = (fils < 10 ? '0' : '') + fils;
+    var sign = isNegative ? "-" : "";
     return sign + egp + "." + filsStr + " EGP";
   }
 
-  const input = document.getElementById("closing-cash-input");
-  const el = document.getElementById("discrepancy-display");
-  const computedTotal = {{ summary.computed_total_piastres }};
+  var input = document.getElementById("closing-cash-input");
+  var el = document.getElementById("discrepancy-display");
+  var summaryData = document.getElementById("shift-summary-data");
+  var computedTotal = summaryData ? parseInt(summaryData.getAttribute("data-computed-total"), 10) || 0 : 0;
 
-  input.addEventListener('input', () => {
-    const closingCash = parseInt(input.value || 0) * 100;
-    const diff = closingCash - computedTotal;
-    el.textContent = formatEgp(diff);
-    
-    if (diff >= 0) {
-      el.className = "text-green-500 font-bold";
-    } else {
-      el.className = "text-red-500 font-bold";
-    }
-  });
+  if (input && el) {
+    input.addEventListener('input', function() {
+      var closingCash = (parseInt(input.value, 10) || 0) * 100;
+      var diff = closingCash - computedTotal;
+      el.textContent = formatEgp(diff);
+      
+      if (diff >= 0) {
+        el.className = "text-green-500 font-bold";
+      } else {
+        el.className = "text-red-500 font-bold";
+      }
+    });
+  }
 </script>
 {% endblock %}
