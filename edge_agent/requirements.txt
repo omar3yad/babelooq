@@ -1,0 +1,9 @@
+# Edge PC (Python 3.10+). Install torch first per https://pytorch.org for GPU builds.
+websockets>=14,<18
+httpx>=0.27,<1
+pydantic>=2.6,<3
+pydantic-settings>=2.2,<3
+pillow>=10.0
+numpy>=1.24
+ultralytics>=8.1
+easyocr>=1.7

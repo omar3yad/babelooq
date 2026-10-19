@@ -1,5 +1,5 @@
 // garage4u Service Worker - PWA Support
-const CACHE_NAME = 'garage4u-v1';
+const CACHE_NAME = 'garage4u-v2';
 const STATIC_ASSETS = [
   '/',
   '/ui/login',
@@ -41,8 +41,8 @@ self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   if (url.protocol === 'chrome-extension:') return;
 
-  // API calls: network only (always fresh data)
-  if (url.pathname.startsWith('/api/')) {
+  // API calls (incl. /ui/operator/api/* long-polls and plate images): network only
+  if (url.pathname.startsWith('/api/') || url.pathname.indexOf('/api/') !== -1) {
     event.respondWith(fetch(event.request));
     return;
   }

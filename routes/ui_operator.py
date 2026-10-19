@@ -1,6 +1,9 @@
+import asyncio
+import logging
+from contextlib import nullcontext
 from datetime import datetime
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, JSONResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -9,10 +12,10 @@ from utils.jinja import format_cairo_12h
 from config import get_settings
 from database import get_db
 from dependencies import require_operator
-from models.user import User
+from models.user import User, UserRole
 from models.pricing_rule import PricingRule
 from models.parking_card import ParkingCard, CardStatus
-from models.parking_session import ParkingSession, SessionStatus
+from models.parking_session import ParkingSession, PlateCaptureStatus, SessionStatus
 from repositories.session_repo import ParkingSessionRepository
 from repositories.rate_repo import PricingRuleRepository
 from repositories.subscription_plan_repo import SubscriptionPlanRepository
@@ -24,6 +27,7 @@ from services.pricing_service import PricingService
 from services.shift_service import ShiftService
 from services.audit_service import AuditService
 from services.plate_service import PlateService
+from services.plate_capture_service import PlateCaptureService, capture_payload
 from services.subscription_service import SubscriptionService
 from services.pricing_helpers import format_duration, format_egp
 from schemas.receipt import ReceiptData
@@ -42,7 +46,13 @@ from services.exceptions import (
     SubscriptionDailyLimitReachedError,
 )
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/ui/operator", tags=["ui-operator"])
+
+# Long-poll safety net: re-read the DB at least this often in case a result
+# notification was lost (e.g. event-bus listener reconnecting).
+_PLATE_RECHECK_INTERVAL_S = 1.0
 
 # Load translations for routing rendering errors
 translations = load_translations()
@@ -677,6 +687,28 @@ async def print_receipt_page(
 # ===========================================================================
 
 
+async def _start_plate_capture(request: Request, db: AsyncSession, settings, session: ParkingSession) -> dict | None:
+    """Ask the garage edge PC for a plate snapshot. The entry is already saved;
+    any failure here only degrades to "no plate", it never blocks the gate."""
+    hub = getattr(request.app.state, "edge_hub", None)
+    if hub is None or not settings.EDGE_API_TOKEN:
+        return None
+    try:
+        capture_status = await PlateCaptureService(db, settings).start(session, hub)
+    except Exception:
+        logger.exception("Plate capture could not start for session %s", session.id)
+        return None
+    return {
+        "status": capture_status.value,
+        "poll_url": f"/ui/operator/api/sessions/{session.id}/plate",
+        "timeout_ms": int(settings.PLATE_CAPTURE_TIMEOUT_S * 1000),
+    }
+
+
+def _can_view_session(user: User, session: ParkingSession) -> bool:
+    return user.role == UserRole.ADMIN or session.operator_id == user.id
+
+
 @router.post("/api/scan")
 async def api_operator_scan(
     request: Request,
@@ -686,6 +718,7 @@ async def api_operator_scan(
     session_repo: ParkingSessionRepository = Depends(get_session_repo),
     pricing_service: PricingService = Depends(get_pricing_service),
     shift_service: ShiftService = Depends(get_shift_service),
+    settings=Depends(get_settings),
 ):
     shift = await shift_service.get_active_shift(current_user.id)
     if not shift:
@@ -761,6 +794,8 @@ async def api_operator_scan(
                         "end_date": format_cairo_12h(sub_obj.end_date, "%Y/%m/%d") if sub_obj.end_date else "—",
                     }
 
+            plate_capture = await _start_plate_capture(request, db, settings, session)
+
             return JSONResponse({
                 "success": True,
                 "type": "entry",
@@ -770,6 +805,7 @@ async def api_operator_scan(
                 "entry_time": format_cairo_12h(session.entry_time),
                 "is_subscribed": bool(session.subscription_id),
                 "subscription": sub_info,
+                "plate_capture": plate_capture,
                 "message": "تم تسجيل الدخول بنجاح",
             })
         except Exception as e:
@@ -888,3 +924,59 @@ async def api_operator_recent_sessions(
 
 
 
+
+
+@router.get("/api/sessions/{session_id}/plate")
+async def api_plate_capture_status(
+    request: Request,
+    session_id: int,
+    wait: int = 0,
+    current_user: User = Depends(require_operator),
+    db: AsyncSession = Depends(get_db),
+    settings=Depends(get_settings),
+):
+    """Plate capture state. With ?wait=1 this long-polls (up to
+    PLATE_POLL_MAX_WAIT_S) until the capture leaves PENDING."""
+    hub = getattr(request.app.state, "edge_hub", None)
+    service = PlateCaptureService(db, settings)
+    loop = asyncio.get_running_loop()
+    wait_until = loop.time() + (settings.PLATE_POLL_MAX_WAIT_S if wait and hub else 0.0)
+
+    waiter = hub.result_waiter(session_id) if hub else nullcontext(asyncio.Event())
+    async with waiter as result_event:
+        while True:
+            # Clear before reading so a result arriving mid-read still wakes us.
+            result_event.clear()
+            session = await service.get_fresh(session_id)
+            if session is None or not _can_view_session(current_user, session):
+                return JSONResponse({"success": False, "error": "الجلسة غير موجودة."}, status_code=404)
+            if session.plate_capture_status != PlateCaptureStatus.PENDING.value:
+                break
+            # +0.25s lets the next loop observe the deadline and mark TIMEOUT.
+            budget = min(wait_until - loop.time(), service.remaining_s(session) + 0.25)
+            if budget <= 0:
+                break
+            try:
+                await asyncio.wait_for(result_event.wait(), min(budget, _PLATE_RECHECK_INTERVAL_S))
+            except asyncio.TimeoutError:
+                pass
+
+    image_url = f"/ui/operator/api/sessions/{session.id}/plate-image"
+    return JSONResponse({"success": True, "session_id": session.id, **capture_payload(session, image_url)})
+
+
+@router.get("/api/sessions/{session_id}/plate-image")
+async def api_plate_image(
+    session_id: int,
+    current_user: User = Depends(require_operator),
+    db: AsyncSession = Depends(get_db),
+    session_repo: ParkingSessionRepository = Depends(get_session_repo),
+    settings=Depends(get_settings),
+):
+    session = await session_repo.get_by_id(session_id)
+    if session is None or not _can_view_session(current_user, session):
+        raise HTTPException(status_code=404, detail="Not found")
+    path = PlateCaptureService(db, settings).resolve_image(session.plate_image_path)
+    if path is None:
+        raise HTTPException(status_code=404, detail="Not found")
+    return FileResponse(path, media_type="image/webp", headers={"Cache-Control": "private, max-age=86400"})

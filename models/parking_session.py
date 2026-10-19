@@ -1,7 +1,7 @@
 import enum
 from datetime import datetime
 from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy import String, SmallInteger, ForeignKey, Enum, Text, Index, text
+from sqlalchemy import String, SmallInteger, ForeignKey, Enum, Text, Index, Float, text
 from database import Base
 from models.mixins import TimestampMixin
 
@@ -13,6 +13,23 @@ class SessionStatus(enum.Enum):
 class PaymentMethod(enum.Enum):
     CASH = "CASH"
     cash = "cash"
+
+class PlateCaptureStatus(str, enum.Enum):
+    """Lifecycle of the edge camera capture attached to an entry session.
+
+    Stored as a plain string column so adding states never needs a DB enum migration.
+    """
+    PENDING = "PENDING"      # trigger dispatched, waiting for the edge PC
+    SUCCESS = "SUCCESS"      # plate read and stored
+    NO_PLATE = "NO_PLATE"    # image captured but no plate recognised
+    FAILED = "FAILED"        # edge reported an error (camera/model)
+    TIMEOUT = "TIMEOUT"      # no result before the deadline
+    OFFLINE = "OFFLINE"      # no edge PC connected for this gate
+
+    @property
+    def is_terminal(self) -> bool:
+        return self is not PlateCaptureStatus.PENDING
+
 
 class ParkingSession(Base, TimestampMixin):
     __tablename__ = "parking_sessions"
@@ -43,6 +60,12 @@ class ParkingSession(Base, TimestampMixin):
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     subscription_id: Mapped[int | None] = mapped_column(ForeignKey("subscriptions.id"), nullable=True)
     is_subscribed: Mapped[bool] = mapped_column(nullable=False, server_default="0")
+    plate_capture_status: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    plate_capture_requested_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    plate_captured_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    plate_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    plate_image_path: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    plate_capture_error: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     __table_args__ = (
         Index(
@@ -54,4 +77,4 @@ class ParkingSession(Base, TimestampMixin):
         ),
     )
 
-__all__ = ["SessionStatus", "PaymentMethod", "ParkingSession"]
+__all__ = ["SessionStatus", "PaymentMethod", "PlateCaptureStatus", "ParkingSession"]

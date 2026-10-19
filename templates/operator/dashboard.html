@@ -484,6 +484,15 @@
                             <p class="text-xs sm:text-sm text-emerald-400 font-bold mt-1">تفضل بالدخول إلى الجراج — بوابات الدخول مفتوحة</p>
                         </div>
 
+                        <!-- Edge Camera Capture (snapshot + recognition status) -->
+                        <div id="entry-capture-box" class="hidden w-full max-w-md flex flex-col items-center my-1">
+                            <img id="entry-capture-img" class="hidden rounded-lg border border-slate-700 shadow-lg"
+                                 style="max-height: 150px; max-width: 100%; object-fit: contain; background-color: #030712;"
+                                 alt="صورة السيارة عند الدخول">
+                            <span id="entry-capture-status" class="text-xs sm:text-sm font-bold mt-1 text-slate-300"
+                                  data-state="PENDING">جاري التقاط صورة السيارة وقراءة اللوحة…</span>
+                        </div>
+
                         <!-- License Plate Presentation Box -->
                         <div id="entry-plate-container" class="hidden w-full max-w-sm bg-white text-black rounded-xl border-4 border-slate-950 shadow-2xl overflow-hidden my-1">
                             <div class="bg-blue-700 text-white text-[11px] font-black tracking-widest py-0.5 px-3 flex justify-between items-center border-b-2 border-black" style="background-color: #1d4ed8;">
@@ -687,7 +696,7 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/dashboard.js?v=20261018d"></script>
+<script src="/static/js/dashboard.js?v=20261019a"></script>
 <script>
     if (typeof startClock === 'function') {
         startClock();

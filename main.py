@@ -70,7 +70,20 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.critical("Startup subscription lifecycle failed: %s", e)
 
+    # 3. Edge camera broker: cross-worker event bus + edge WebSocket hub
+    from services.event_bus import create_event_bus
+    from services.edge_hub import EdgeHub
+
+    bus = create_event_bus(settings.DATABASE_URL, engine)
+    hub = EdgeHub(bus, presence_ttl_s=settings.EDGE_PRESENCE_TTL_S)
+    app.state.edge_hub = hub
+    await bus.start()
+    await hub.start()
+
     yield
+
+    await hub.stop()
+    await bus.stop()
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -160,6 +173,7 @@ from routes.subscriptions_api import router as subscriptions_api_router
 from routes.admin_api import router as admin_api_router
 from routes.ui_admin import router as ui_admin_router
 from routes.ui_subscriptions import router as ui_subscriptions_router
+from routes.edge_ws import router as edge_ws_router
 
 # Include routers
 app.include_router(auth_router)
@@ -174,6 +188,7 @@ app.include_router(subscriptions_api_router)
 app.include_router(admin_api_router)
 app.include_router(ui_admin_router)
 app.include_router(ui_subscriptions_router)
+app.include_router(edge_ws_router)
 
 @app.get("/")
 async def root_redirect():

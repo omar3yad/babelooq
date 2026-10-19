@@ -26,6 +26,12 @@
   var currentExitSessionId = null;
   var lastReceiptUrl = null;
   var autoResetTimer = null;
+  // Incremented on every new entry/reset so late long-poll replies are ignored
+  var captureToken = 0;
+  var ENTRY_RESET_MS = 4000;
+  var CAPTURE_POLL_RETRY_MS = 500;
+  // Extra slack on top of the server deadline before the client gives up
+  var CAPTURE_CLIENT_SLACK_MS = 3000;
 
   function padZero(num) {
     return (num < 10 ? "0" : "") + num;
@@ -333,14 +339,160 @@
       if (plateBox) plateBox.classList.add("hidden");
     }
 
+    var capturePending = startPlateCapture(data);
+    if (!capturePending) {
+      scheduleEntryReset();
+    }
+  }
+
+  function scheduleEntryReset() {
+    if (autoResetTimer) clearTimeout(autoResetTimer);
     autoResetTimer = setTimeout(function () {
       resetCustomerDisplay();
-    }, 4000);
+    }, ENTRY_RESET_MS);
+  }
+
+  // ---------------------------------------------------------------------
+  // Edge camera plate capture (long-poll; XHR only for legacy browsers)
+  // ---------------------------------------------------------------------
+
+  var CAPTURE_MESSAGES = {
+    PENDING: "جاري التقاط صورة السيارة وقراءة اللوحة…",
+    SUCCESS: "تمت قراءة اللوحة بنجاح",
+    NO_PLATE: "تم التقاط الصورة — لم يتم التعرف على اللوحة",
+    FAILED: "تعذر التقاط الصورة من الكاميرا",
+    TIMEOUT: "انتهت مهلة قراءة اللوحة",
+    OFFLINE: "كاميرا البوابة غير متصلة حالياً"
+  };
+  var CAPTURE_COLORS = {
+    PENDING: "#cbd5e1",
+    SUCCESS: "#34d399",
+    NO_PLATE: "#fcd34d",
+    FAILED: "#fb7185",
+    TIMEOUT: "#fcd34d",
+    OFFLINE: "#fb7185"
+  };
+
+  // Returns true while a capture result is still expected.
+  function startPlateCapture(data) {
+    captureToken++;
+    var box = document.getElementById("entry-capture-box");
+    var img = document.getElementById("entry-capture-img");
+    if (img) {
+      img.classList.add("hidden");
+      img.removeAttribute("src");
+    }
+
+    var cap = data && data.plate_capture;
+    if (!box || !cap || !cap.status) {
+      if (box) box.classList.add("hidden");
+      return false;
+    }
+
+    box.classList.remove("hidden");
+    renderCapture(cap, data);
+    if (cap.status !== "PENDING" || !cap.poll_url) return false;
+
+    var deadline = new Date().getTime() + (cap.timeout_ms || 4000) + CAPTURE_CLIENT_SLACK_MS;
+    pollPlateCapture(captureToken, cap.poll_url, deadline, data);
+    return true;
+  }
+
+  function pollPlateCapture(token, url, deadline, entryData) {
+    if (token !== captureToken) return;
+    if (new Date().getTime() > deadline) {
+      finishCapture(token, { status: "TIMEOUT" }, entryData);
+      return;
+    }
+
+    var xhr = new XMLHttpRequest();
+    xhr.open("GET", url + "?wait=1", true);
+    xhr.setRequestHeader("Accept", "application/json");
+    xhr.timeout = 12000;
+
+    function retry() {
+      if (token !== captureToken) return;
+      setTimeout(function () {
+        pollPlateCapture(token, url, deadline, entryData);
+      }, CAPTURE_POLL_RETRY_MS);
+    }
+
+    xhr.onreadystatechange = function () {
+      if (xhr.readyState !== 4 || token !== captureToken) return;
+      if (xhr.status === 0) return; // network error / timeout: handled below
+      var res = null;
+      try {
+        res = JSON.parse(xhr.responseText);
+      } catch (e) {
+        res = null;
+      }
+      if (xhr.status >= 200 && xhr.status < 300 && res && res.status) {
+        if (res.status === "PENDING") {
+          pollPlateCapture(token, url, deadline, entryData);
+        } else {
+          finishCapture(token, res, entryData);
+        }
+      } else if (xhr.status === 404 || xhr.status === 401 || xhr.status === 403) {
+        finishCapture(token, { status: "FAILED" }, entryData);
+      } else {
+        retry();
+      }
+    };
+    xhr.onerror = retry;
+    xhr.ontimeout = retry;
+    xhr.send(null);
+  }
+
+  function finishCapture(token, res, entryData) {
+    if (token !== captureToken) return;
+    renderCapture(res, entryData);
+    playSound(res.status === "SUCCESS" ? "success" : "error");
+    scheduleEntryReset();
+  }
+
+  function renderCapture(res, entryData) {
+    var statusEl = document.getElementById("entry-capture-status");
+    var img = document.getElementById("entry-capture-img");
+    var plateBox = document.getElementById("entry-plate-container");
+    var plateText = document.getElementById("entry-plate-text");
+    var state = res.status;
+
+    if (statusEl) {
+      var msg = CAPTURE_MESSAGES[state] || CAPTURE_MESSAGES.FAILED;
+      if (state === "SUCCESS" && typeof res.confidence === "number") {
+        msg += " (" + Math.round(res.confidence * 100) + "%)";
+      }
+      statusEl.textContent = msg;
+      statusEl.style.color = CAPTURE_COLORS[state] || CAPTURE_COLORS.FAILED;
+      statusEl.setAttribute("data-state", state);
+    }
+
+    if (img && res.image_url) {
+      img.onerror = function () {
+        img.classList.add("hidden");
+      };
+      img.src = res.image_url;
+      img.classList.remove("hidden");
+    }
+
+    if (state === "SUCCESS" && res.plate_number && plateBox && plateText) {
+      var registered = entryData && entryData.subscription && entryData.subscription.plate_number;
+      if (registered && statusEl) {
+        // Keep the subscriber's registered plate visible; show the camera read alongside.
+        statusEl.textContent += " — لوحة الكاميرا: " + res.plate_number;
+      } else {
+        plateText.textContent = res.plate_number;
+        plateBox.classList.remove("hidden");
+      }
+    }
   }
 
   function resetCustomerDisplay() {
     currentExitSessionId = null;
     lastReceiptUrl = null;
+    captureToken++;
+    var captureBox = document.getElementById("entry-capture-box");
+    if (captureBox) captureBox.classList.add("hidden");
     if (autoResetTimer) {
       clearTimeout(autoResetTimer);
       autoResetTimer = null;
