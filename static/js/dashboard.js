@@ -150,8 +150,11 @@
       }
     });
 
-    // Auto poll session count every 20 seconds
-    setInterval(refreshRecentSessions, 20000);
+    // Load recent sessions immediately on startup
+    refreshRecentSessions();
+
+    // Auto poll session count every 10 seconds
+    setInterval(refreshRecentSessions, 10000);
   }
 
   function handleDirectScan(e) {

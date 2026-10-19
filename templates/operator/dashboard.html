@@ -170,8 +170,8 @@
   .giant-clean-price {
     font-family: 'Outfit', 'Cairo', monospace, sans-serif;
     font-family: var(--font-num);
-    font-size: 5rem; /* IE11 fallback */
-    font-size: clamp(4rem, 7.5vw, 6.5rem);
+    font-size: 5.5rem; /* IE11 fallback */
+    font-size: clamp(4.5rem, 8vw, 7rem);
     line-height: 0.95;
     font-weight: 900;
     letter-spacing: -0.03em;
@@ -179,6 +179,53 @@
     filter: none !important;
     text-shadow: none !important;
     box-shadow: none !important;
+  }
+
+  /* 2x2 Details Layout: Exactly 2 rows with 2 side-by-side cells per row */
+  .pos-details-row {
+    display: -ms-flexbox !important;
+    display: flex !important;
+    -ms-flex-direction: row !important;
+    flex-direction: row !important;
+    width: 100% !important;
+    margin-bottom: 8px !important;
+    box-sizing: border-box !important;
+  }
+  .pos-detail-cell {
+    -ms-flex: 1 1 50% !important;
+    flex: 1 1 50% !important;
+    width: 50% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+    background-color: #030712 !important;
+    background: rgba(3, 7, 18, 0.92) !important;
+    border: 1px solid #14344c !important;
+    border-radius: 12px !important;
+    padding: 10px 12px !important;
+    display: -ms-flexbox !important;
+    display: flex !important;
+    -ms-flex-direction: column !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+    text-align: center !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5) !important;
+  }
+  .pos-details-row > .pos-detail-cell:first-child {
+    margin-left: 10px !important; /* In RTL, pushes the second cell to the left */
+  }
+  .pos-detail-label {
+    font-size: 13px;
+    color: #94a3b8;
+    font-weight: 700;
+    margin-bottom: 4px;
+    display: block;
+  }
+  .pos-detail-val {
+    font-size: 17px;
+    font-weight: 900;
+    line-height: 1.25;
+    letter-spacing: 0.02em;
   }
 
   /* Compact Viewport Tuning for 1366x768 & 1280x1024 Monitors */
@@ -296,11 +343,6 @@
                     <span class="w-2 h-2 rounded-full bg-rose-500 inline-block" style="width: 8px; height: 8px; margin-left: 6px;"></span>
                     <span>إنهاء الوردية</span>
                 </a>
-
-                <!-- Logout Button -->
-                <a href="/ui/logout" class="bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/80 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold transition duration-150" style="background-color: #0f172a; color: #cbd5e1;">
-                    تسجيل الخروج
-                </a>
             </div>
         </header>
 
@@ -353,15 +395,15 @@
                         </div>
 
                         <!-- THE GIANT CRISP PRICE (NO GLOW HALO) -->
-                        <div class="flex flex-col items-center justify-center my-auto py-1 text-center">
-                            <span class="text-xs sm:text-sm font-black text-slate-300 mb-0.5">
+                        <div class="flex flex-col items-center justify-center my-auto py-2 text-center">
+                            <span class="text-sm sm:text-base font-black text-slate-200 mb-1">
                                 إجمالي الحساب المطلوب
                             </span>
                             
                             <div class="flex items-center justify-center flex-rtl-spaced" dir="ltr">
                                 <div class="flex flex-col items-end">
-                                    <span class="text-lg sm:text-xl font-black text-emerald-400 tracking-tight" style="color: #34d399;">ج.م</span>
-                                    <span class="text-[10px] text-slate-400 font-bold font-digital">EGP CASH</span>
+                                    <span class="text-xl sm:text-2xl font-black text-emerald-400 tracking-tight" style="color: #34d399;">ج.م</span>
+                                    <span class="text-[11px] text-slate-400 font-bold font-digital">EGP CASH</span>
                                 </div>
                                 <span id="exit-huge-price" class="giant-clean-price">
                                     0.00
@@ -369,27 +411,31 @@
                             </div>
                         </div>
 
-                        <!-- 4 Details Micro-Cards -->
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-2" style="margin-top: 6px;">
+                        <!-- 2x2 Details: 2 Upper Boxes + 2 Lower Boxes -->
+                        <div class="w-full" style="margin-top: 10px; margin-bottom: 6px;">
                             
-                            <div class="bg-[#030712] border border-slate-800 rounded-xl p-2 text-center flex flex-col justify-center shadow-md" style="background-color: #030712;">
-                                <span class="text-[11px] text-slate-400 font-bold">وقت الدخول</span>
-                                <span id="exit-entry-time" class="font-digital text-xs font-bold text-slate-200">—</span>
+                            <!-- Upper Row: وقت الدخول + مدة الانتظار -->
+                            <div class="pos-details-row">
+                                <div class="pos-detail-cell">
+                                    <span class="pos-detail-label">وقت الدخول</span>
+                                    <span id="exit-entry-time" class="pos-detail-val font-digital text-slate-100" style="color: #f1f5f9;">—</span>
+                                </div>
+                                <div class="pos-detail-cell" style="border-color: #0284c7 !important;">
+                                    <span class="pos-detail-label">مدة الانتظار</span>
+                                    <span id="exit-duration" class="pos-detail-val font-digital text-cyan-300" style="color: #67e8f9; font-size: 20px;">—</span>
+                                </div>
                             </div>
 
-                            <div class="bg-[#030712] border border-slate-800 rounded-xl p-2 text-center flex flex-col justify-center shadow-md" style="background-color: #030712;">
-                                <span class="text-[11px] text-slate-400 font-bold">مدة الانتظار</span>
-                                <span id="exit-duration" class="font-digital text-sm font-black text-cyan-400" style="color: #22d3ee;">—</span>
-                            </div>
-
-                            <div class="bg-[#030712] border border-slate-800 rounded-xl p-2 text-center flex flex-col justify-center shadow-md" style="background-color: #030712;">
-                                <span class="text-[11px] text-slate-400 font-bold">التعرفة المحتسبة</span>
-                                <span id="exit-rate-label" class="text-[11px] font-bold text-amber-300 truncate" style="color: #fcd34d;">—</span>
-                            </div>
-
-                            <div class="bg-[#030712] border border-slate-800 rounded-xl p-2 text-center flex flex-col justify-center shadow-md" style="background-color: #030712;">
-                                <span class="text-[11px] text-slate-400 font-bold">رقم اللوحة</span>
-                                <span id="exit-plate-number" class="font-digital text-xs font-bold text-cyan-300" style="color: #67e8f9;">—</span>
+                            <!-- Lower Row: التعرفة المحتسبة + رقم اللوحة -->
+                            <div class="pos-details-row">
+                                <div class="pos-detail-cell">
+                                    <span class="pos-detail-label">التعرفة المحتسبة</span>
+                                    <span id="exit-rate-label" class="pos-detail-val text-amber-300 truncate max-w-full" style="color: #fcd34d;">—</span>
+                                </div>
+                                <div class="pos-detail-cell">
+                                    <span class="pos-detail-label">رقم اللوحة</span>
+                                    <span id="exit-plate-number" class="pos-detail-val font-digital text-cyan-200" style="color: #a5f3fc;">—</span>
+                                </div>
                             </div>
 
                         </div>
@@ -641,7 +687,7 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/dashboard.js?v=20"></script>
+<script src="/static/js/dashboard.js?v=20261018d"></script>
 <script>
     if (typeof startClock === 'function') {
         startClock();
