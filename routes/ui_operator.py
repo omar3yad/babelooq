@@ -63,6 +63,7 @@ def get_error_translation_key(e: Exception) -> str:
         "CardNotFoundError": "errors.card_not_found",
         "CardAlreadyActiveError": "errors.card_already_active",
         "CardNotAvailableError": "errors.card_not_available",
+        "CardHasNoActiveSessionError": "errors.no_active_session",
         "NoActiveShiftError": "errors.no_active_shift",
         "InvalidBarcodeFormatError": "errors.invalid_barcode_format",
         "SessionNotFoundError": "errors.session_not_found",
@@ -463,6 +464,14 @@ async def exit_confirm_session(
     try:
         res = await session_service.close_session(session_id, current_user.id)
         session = res.session if hasattr(res, "session") else res[0] if isinstance(res, tuple) else res
+        hub = getattr(request.app.state, "edge_hub", None)
+        settings = getattr(request.app.state, "settings", None) or get_settings()
+        if hub and settings.EDGE_API_TOKEN:
+            asyncio.create_task(
+                PlateCaptureService(None, settings).start_exit_capture(
+                    session, hub, gate_id=getattr(current_user, "gate_number", 2) or 2
+                )
+            )
     except SessionNotActiveError:
         return RedirectResponse("/ui/operator/exit?error=SESSION_NOT_ACTIVE", status_code=303)
     except NoPricingRuleError as e:
@@ -848,15 +857,45 @@ async def api_operator_scan(
             closed_session = res[0] if isinstance(res, tuple) else (res.session if hasattr(res, "session") else res)
             calc = res[1] if isinstance(res, tuple) and len(res) > 1 else None
 
-            # 3. Format response details
-            is_sub = getattr(closed_session, "is_subscribed", False)
-            total_egp = f"{(closed_session.amount_charged or 0) / 100:.2f}"
-            total_formatted = format_egp(closed_session.amount_charged or 0)
+            # Extract scalar values immediately to avoid any detached instance issues
+            closed_session_id = int(closed_session.id)
+            card_code_val = str(closed_session.card_code)
+            plate_number_val = str(closed_session.plate_number or "")
+            is_sub = bool(getattr(closed_session, "is_subscribed", False))
+            amount_piastres = int(closed_session.amount_charged or 0)
+            entry_time_val = closed_session.entry_time
+            duration_mins = int(closed_session.duration_minutes or 0)
+
+            # Trigger background exit camera snapshot (no OCR, admin only)
+            try:
+                hub = getattr(request.app.state, "edge_hub", None)
+                if hub and getattr(settings, "EDGE_API_TOKEN", None):
+                    gate_id_val = int(getattr(current_user, "gate_number", 2) or 2)
+                    asyncio.create_task(
+                        PlateCaptureService(db, settings).start_exit_capture(
+                            closed_session_id,
+                            hub,
+                            gate_id=gate_id_val,
+                            card_code=card_code_val,
+                        )
+                    )
+            except Exception as cam_exc:
+                logger.error("Could not trigger exit camera snapshot: %s", cam_exc)
+
+            # 3. Format response details with safe fallbacks
+            total_egp = f"{amount_piastres / 100:.2f}"
+            try:
+                total_formatted = format_egp(amount_piastres)
+            except Exception:
+                total_formatted = f"{total_egp} ج.م"
             
             rate_label = "عادي"
             rate_per_hour = ""
-            if calc and hasattr(calc, 'rate_per_hour'):
-                rate_per_hour = format_egp(calc.rate_per_hour)
+            if calc and hasattr(calc, "rate_per_hour"):
+                try:
+                    rate_per_hour = format_egp(calc.rate_per_hour)
+                except Exception:
+                    rate_per_hour = f"{getattr(calc, 'rate_per_hour', 0) / 100:.2f} ج.م"
             else:
                 try:
                     rule = await pricing_service.get_active_rule()
@@ -866,23 +905,34 @@ async def api_operator_scan(
                 except Exception:
                     pass
 
+            try:
+                entry_time_str = format_cairo_12h(entry_time_val)
+            except Exception:
+                entry_time_str = str(entry_time_val or "—")
+
+            try:
+                duration_str = format_duration(duration_mins)
+            except Exception:
+                duration_str = f"{duration_mins} دقيقة"
+
             return JSONResponse({
                 "success": True,
                 "type": "exit_completed",
-                "session_id": closed_session.id,
-                "card_code": closed_session.card_code,
-                "plate_number": closed_session.plate_number or "",
+                "session_id": closed_session_id,
+                "card_code": card_code_val,
+                "plate_number": plate_number_val,
                 "is_subscribed": is_sub,
                 "total_egp": total_egp,
                 "total_formatted": total_formatted,
-                "entry_time": format_cairo_12h(closed_session.entry_time),
-                "duration_display": format_duration(closed_session.duration_minutes or 0),
+                "entry_time": entry_time_str,
+                "duration_display": duration_str,
                 "rate_label": "اشتراك معتمد (مجاني)" if is_sub else rate_label,
                 "rate_per_hour": "" if is_sub else rate_per_hour,
-                "receipt_url": f"/ui/operator/receipt/{closed_session.id}",
+                "receipt_url": f"/ui/operator/receipt/{closed_session_id}",
                 "message": "تم تأكيد خروج السيارة وحساب المبلغ بنجاح",
             })
         except Exception as e:
+            logger.exception("api_operator_scan exit failed: %s", e)
             key = get_error_translation_key(e)
             err_msg = translations.get(key, getattr(e, "message", str(e)))
             return JSONResponse({"success": False, "error": err_msg}, status_code=400)
@@ -908,6 +958,14 @@ async def api_operator_exit_confirm(
     try:
         res = await session_service.close_session(session_id, current_user.id)
         session = res.session if hasattr(res, "session") else res[0] if isinstance(res, tuple) else res
+        hub = getattr(request.app.state, "edge_hub", None)
+        settings = getattr(request.app.state, "settings", None) or get_settings()
+        if hub and settings.EDGE_API_TOKEN:
+            asyncio.create_task(
+                PlateCaptureService(None, settings).start_exit_capture(
+                    session, hub, gate_id=getattr(current_user, "gate_number", 2) or 2
+                )
+            )
         return JSONResponse({
             "success": True,
             "session_id": session.id,
@@ -934,6 +992,7 @@ async def api_operator_recent_sessions(
     for s in sessions:
         rows.append({
             "card_code": s.card_code,
+            "plate_number": s.plate_number,
             "entry_time": format_cairo_12h(s.entry_time),
             "exit_time": format_cairo_12h(s.exit_time) if s.exit_time else None,
             "amount_formatted": format_egp(s.amount_charged) if s.amount_charged is not None else None,

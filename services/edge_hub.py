@@ -147,6 +147,8 @@ class EdgeHub:
     async def _on_trigger(self, payload: dict[str, Any]) -> None:
         trigger = TriggerCapture.model_validate(payload)
         conn = self._local.get(trigger.gate_id)
+        if conn is None and self._local:
+            conn = next(iter(self._local.values()))
         if conn is None:
             return  # another worker owns this gate's socket
         try:

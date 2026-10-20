@@ -149,14 +149,21 @@ class EdgeAgent:
 
         deadline = received_at + timeout_s
         timings: dict[str, float] = {}
-        result: dict[str, Any] = {"event": "CAPTURE_RESULT", "session_id": session_id}
+        skip_ocr = bool(trigger.get("skip_ocr") or trigger.get("capture_type") == "exit")
+        capture_type = str(trigger.get("capture_type") or "entry")
+        result: dict[str, Any] = {"event": "CAPTURE_RESULT", "session_id": session_id, "capture_type": capture_type}
         lock = self._gate_locks.get(gate_id)
+        active_gate_id = gate_id
+        if lock is None and self._gate_locks:
+            active_gate_id = next(iter(self._gate_locks.keys()))
+            lock = self._gate_locks[active_gate_id]
+            logger.info("Gate %s has no camera lock, falling back to gate %s camera", gate_id, active_gate_id)
 
         try:
             if lock is None:
                 raise CameraError(f"no camera configured for gate {gate_id}")
             async with lock:
-                result.update(await self._capture(gate_id, session_id, deadline, timings))
+                result.update(await self._capture(active_gate_id, session_id, deadline, timings, skip_ocr=skip_ocr, capture_type=capture_type))
         except DeadlineExceeded as exc:
             result.update(status="ERROR", error=f"deadline exceeded {exc}")
         except CameraError as exc:
@@ -168,12 +175,20 @@ class EdgeAgent:
         timings["total"] = _ms_since(received_at)
         result["timings_ms"] = timings
         logger.info(
-            "[CAPTURE RESULT] session=%s gate=%s status=%s plate=%r timings=%s",
-            session_id, gate_id, result.get("status"), result.get("plate_number"), timings,
+            "[CAPTURE RESULT] session=%s gate=%s type=%s status=%s plate=%r timings=%s",
+            session_id, gate_id, capture_type, result.get("status"), result.get("plate_number"), timings,
         )
         await self._send_result(result)
 
-    async def _capture(self, gate_id: int, session_id: int, deadline: float, timings: dict[str, float]) -> dict[str, Any]:
+    async def _capture(
+        self,
+        gate_id: int,
+        session_id: int,
+        deadline: float,
+        timings: dict[str, float],
+        skip_ocr: bool = False,
+        capture_type: str = "entry",
+    ) -> dict[str, Any]:
         remaining = deadline - time.monotonic()
         if remaining <= 0.05:
             raise DeadlineExceeded("before snapshot")
@@ -184,18 +199,42 @@ class EdgeAgent:
 
         started = time.monotonic()
         loop = asyncio.get_running_loop()
-        recognition, encoded_img = await loop.run_in_executor(
-            self._executor,
-            partial(self._analyse_and_save, jpeg, gate_id, session_id)
-        )
-        timings["analyse"] = _ms_since(started)
+        if skip_ocr:
+            recognition, encoded_img = await loop.run_in_executor(
+                self._executor,
+                partial(self._encode_snapshot_only, jpeg, gate_id, session_id)
+            )
+            timings["encode"] = _ms_since(started)
+            return {
+                "status": "SUCCESS",
+                "capture_type": capture_type,
+                "plate_number": None,
+                "confidence": None,
+                "image_webp_b64": base64.b64encode(encoded_img).decode("ascii"),
+            }
+        else:
+            recognition, encoded_img = await loop.run_in_executor(
+                self._executor,
+                partial(self._analyse_and_save, jpeg, gate_id, session_id)
+            )
+            timings["analyse"] = _ms_since(started)
+            return {
+                "status": "SUCCESS" if recognition.plate_text else "NO_PLATE",
+                "capture_type": capture_type,
+                "plate_number": recognition.plate_text,
+                "confidence": recognition.confidence,
+                "image_webp_b64": base64.b64encode(encoded_img).decode("ascii"),
+            }
 
-        return {
-            "status": "SUCCESS" if recognition.plate_text else "NO_PLATE",
-            "plate_number": recognition.plate_text,
-            "confidence": recognition.confidence,
-            "image_webp_b64": base64.b64encode(encoded_img).decode("ascii"),
-        }
+    def _encode_snapshot_only(self, jpeg: bytes, gate_id: int, session_id: int) -> tuple[Recognition, bytes]:
+        """Encodes snapshot without running AI models."""
+        image = decode_image(jpeg)
+        recognition = Recognition(plate_text=None, confidence=None)
+        if self._settings.IMAGE_FORMAT == "webp":
+            encoded_img = encode_webp(image, self._settings.WEBP_MAX_WIDTH, self._settings.WEBP_QUALITY)
+        else:
+            encoded_img = encode_jpeg(image, self._settings.WEBP_MAX_WIDTH, self._settings.JPEG_QUALITY)
+        return recognition, encoded_img
 
     def _analyse_and_save(self, jpeg: bytes, gate_id: int, session_id: int) -> tuple[Recognition, bytes]:
         """Runs in the inference thread."""

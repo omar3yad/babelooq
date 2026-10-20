@@ -16,7 +16,7 @@ from PIL import Image
 @dataclass(frozen=True)
 class Recognition:
     plate_text: str | None
-    confidence: float
+    confidence: float | None = None
     bbox: tuple[int, int, int, int] | None = None
     plate_crop: np.ndarray | None = None
 
@@ -43,7 +43,7 @@ class EgyptianPlateRecognizer:
         self._ocr = YOLO(ocr_weights).to(self.device)
 
     def warmup(self) -> None:
-        """Warmup CUDA kernels so the first real car is not delayed."""
+        """Warup CUDA kernels so the first real car is not delayed."""
         dummy = Image.new("RGB", (640, 480))
         self.recognize(dummy)
 
@@ -51,7 +51,7 @@ class EgyptianPlateRecognizer:
         frame = np.asarray(image)
         # Convert RGB to BGR for OpenCV-trained YOLO if needed, but RGB is fine
         results = self._detector(frame, conf=self._min_confidence, verbose=False)
-
+        
         best_plate_crop = None
         best_det_conf = 0.0
         best_bbox = None
@@ -91,7 +91,7 @@ class EgyptianPlateRecognizer:
                 plate_text=None,
                 confidence=round(best_det_conf, 3),
                 bbox=best_bbox,
-                plate_crop=best_plate_crop,
+                plate_crop=best_plate_crop
             )
 
         # Sort characters right-to-left for Arabic plates (descending X coordinate)
@@ -113,7 +113,7 @@ class EgyptianPlateRecognizer:
             plate_text=plate_text if plate_text else None,
             confidence=composite_conf,
             bbox=best_bbox,
-            plate_crop=best_plate_crop,
+            plate_crop=best_plate_crop
         )
 
 
@@ -133,7 +133,7 @@ def encode_webp(image: Image.Image, max_width: int, quality: int) -> bytes:
 
 
 def encode_jpeg(image: Image.Image, max_width: int, quality: int = 80) -> bytes:
-    """Encodes as JPEG so that older browsers like Internet Explorer can display it."""
+    """Encodes as JPEG for maximum compatibility."""
     if image.width > max_width:
         height = round(image.height * max_width / image.width)
         image = image.resize((max_width, height), Image.Resampling.BILINEAR)

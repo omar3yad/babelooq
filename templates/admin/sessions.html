@@ -111,6 +111,7 @@
             <th class="p-3">رقم الجلسة</th>
             <th class="p-3">كود الكرت</th>
             <th class="p-3">رقم اللوحة</th>
+            <th class="p-3 text-center">صورة اللوحة</th>
             <th class="p-3">البوابة</th>
             <th class="p-3">عامل الدخول</th>
             <th class="p-3">عامل الخروج</th>
@@ -128,6 +129,25 @@
             <td class="p-3 font-mono font-medium text-white">#{{ s.id | zfill(8) | to_arabic_indic }}</td>
             <td class="p-3 font-mono text-indigo-300">{{ s.card_code }}</td>
             <td class="p-3 text-gray-200">{{ s.plate_number or "—" }}</td>
+            <td class="p-2 text-center" onclick="event.stopPropagation()">
+              <div class="inline-flex items-center gap-1.5 justify-center">
+                {% if s.plate_image_path %}
+                <a href="/ui/admin/sessions/{{ s.id }}/plate-image" target="_blank" title="عرض صورة الدخول" class="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-900/90 hover:bg-cyan-950 border border-slate-700 hover:border-cyan-500/60 text-cyan-300 hover:text-white transition group shadow-sm text-xs font-bold font-mono">
+                  <span>📷</span>
+                  <span>دخول</span>
+                </a>
+                {% endif %}
+                {% if s.exit_image_path %}
+                <a href="/ui/admin/sessions/{{ s.id }}/exit-image" target="_blank" title="عرض صورة الخروج" class="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-900/90 hover:bg-emerald-950 border border-slate-700 hover:border-emerald-500/60 text-emerald-300 hover:text-white transition group shadow-sm text-xs font-bold font-mono">
+                  <span>📸</span>
+                  <span>خروج</span>
+                </a>
+                {% endif %}
+                {% if not s.plate_image_path and not s.exit_image_path %}
+                <span class="text-gray-600 text-xs">—</span>
+                {% endif %}
+              </div>
+            </td>
             <td class="p-3 text-gray-300">بوابة {{ s.gate_number | to_arabic_indic }}</td>
             <td class="p-3 text-gray-300">{{ operator_names.get(s.operator_id, "—") }}</td>
             <td class="p-3 font-medium text-emerald-300">{{ operator_names.get(s.exit_operator_id, "—") if s.exit_operator_id else "—" }}</td>
@@ -159,7 +179,7 @@
           </tr>
           {% else %}
           <tr>
-            <td colspan="12" class="p-6 text-center text-gray-400">{{ t("admin.table.no_results") }}</td>
+            <td colspan="13" class="p-6 text-center text-gray-400">{{ t("admin.table.no_results") }}</td>
           </tr>
           {% endfor %}
         </tbody>

@@ -5,7 +5,7 @@ from typing import Annotated, Literal, Optional
 from pydantic import BeforeValidator
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -419,6 +419,44 @@ async def admin_session_detail_page(
             "audit_logs": audit_logs,
         },
     )
+
+
+@router.get("/sessions/{session_id}/plate-image")
+async def admin_session_plate_image(
+    session_id: int,
+    current_user: User = Depends(require_admin_ui),
+    db: AsyncSession = Depends(get_db),
+    settings=Depends(get_settings),
+):
+    from services.plate_capture_service import PlateCaptureService
+    session_repo = ParkingSessionRepository(db)
+    session = await session_repo.get_by_id(session_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail="الجلسة غير موجودة")
+    path = PlateCaptureService(db, settings).resolve_image(session.plate_image_path)
+    if path is None:
+        raise HTTPException(status_code=404, detail="صورة اللوحة غير موجودة")
+    media_type = "image/jpeg" if path.endswith((".jpg", ".jpeg")) else "image/webp"
+    return FileResponse(path, media_type=media_type, headers={"Cache-Control": "private, max-age=86400"})
+
+
+@router.get("/sessions/{session_id}/exit-image")
+async def admin_session_exit_image(
+    session_id: int,
+    current_user: User = Depends(require_admin_ui),
+    db: AsyncSession = Depends(get_db),
+    settings=Depends(get_settings),
+):
+    from services.plate_capture_service import PlateCaptureService
+    session_repo = ParkingSessionRepository(db)
+    session = await session_repo.get_by_id(session_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail="الجلسة غير موجودة")
+    path = PlateCaptureService(db, settings).resolve_image(session.exit_image_path)
+    if path is None:
+        raise HTTPException(status_code=404, detail="صورة خروج السيارة غير موجودة")
+    media_type = "image/jpeg" if path.endswith((".jpg", ".jpeg")) else "image/webp"
+    return FileResponse(path, media_type=media_type, headers={"Cache-Control": "private, max-age=86400"})
 
 
 # ---------------------------------------------------------------------------

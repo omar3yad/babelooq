@@ -11,7 +11,7 @@ class EdgeSettings(BaseSettings):
         env_prefix="EDGE_",
         env_file=("edge_agent/.env", ".env"),
         env_file_encoding="utf-8",
-        extra="ignore",
+        extra="ignore"
     )
 
     SERVER_URL: str = "wss://babelooq.garage4u.io/ws/edge"
@@ -19,9 +19,10 @@ class EdgeSettings(BaseSettings):
     NODE_ID: str = "garage-edge-1"
 
     # gate_id -> camera HTTP snapshot URL, as JSON or dict:
+    # EDGE_CAMERAS={"1": "http://192.168.1.100/ISAPI/Streaming/channels/201/picture", "2": "http://192.168.1.100/ISAPI/Streaming/channels/101/picture"}
     CAMERAS: dict[int, str] = {
         1: "http://192.168.1.100/ISAPI/Streaming/channels/201/picture",
-        2: "http://192.168.1.100/ISAPI/Streaming/channels/101/picture",
+        2: "http://192.168.1.100/ISAPI/Streaming/channels/101/picture"
     }
     CAMERA_AUTH: Literal["none", "basic", "digest"] = "digest"
     CAMERA_USERNAME: str | None = "admin"
@@ -33,7 +34,7 @@ class EdgeSettings(BaseSettings):
     USE_GPU: bool = True
     MIN_DETECTION_CONFIDENCE: float = Field(default=0.25, ge=0, le=1)
 
-    IMAGE_FORMAT: Literal["jpeg", "webp"] = "jpeg"
+    IMAGE_FORMAT: Literal["jpeg", "webp"] = "webp"
     JPEG_QUALITY: int = Field(default=80, ge=10, le=100)
     WEBP_QUALITY: int = Field(default=75, ge=10, le=100)
     WEBP_MAX_WIDTH: int = Field(default=1024, ge=320, le=4096)

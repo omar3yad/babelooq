@@ -82,6 +82,36 @@ class PlateCaptureService:
             return PlateCaptureStatus.FAILED
         return PlateCaptureStatus.PENDING
 
+    async def start_exit_capture(
+        self,
+        session: ParkingSession | int,
+        hub: EdgeHub,
+        gate_id: int = 2,
+        card_code: str | None = None,
+    ) -> bool:
+        """Trigger edge PC to capture a snapshot at exit without OCR.
+
+        Never raises: exit completion must not be affected by camera or network issues.
+        """
+        session_id = session if isinstance(session, int) else getattr(session, "id", 0)
+        card_uid = card_code or (getattr(session, "card_code", "") if not isinstance(session, int) else "")
+        timeout_ms = int(self.settings.PLATE_CAPTURE_TIMEOUT_S * 1000)
+        try:
+            await hub.request_capture(
+                TriggerCapture(
+                    session_id=session_id,
+                    card_uid=str(card_uid),
+                    gate_id=gate_id,
+                    timeout_ms=max(timeout_ms - _EDGE_NETWORK_MARGIN_MS, 300),
+                    capture_type="exit",
+                    skip_ocr=True,
+                )
+            )
+            return True
+        except Exception as exc:
+            logger.error("Exit capture dispatch failed for session %s: %s", session_id, exc)
+            return False
+
     async def _set_status(
         self,
         session: ParkingSession,
@@ -105,6 +135,27 @@ class PlateCaptureService:
         session = await self._get(result.session_id)
         if session is None:
             raise CaptureRejected("unknown session")
+
+        # Handle exit snapshot without OCR
+        is_exit_capture = (
+            getattr(result, "capture_type", "entry") == "exit"
+            or session.exit_time is not None
+            or (session.plate_image_path is not None and session.exit_image_path is None)
+        )
+        if is_exit_capture:
+            image_bytes, ext = self._decode_image(result.image_webp_b64)
+            rel_path = None
+            if image_bytes is not None:
+                rel_path = self._build_image_path(session.id, ext or ".jpg", suffix="_exit")
+                await asyncio.to_thread(self._write_atomic, rel_path, image_bytes)
+                await self.db.execute(
+                    update(ParkingSession)
+                    .where(ParkingSession.id == session.id)
+                    .values(exit_image_path=rel_path)
+                )
+                await self.db.commit()
+            return await self._get(session.id)
+
         if session.gate_number not in allowed_gates:
             raise CaptureRejected("session belongs to another gate")
         if session.plate_capture_status not in _LATE_RESULT_STATUSES:
@@ -174,10 +225,10 @@ class PlateCaptureService:
         return data, ext
 
     @staticmethod
-    def _build_image_path(session_id: int, ext: str = ".jpg") -> str:
+    def _build_image_path(session_id: int, ext: str = ".jpg", suffix: str = "") -> str:
         day = datetime.utcnow()
         return os.path.join(
-            f"{day:%Y}", f"{day:%m}", f"{day:%d}", f"{session_id}_{uuid.uuid4().hex[:8]}{ext}"
+            f"{day:%Y}", f"{day:%m}", f"{day:%d}", f"{session_id}{suffix}_{uuid.uuid4().hex[:8]}{ext}"
         )
 
     def _write_atomic(self, rel_path: str, data: bytes) -> None:

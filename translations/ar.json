@@ -34,7 +34,7 @@
   "errors.card_already_active": "الكرت ده جوه الجراج بالفعل",
   "errors.card_not_found": "الكرت ده مش مسجل في النظام",
   "errors.card_not_available": "الكرت ده متعطل — تواصل مع الإدارة",
-  "errors.no_active_session": "مفيش جلسة مفتوحة لهذا الكرت",
+  "errors.no_active_session": "لا توجد جلسة مفتوحة لهذا الكارت (تم تسجيل الخروج بالفعل)",
   "errors.no_active_shift": "افتح شيفتك الأول قبل ما تبدأ",
   "errors.no_pricing_rule": "لا توجد تعريفة سعرية نشطة — تواصل مع الإدارة",
   "subscriptions.plan.title": "خطط الاشتراك",

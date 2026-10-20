@@ -66,6 +66,7 @@ class ParkingSession(Base, TimestampMixin):
     plate_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
     plate_image_path: Mapped[str | None] = mapped_column(String(255), nullable=True)
     plate_capture_error: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    exit_image_path: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     __table_args__ = (
         Index(

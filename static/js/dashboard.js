@@ -46,15 +46,38 @@
   }
   setInterval(updateCameraTimer, 1000);
 
+  function stopAutoReset() {
+    if (autoResetTimer) {
+      clearTimeout(autoResetTimer);
+      autoResetTimer = null;
+    }
+  }
+
+  function updatePlatePreview(val) {
+    var plateEl = document.getElementById("entry-plate-text");
+    if (plateEl) {
+      var trimmed = (val || "").trim();
+      plateEl.textContent = trimmed || "—";
+    }
+  }
+
   function saveManualPlate(val) {
     val = (val || "").trim();
-    if (!val) return;
     var plateEl = document.getElementById("entry-plate-text");
-    if (plateEl) plateEl.textContent = val;
-    if (!currentEntrySessionId) return;
+    if (plateEl) plateEl.textContent = val || "—";
+
+    var plateInput = document.getElementById("plate-manual-input");
+    var targetId = currentEntrySessionId || (plateInput ? plateInput.getAttribute("data-session-id") : null);
+    if (!targetId) return;
+
     var xhr = new XMLHttpRequest();
-    xhr.open("POST", "/ui/operator/api/sessions/" + currentEntrySessionId + "/plate-override", true);
+    xhr.open("POST", "/ui/operator/api/sessions/" + targetId + "/plate-override", true);
     xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+    xhr.onreadystatechange = function () {
+      if (xhr.readyState === 4 && xhr.status >= 200 && xhr.status < 300) {
+        refreshRecentSessions();
+      }
+    };
     xhr.send(JSON.stringify({ plate_number: val }));
   }
 
@@ -343,8 +366,13 @@
     if (cardCodeEl) cardCodeEl.textContent = data.card_code || "—";
 
     var plate = data.plate_number || (data.subscription && data.subscription.plate_number) || "";
-    if (plateText) plateText.textContent = plate || "ف أ ج ٨٦٩١";
-    if (plateInput) plateInput.value = plate || "";
+    if (plateText) plateText.textContent = plate || "—";
+    if (plateInput) {
+      plateInput.value = plate || "";
+      if (data.session_id) {
+        plateInput.setAttribute("data-session-id", data.session_id);
+      }
+    }
 
     if (data.is_subscribed) {
       if (statusText) statusText.textContent = "تم تسجيل دخول المشترك";
@@ -355,26 +383,36 @@
     }
 
     if (confBadge) {
-      var conf = 85;
-      if (data.plate_capture && typeof data.plate_capture.confidence === "number") {
-        conf = Math.round(data.plate_capture.confidence * 100);
-      } else if (!plate) {
-        conf = 26;
-      }
-      if (conf < 50) {
+      if (data.plate_capture && data.plate_capture.status === "SUCCESS" && plate) {
+        var conf = typeof data.plate_capture.confidence === "number" ? Math.round(data.plate_capture.confidence * 100) : 85;
+        if (conf < 50) {
+          confBadge.className = "w-full bg-amber-950/60 border border-amber-500/60 text-amber-300 rounded-lg py-1 px-2.5 text-center text-xs font-bold shadow-sm my-1";
+          if (confText) confText.textContent = "دقة القراءة " + conf + "% - يرجى المراجعة";
+        } else {
+          confBadge.className = "w-full bg-emerald-950/60 border border-emerald-500/60 text-emerald-300 rounded-lg py-1 px-2.5 text-center text-xs font-bold shadow-sm my-1";
+          if (confText) confText.textContent = "دقة القراءة " + conf + "% - تمت قراءة اللوحة بنجاح";
+        }
+      } else if (data.plate_capture && (data.plate_capture.status === "NO_PLATE" || data.plate_capture.status === "FAILED")) {
         confBadge.className = "w-full bg-amber-950/60 border border-amber-500/60 text-amber-300 rounded-lg py-1 px-2.5 text-center text-xs font-bold shadow-sm my-1";
-        if (confText) confText.textContent = "دقة القراءة " + conf + "% - يرجى المراجعة";
+        if (confText) confText.textContent = "لم يتم التعرف على اللوحة تلقائياً — يرجى كتابتها يدوياً";
       } else {
-        confBadge.className = "w-full bg-emerald-950/60 border border-emerald-500/60 text-emerald-300 rounded-lg py-1 px-2.5 text-center text-xs font-bold shadow-sm my-1";
-        if (confText) confText.textContent = "دقة القراءة " + conf + "% - تمت قراءة اللوحة بنجاح";
+        confBadge.className = "w-full bg-cyan-950/60 border border-cyan-500/60 text-cyan-300 rounded-lg py-1 px-2.5 text-center text-xs font-bold shadow-sm my-1";
+        if (confText) confText.textContent = "جاري التقاط صورة السيارة وقراءة اللوحة...";
       }
+      confBadge.classList.remove("hidden");
     }
 
     if (captureImg) {
       captureImg.classList.remove("hidden");
       if (standbyView) standbyView.classList.add("hidden");
     }
-    if (boundingBox) boundingBox.classList.remove("hidden");
+    if (boundingBox) {
+      if (plate) {
+        boundingBox.classList.remove("hidden");
+      } else {
+        boundingBox.classList.add("hidden");
+      }
+    }
 
     var capturePending = startPlateCapture(data);
     if (!capturePending) {
@@ -383,6 +421,10 @@
   }
 
   function scheduleEntryReset() {
+    var plateInput = document.getElementById("plate-manual-input");
+    if (plateInput && document.activeElement === plateInput) {
+      return;
+    }
     if (autoResetTimer) clearTimeout(autoResetTimer);
     autoResetTimer = setTimeout(function () {
       resetCustomerDisplay();
@@ -509,17 +551,28 @@
       if (plateText) plateText.textContent = res.plate_number;
       if (plateInput) plateInput.value = res.plate_number;
       if (boundingBox) boundingBox.classList.remove("hidden");
+    } else {
+      var fallback = (entryData && (entryData.plate_number || (entryData.subscription && entryData.subscription.plate_number))) || "";
+      if (plateText) plateText.textContent = fallback || "—";
+      if (plateInput && !plateInput.value) plateInput.value = fallback || "";
+      if (boundingBox) boundingBox.classList.add("hidden");
     }
 
-    if (confBadge && typeof res.confidence === "number") {
-      var conf = Math.round(res.confidence * 100);
-      if (conf < 50) {
-        confBadge.className = "w-full bg-amber-950/60 border border-amber-500/60 text-amber-300 rounded-lg py-1 px-2.5 text-center text-xs font-bold shadow-sm my-1";
-        if (confText) confText.textContent = "دقة القراءة " + conf + "% - يرجى المراجعة";
+    if (confBadge) {
+      var conf = typeof res.confidence === "number" ? Math.round(res.confidence * 100) : 0;
+      if (state === "SUCCESS" && res.plate_number) {
+        if (conf < 50) {
+          confBadge.className = "w-full bg-amber-950/60 border border-amber-500/60 text-amber-300 rounded-lg py-1 px-2.5 text-center text-xs font-bold shadow-sm my-1";
+          if (confText) confText.textContent = "دقة القراءة " + conf + "% - يرجى المراجعة";
+        } else {
+          confBadge.className = "w-full bg-emerald-950/60 border border-emerald-500/60 text-emerald-300 rounded-lg py-1 px-2.5 text-center text-xs font-bold shadow-sm my-1";
+          if (confText) confText.textContent = "دقة القراءة " + conf + "% - تمت قراءة اللوحة بنجاح";
+        }
       } else {
-        confBadge.className = "w-full bg-emerald-950/60 border border-emerald-500/60 text-emerald-300 rounded-lg py-1 px-2.5 text-center text-xs font-bold shadow-sm my-1";
-        if (confText) confText.textContent = "دقة القراءة " + conf + "% - تمت قراءة اللوحة بنجاح";
+        confBadge.className = "w-full bg-amber-950/60 border border-amber-500/60 text-amber-300 rounded-lg py-1 px-2.5 text-center text-xs font-bold shadow-sm my-1";
+        if (confText) confText.textContent = "لم يتم التعرف على اللوحة تلقائياً — يرجى كتابتها يدوياً";
       }
+      confBadge.classList.remove("hidden");
     }
   }
 
@@ -537,6 +590,40 @@
     var exitBox = document.getElementById("exit-display-box");
     if (exitBox) exitBox.classList.add("hidden");
     if (standbyBox) standbyBox.classList.remove("hidden");
+
+    // Reset Gate 1 UI elements
+    var entryCardCode = document.getElementById("entry-card-code");
+    if (entryCardCode) entryCardCode.textContent = "—";
+
+    var entryPlate = document.getElementById("entry-plate-text");
+    if (entryPlate) entryPlate.textContent = "—";
+
+    var entryInput = document.getElementById("plate-manual-input");
+    if (entryInput) {
+      entryInput.value = "";
+      entryInput.removeAttribute("data-session-id");
+    }
+
+    var entryStatus = document.getElementById("entry-status-text");
+    if (entryStatus) entryStatus.textContent = "في انتظار مسح الكارت...";
+
+    var confBadge = document.getElementById("entry-confidence-badge");
+    if (confBadge) confBadge.classList.add("hidden");
+
+    var boundingBox = document.getElementById("plate-bounding-box");
+    if (boundingBox) boundingBox.classList.add("hidden");
+
+    var captureImg = document.getElementById("entry-capture-img");
+    if (captureImg) {
+      captureImg.classList.add("hidden");
+      captureImg.src = "";
+    }
+
+    var standbyView = document.getElementById("camera-standby-view");
+    if (standbyView) standbyView.classList.remove("hidden");
+
+    var subPill = document.getElementById("entry-subscriber-pill");
+    if (subPill) subPill.classList.add("hidden");
 
     var input = document.getElementById("card-code-input");
     if (input) {
@@ -601,10 +688,14 @@
               ? '<span class="text-slate-400 font-bold text-xs">' + s.exit_time + '</span>'
               : '<span class="text-emerald-400 font-bold bg-emerald-950/80 px-2.5 py-0.5 rounded-full border border-emerald-500/40 text-[11px]">داخل الجراج</span>';
 
+            var plateDisplay = s.plate_number
+              ? '<span class="font-bold text-cyan-300 font-digital text-xs sm:text-sm">' + s.plate_number + '</span>'
+              : '<span class="text-slate-500 font-bold">—</span>';
+
             html += '<tr class="border-b border-slate-800/60 hover:bg-slate-800/40 transition">' +
               '<td class="py-2 px-3 font-digital text-slate-200 font-bold text-sm">' + (s.card_code || "—") + '</td>' +
               '<td class="py-2 px-3 text-slate-300 font-digital text-xs">' + (s.entry_time || "—") + '</td>' +
-              '<td class="py-2 px-3 font-digital">' + amount + '</td>' +
+              '<td class="py-2 px-3 font-digital">' + plateDisplay + '</td>' +
               '<td class="py-2 px-3">' + status + '</td>' +
               '</tr>';
           } else {
@@ -637,6 +728,8 @@
   window.dismissError = dismissError;
   window.refreshRecentSessions = refreshRecentSessions;
   window.saveManualPlate = saveManualPlate;
+  window.updatePlatePreview = updatePlatePreview;
+  window.stopAutoReset = stopAutoReset;
 
   // Auto initialize clock immediately
   startClock();

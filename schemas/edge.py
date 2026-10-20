@@ -1,3 +1,4 @@
+
 """WebSocket protocol between the VPS and the garage edge PC.
 
 Edge -> VPS:  HELLO, CAPTURE_RESULT, PING
@@ -32,6 +33,7 @@ class CaptureResult(BaseModel):
     image_webp_b64: str | None = Field(default=None, max_length=2_100_000)
     error: str | None = Field(default=None, max_length=255)
     timings_ms: dict[str, float] | None = None
+    capture_type: str = Field(default="entry", max_length=16)
 
 
 class TriggerCapture(BaseModel):
@@ -42,6 +44,8 @@ class TriggerCapture(BaseModel):
     # Relative budget (not an absolute timestamp) so clock skew between the VPS
     # and the edge PC cannot shrink or extend it.
     timeout_ms: int
+    capture_type: str = Field(default="entry", max_length=16)
+    skip_ocr: bool = False
 
 
 __all__ = ["EdgeHello", "CaptureResult", "TriggerCapture"]
