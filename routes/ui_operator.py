@@ -139,12 +139,15 @@ async def start_shift_page(
 @router.post("/shift/start")
 async def open_shift(
     request: Request,
-    opening_cash_egp: int = Form(...),
+    opening_cash_egp: int = Form(0),
     current_user: User = Depends(require_operator),
     shift_service: ShiftService = Depends(get_shift_service),
 ):
-    opening_cash_piastres = opening_cash_egp * 100
     gate = current_user.gate_number or 2
+    if gate == 1:
+        opening_cash_piastres = 0
+    else:
+        opening_cash_piastres = opening_cash_egp * 100
     try:
         await shift_service.open_shift(
             operator_id=current_user.id,
@@ -162,6 +165,7 @@ async def end_shift_page(
     request: Request,
     current_user: User = Depends(require_operator),
     shift_service: ShiftService = Depends(get_shift_service),
+    db: AsyncSession = Depends(get_db),
 ):
     try:
         shift = await shift_service.require_active_shift(current_user.id)
@@ -169,17 +173,56 @@ async def end_shift_page(
         return RedirectResponse("/ui/operator/dashboard", status_code=303)
 
     summary = await shift_service._compute_summary(shift, None)
+
+    entry_stats = None
+    if current_user.gate_number == 1:
+        from sqlalchemy import func
+        total_entered_res = await db.execute(
+            select(func.count(ParkingSession.id)).where(ParkingSession.shift_id == shift.id)
+        )
+        total_entered = total_entered_res.scalar() or 0
+
+        active_res = await db.execute(
+            select(func.count(ParkingSession.id)).where(
+                ParkingSession.shift_id == shift.id,
+                ParkingSession.status == SessionStatus.ACTIVE,
+            )
+        )
+        active_count = active_res.scalar() or 0
+        completed_count = max(total_entered - active_count, 0)
+
+        sub_res = await db.execute(
+            select(func.count(ParkingSession.id)).where(
+                ParkingSession.shift_id == shift.id,
+                ParkingSession.subscription_id.isnot(None),
+            )
+        )
+        subs_count = sub_res.scalar() or 0
+
+        entry_stats = {
+            "total_entered": total_entered,
+            "active_count": active_count,
+            "completed_count": completed_count,
+            "subs_count": subs_count,
+        }
+
     templates = request.app.state.templates
     return templates.TemplateResponse(
         "operator/shift_end.html",
-        {"request": request, "user": current_user, "shift": shift, "summary": summary},
+        {
+            "request": request,
+            "user": current_user,
+            "shift": shift,
+            "summary": summary,
+            "entry_stats": entry_stats,
+        },
     )
 
 
 @router.post("/shift/end")
 async def close_shift(
     request: Request,
-    closing_cash_egp: int = Form(...),
+    closing_cash_egp: int = Form(0),
     current_user: User = Depends(require_operator),
     shift_service: ShiftService = Depends(get_shift_service),
 ):
@@ -188,7 +231,11 @@ async def close_shift(
     except NoActiveShiftError:
         return RedirectResponse("/ui/operator/dashboard", status_code=303)
 
-    closing_cash_piastres = closing_cash_egp * 100
+    if current_user.gate_number == 1:
+        closing_cash_piastres = 0
+    else:
+        closing_cash_piastres = closing_cash_egp * 100
+
     await shift_service.close_shift(
         shift_id=shift.id,
         operator_id=current_user.id,
@@ -211,7 +258,10 @@ async def dashboard_page(
     shift = await shift_service.get_active_shift(current_user.id)
     sessions, total = [], 0
     if shift:
-        sessions, total = await session_repo.get_by_shift_combined(shift.id, page=1, size=10)
+        if current_user.gate_number == 1:
+            sessions, total = await session_repo.get_by_shift(shift.id, page=1, size=10)
+        else:
+            sessions, total = await session_repo.get_by_shift_combined(shift.id, page=1, size=10)
 
     active_rule = await pricing_repo.get_active()
     
@@ -852,8 +902,12 @@ async def api_operator_scan(
             # 1. Validate session
             session = await card_service.validate_for_exit(card_code, session_repo)
             
+            # Extract current_user info before close_session commits and expires ORM attributes
+            operator_id_val = int(current_user.id)
+            gate_id_val = int(getattr(current_user, "gate_number", 2) or 2)
+
             # 2. Close session automatically
-            res = await session_service.close_session(session.id, current_user.id)
+            res = await session_service.close_session(session.id, operator_id_val)
             closed_session = res[0] if isinstance(res, tuple) else (res.session if hasattr(res, "session") else res)
             calc = res[1] if isinstance(res, tuple) and len(res) > 1 else None
 
@@ -870,14 +924,11 @@ async def api_operator_scan(
             try:
                 hub = getattr(request.app.state, "edge_hub", None)
                 if hub and getattr(settings, "EDGE_API_TOKEN", None):
-                    gate_id_val = int(getattr(current_user, "gate_number", 2) or 2)
-                    asyncio.create_task(
-                        PlateCaptureService(db, settings).start_exit_capture(
-                            closed_session_id,
-                            hub,
-                            gate_id=gate_id_val,
-                            card_code=card_code_val,
-                        )
+                    await PlateCaptureService(db, settings).start_exit_capture(
+                        closed_session_id,
+                        hub,
+                        gate_id=gate_id_val,
+                        card_code=card_code_val,
                     )
             except Exception as cam_exc:
                 logger.error("Could not trigger exit camera snapshot: %s", cam_exc)

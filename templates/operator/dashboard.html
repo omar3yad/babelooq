@@ -304,13 +304,27 @@
         <div>
             <h1 class="text-2xl sm:text-3xl font-black text-white tracking-tight">{{ t("operator.dashboard.no_shift_banner") }}</h1>
             <p class="text-slate-300 text-sm sm:text-base mt-2 leading-relaxed">
+                {% if user.gate_number == 1 %}
+                لا توجد وردية مفتوحة حالياً. يرجى فتح الوردية لبدء تسجيل دخول السيارات وتمرير الكروت.
+                {% else %}
                 لا توجد وردية مفتوحة حالياً. يرجى فتح وردية جديدة لتتمكن من مسح كروت الجراج وحساب تكلفة الخروج وإصدار الإيصالات.
+                {% endif %}
             </p>
         </div>
+        {% if user.gate_number == 1 %}
+        <form method="POST" action="/ui/operator/shift/start" class="w-full mt-2">
+            <input type="hidden" name="opening_cash_egp" value="0">
+            <button type="submit" class="w-full bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:to-teal-500 text-white font-black py-3 px-6 rounded-xl shadow-xl transition-all duration-200 text-lg flex items-center justify-center gap-2 cursor-pointer" style="background-color: #059669;">
+                <span>ابدأ وردية الدخول</span>
+                <span class="text-xl">➔</span>
+            </button>
+        </form>
+        {% else %}
         <a href="/ui/operator/shift/start" class="mt-2 w-full bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:to-teal-500 text-white font-black py-3 px-6 rounded-xl shadow-xl transition-all duration-200 text-lg flex items-center justify-center gap-2" style="background-color: #059669;">
             <span>{{ t("operator.shift.start_button") }}</span>
             <span class="text-xl">➔</span>
         </a>
+        {% endif %}
     </div>
 
     {% else %}

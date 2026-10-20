@@ -244,3 +244,55 @@ async def test_receipt_idempotent_printed_at(async_client, db_session, auth_serv
     await async_client.get(f"/ui/operator/receipt/{session.id}")
     await db_session.refresh(session)
     assert session.receipt_printed_at == first_printed_at
+
+
+@pytest.mark.asyncio
+async def test_entry_operator_shift_start_page_has_no_cash_field(async_client, db_session, auth_service):
+    # Setup gate 1 operator
+    await setup_operator(db_session, auth_service, async_client)
+    res = await async_client.get("/ui/operator/shift/start")
+    assert res.status_code == 200
+    # Entry operator should not see opening cash input
+    assert 'name="opening_cash_egp"' in res.text
+    assert 'type="hidden"' in res.text
+    assert "بوابة الدخول (#1)" in res.text
+    assert "لا يتطلب كاش" in res.text
+
+
+@pytest.mark.asyncio
+async def test_entry_operator_open_shift_records_zero_cash(async_client, db_session, auth_service):
+    op = await setup_operator(db_session, auth_service, async_client)
+    res = await async_client.post("/ui/operator/shift/start", data={})
+    assert res.status_code == 303
+    assert res.headers["location"] == "/ui/operator/dashboard"
+
+    shift_res = await db_session.execute(select(Shift).where(Shift.operator_id == op.id))
+    shift = shift_res.scalars().first()
+    assert shift is not None
+    assert shift.opening_cash_egp == 0
+    assert shift.gate_number == 1
+
+
+@pytest.mark.asyncio
+async def test_entry_operator_shift_end_page_has_no_cash_field(async_client, db_session, auth_service):
+    op = await setup_operator(db_session, auth_service, async_client)
+    await open_operator_shift(db_session, op.id)
+    res = await async_client.get("/ui/operator/shift/end")
+    assert res.status_code == 200
+    assert "ملخص حركة الدخول للشيفت" in res.text
+    assert "لا توجد عهدة نقدية" in res.text
+    assert 'id="closing-cash-input"' not in res.text
+
+
+@pytest.mark.asyncio
+async def test_entry_operator_close_shift_records_zero_cash(async_client, db_session, auth_service):
+    op = await setup_operator(db_session, auth_service, async_client)
+    shift = await open_operator_shift(db_session, op.id)
+    res = await async_client.post("/ui/operator/shift/end", data={})
+    assert res.status_code == 303
+    assert "/ui/login" in res.headers["location"]
+
+    await db_session.refresh(shift)
+    assert shift.ended_at is not None
+    assert shift.closing_cash_egp == 0
+

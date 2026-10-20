@@ -117,11 +117,17 @@
             </td>
             <td class="p-3 text-gray-400 text-xs">{{ s.started_at | format_datetime }}</td>
             <td class="p-3 text-gray-400 text-xs">{{ s.ended_at | format_datetime if s.ended_at else "مفتوح" }}</td>
+            {% if s.gate_number == 1 %}
+            <td class="p-3 text-gray-500 text-xs font-medium">لا ينطبق (دخول)</td>
+            <td class="p-3 text-gray-500 text-xs">—</td>
+            <td class="p-3 text-gray-500 text-xs">—</td>
+            {% else %}
             <td class="p-3 font-semibold text-emerald-400">{{ computed | format_egp }}</td>
             <td class="p-3 font-semibold text-white">{{ s.closing_cash_egp | format_egp if s.closing_cash_egp is not none else "—" }}</td>
             <td class="p-3 font-semibold {{ discrepancy | discrepancy_class(computed) }}">
               {{ discrepancy | format_egp if discrepancy is not none else "—" }}
             </td>
+            {% endif %}
             <td class="p-3">
               <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium {{ 'bg-emerald-900/60 text-emerald-300 border border-emerald-700/50' if not s.ended_at else 'bg-gray-700 text-gray-300' }}">
                 {{ s.ended_at | shift_status_label }}

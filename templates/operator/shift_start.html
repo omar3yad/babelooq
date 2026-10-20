@@ -12,6 +12,21 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
             </svg>
         </div>
+        {% if user.gate_number == 1 %}
+        <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 mb-3">
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+            <span>بوابة الدخول (#1)</span>
+        </div>
+        <h2 class="text-2xl font-bold mb-2 text-white">افتح شيفتك الجديد</h2>
+        <p class="text-xs text-gray-400 mb-6">تسجيل حركة دخول السيارات وإصدار الكروت (لا يتطلب كاش)</p>
+        
+        <form method="POST" action="/ui/operator/shift/start" class="flex flex-col gap-4">
+            <input type="hidden" name="opening_cash_egp" value="0">
+            <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 rounded-lg shadow-md transition duration-200 min-h-[56px] text-lg mt-2 cursor-pointer">
+                {{ t("operator.shift.start_button") }}
+            </button>
+        </form>
+        {% else %}
         <h2 class="text-2xl font-bold mb-2 text-white">افتح شيفتك الجديد</h2>
         <p class="text-xs text-gray-400 mb-6">يرجى تسجيل الكاش الافتتاحي المتوفر في الخزنة لبدء العمل</p>
         
@@ -28,10 +43,11 @@
                        class="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-center text-white text-xl font-bold min-h-[48px] focus:outline-none focus:border-indigo-500 transition duration-200">
             </div>
 
-            <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 rounded-lg shadow-md transition duration-200 min-h-[56px] text-lg mt-2">
+            <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 rounded-lg shadow-md transition duration-200 min-h-[56px] text-lg mt-2 cursor-pointer">
                 {{ t("operator.shift.start_button") }}
             </button>
         </form>
+        {% endif %}
     </div>
 
 </div>

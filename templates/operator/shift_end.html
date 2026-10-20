@@ -5,6 +5,60 @@
 {% block content %}
 <div class="container mx-auto px-4 py-6 max-w-md flex flex-col justify-center flex-grow">
     
+    {% if user.gate_number == 1 %}
+    <!-- ========================================================== -->
+    <!-- GATE 1: ENTRY OPERATOR SHIFT SUMMARY (NO CASH)              -->
+    <!-- ========================================================== -->
+    <div class="bg-gray-800 border border-gray-700 rounded-2xl shadow-xl overflow-hidden mb-6">
+        <div class="bg-gray-750 px-6 py-4 border-b border-gray-700 text-center">
+            <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 mb-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                <span>بوابة الدخول الرئيسية (#1)</span>
+            </div>
+            <span class="text-xs text-emerald-400 block mb-1">ملخص حركة الدخول للشيفت</span>
+            <h2 class="text-xl font-bold text-white">الشيفت رقم #{{ shift.id }}</h2>
+        </div>
+        
+        <div class="p-6 flex flex-col gap-4 text-sm">
+            <div class="flex justify-between border-b border-gray-700 pb-3">
+                <span class="text-gray-400">إجمالي السيارات التي تم إدخالها بالشيفت:</span>
+                <span class="font-bold text-emerald-400 text-base">{{ (entry_stats.total_entered if entry_stats else summary.total_sessions) }} سيارة</span>
+            </div>
+            <div class="flex justify-between border-b border-gray-700 pb-3">
+                <span class="text-gray-400">سيارات لا تزال داخل الجراج:</span>
+                <span class="font-bold text-amber-400 text-base">{{ (entry_stats.active_count if entry_stats else summary.active_sessions) }} سيارة</span>
+            </div>
+            <div class="flex justify-between border-b border-gray-700 pb-3">
+                <span class="text-gray-400">سيارات غادرت الجراج لاحقاً:</span>
+                <span class="font-bold text-white text-base">{{ (entry_stats.completed_count if entry_stats else summary.completed_sessions) }} سيارة</span>
+            </div>
+            {% if entry_stats and entry_stats.subs_count > 0 %}
+            <div class="flex justify-between border-b border-gray-700 pb-3">
+                <span class="text-gray-400">اشتراكات تم تمريرها بالدخول:</span>
+                <span class="font-bold text-cyan-400 text-base">{{ entry_stats.subs_count }} اشتراك</span>
+            </div>
+            {% endif %}
+            
+            <div class="bg-emerald-950/40 border border-emerald-500/30 rounded-xl p-3 text-center text-xs text-emerald-300 font-medium mt-1">
+                ℹ️ هذه بوابة دخول فقط — لا توجد عهدة نقدية أو مبالغ تحصيل مسجلة على العامل.
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm shift end form without cash inputs -->
+    <div class="bg-gray-800 border border-gray-700 rounded-2xl p-6 shadow-xl mb-6">
+        <form method="POST" action="/ui/operator/shift/end" class="flex flex-col gap-4">
+            <input type="hidden" name="closing_cash_egp" value="0">
+            <button type="submit" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-3.5 rounded-lg shadow-md transition duration-200 min-h-[56px] text-lg cursor-pointer">
+                {{ t("operator.shift.end_button") }}
+            </button>
+        </form>
+    </div>
+
+    {% else %}
+    <!-- ========================================================== -->
+    <!-- GATE 2+: EXIT OPERATOR SHIFT SUMMARY (WITH CASH)            -->
+    <!-- ========================================================== -->
     <!-- Read-only shift summary -->
     <div class="bg-gray-800 border border-gray-700 rounded-2xl shadow-xl overflow-hidden mb-6">
         <div class="bg-gray-750 px-6 py-4 border-b border-gray-700 text-center">
@@ -58,11 +112,12 @@
                 <span id="discrepancy-display" class="font-bold text-gray-300">0.00 EGP</span>
             </div>
 
-            <button type="submit" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-3.5 rounded-lg shadow-md transition duration-200 min-h-[56px] text-lg mt-2">
+            <button type="submit" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-3.5 rounded-lg shadow-md transition duration-200 min-h-[56px] text-lg mt-2 cursor-pointer">
                 {{ t("operator.shift.end_button") }}
             </button>
         </form>
     </div>
+    {% endif %}
 
 </div>
 <div id="shift-summary-data" data-computed-total="{{ summary.computed_total_piastres }}" style="display:none;"></div>
