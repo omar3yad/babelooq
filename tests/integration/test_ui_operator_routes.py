@@ -173,7 +173,7 @@ async def test_receipt_page_triggers_print(async_client, db_session, auth_servic
     response = await async_client.get(f"/ui/operator/receipt/{session.id}")
     assert response.status_code == 200
     assert "window.print()" in response.text
-    assert "garage4u" in response.text
+    assert "جراج باب اللوق" in response.text
 
 @pytest.mark.asyncio
 async def test_receipt_sets_printed_at(async_client, db_session, auth_service):

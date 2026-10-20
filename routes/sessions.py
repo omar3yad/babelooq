@@ -248,7 +248,8 @@ async def get_session_receipt(
         payment_method="نقدي",
         is_lost_card=session.is_lost_card,
         is_grace_period=is_grace_period,
-        garage_name="garage4u",
+        company_name="garage4u",
+        garage_name="جراج باب اللوق",
     )
 
     return {"data": receipt.model_dump(mode="json")}

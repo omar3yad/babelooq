@@ -20,7 +20,8 @@
 <body class="receipt-body">
 
   <!-- Receipt Body Content -->
-  <div class="center bold" style="font-size: 12pt;">{{ receipt.garage_name }}</div>
+  <div class="center bold" style="font-size: 15pt; letter-spacing: 1.5px;">{{ receipt.company_name or "garage4u" }}</div>
+  <div class="center bold" style="font-size: 13pt; margin-top: 3px;">{{ receipt.garage_name or "جراج باب اللوق" }}</div>
   <p class="sep">--------------------------------</p>
   
   <div class="center bold" style="font-size: 11pt;">
