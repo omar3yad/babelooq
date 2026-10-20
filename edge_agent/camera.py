@@ -1,5 +1,4 @@
 import asyncio
-
 import httpx
 
 
@@ -29,11 +28,13 @@ class SnapshotCamera:
             auth = httpx.BasicAuth(username, password or "")
         elif auth_mode == "digest" and username:
             auth = httpx.DigestAuth(username, password or "")
+
         self._client = httpx.AsyncClient(
             auth=auth,
             timeout=httpx.Timeout(timeout_s, connect=min(0.5, timeout_s)),
             limits=httpx.Limits(max_keepalive_connections=8, keepalive_expiry=30),
             headers={"Cache-Control": "no-cache"},
+            verify=False,
         )
 
     @property

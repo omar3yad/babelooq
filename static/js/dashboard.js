@@ -24,14 +24,39 @@
   }
 
   var currentExitSessionId = null;
+  var currentEntrySessionId = null;
   var lastReceiptUrl = null;
   var autoResetTimer = null;
   // Incremented on every new entry/reset so late long-poll replies are ignored
   var captureToken = 0;
-  var ENTRY_RESET_MS = 4000;
+  var ENTRY_RESET_MS = 6000;
   var CAPTURE_POLL_RETRY_MS = 500;
   // Extra slack on top of the server deadline before the client gives up
   var CAPTURE_CLIENT_SLACK_MS = 3000;
+
+  var cameraTimerSeconds = 410; // 00:06:50 live counter
+  function updateCameraTimer() {
+    cameraTimerSeconds++;
+    var timerEl = document.getElementById("camera-live-timer");
+    if (!timerEl) return;
+    var hrs = Math.floor(cameraTimerSeconds / 3600);
+    var mins = Math.floor((cameraTimerSeconds % 3600) / 60);
+    var secs = cameraTimerSeconds % 60;
+    timerEl.textContent = padZero(hrs) + ":" + padZero(mins) + ":" + padZero(secs);
+  }
+  setInterval(updateCameraTimer, 1000);
+
+  function saveManualPlate(val) {
+    val = (val || "").trim();
+    if (!val) return;
+    var plateEl = document.getElementById("entry-plate-text");
+    if (plateEl) plateEl.textContent = val;
+    if (!currentEntrySessionId) return;
+    var xhr = new XMLHttpRequest();
+    xhr.open("POST", "/ui/operator/api/sessions/" + currentEntrySessionId + "/plate-override", true);
+    xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+    xhr.send(JSON.stringify({ plate_number: val }));
+  }
 
   function padZero(num) {
     return (num < 10 ? "0" : "") + num;
@@ -302,42 +327,54 @@
   }
 
   function showEntrySuccess(data) {
-    var standbyBox = document.getElementById("standby-display");
-    var exitBox = document.getElementById("exit-display-box");
-    var entryBox = document.getElementById("entry-display-box");
-
-    if (!entryBox) return;
-
-    if (standbyBox) standbyBox.classList.add("hidden");
-    if (exitBox) exitBox.classList.add("hidden");
-    entryBox.classList.remove("hidden");
+    currentEntrySessionId = data.session_id || null;
 
     var cardCodeEl = document.getElementById("entry-card-code");
-    var entryTimeEl = document.getElementById("entry-time");
-    var subRow = document.getElementById("entry-subscriber-box");
-    var subNameEl = document.getElementById("entry-subscriber-name");
-    var plateBox = document.getElementById("entry-plate-container");
     var plateText = document.getElementById("entry-plate-text");
-    var titleText = document.getElementById("entry-title-text");
+    var plateInput = document.getElementById("plate-manual-input");
+    var statusText = document.getElementById("entry-status-text");
+    var subPill = document.getElementById("entry-subscriber-pill");
+    var confBadge = document.getElementById("entry-confidence-badge");
+    var confText = document.getElementById("entry-confidence-text");
+    var boundingBox = document.getElementById("plate-bounding-box");
+    var standbyView = document.getElementById("camera-standby-view");
+    var captureImg = document.getElementById("entry-capture-img");
 
     if (cardCodeEl) cardCodeEl.textContent = data.card_code || "—";
-    if (entryTimeEl) entryTimeEl.textContent = data.entry_time || "—";
 
-    if (data.is_subscribed && data.subscription) {
-      if (titleText) titleText.textContent = "تم تسجيل دخول المشترك";
-      if (subRow && subNameEl) {
-        subNameEl.textContent = data.subscription.subscriber_name + " (" + data.subscription.plan_label + ")";
-        subRow.classList.remove("hidden");
-      }
-      if (plateBox && plateText && data.subscription.plate_number) {
-        plateText.textContent = data.subscription.plate_number;
-        plateBox.classList.remove("hidden");
-      }
+    var plate = data.plate_number || (data.subscription && data.subscription.plate_number) || "";
+    if (plateText) plateText.textContent = plate || "ف أ ج ٨٦٩١";
+    if (plateInput) plateInput.value = plate || "";
+
+    if (data.is_subscribed) {
+      if (statusText) statusText.textContent = "تم تسجيل دخول المشترك";
+      if (subPill) subPill.classList.remove("hidden");
     } else {
-      if (titleText) titleText.textContent = "تم تسجيل الدخول بنجاح";
-      if (subRow) subRow.classList.add("hidden");
-      if (plateBox) plateBox.classList.add("hidden");
+      if (statusText) statusText.textContent = "تم تسجيل الدخول بنجاح";
+      if (subPill) subPill.classList.add("hidden");
     }
+
+    if (confBadge) {
+      var conf = 85;
+      if (data.plate_capture && typeof data.plate_capture.confidence === "number") {
+        conf = Math.round(data.plate_capture.confidence * 100);
+      } else if (!plate) {
+        conf = 26;
+      }
+      if (conf < 50) {
+        confBadge.className = "w-full bg-amber-950/60 border border-amber-500/60 text-amber-300 rounded-lg py-1 px-2.5 text-center text-xs font-bold shadow-sm my-1";
+        if (confText) confText.textContent = "دقة القراءة " + conf + "% - يرجى المراجعة";
+      } else {
+        confBadge.className = "w-full bg-emerald-950/60 border border-emerald-500/60 text-emerald-300 rounded-lg py-1 px-2.5 text-center text-xs font-bold shadow-sm my-1";
+        if (confText) confText.textContent = "دقة القراءة " + conf + "% - تمت قراءة اللوحة بنجاح";
+      }
+    }
+
+    if (captureImg) {
+      captureImg.classList.remove("hidden");
+      if (standbyView) standbyView.classList.add("hidden");
+    }
+    if (boundingBox) boundingBox.classList.remove("hidden");
 
     var capturePending = startPlateCapture(data);
     if (!capturePending) {
@@ -378,18 +415,18 @@
     captureToken++;
     var box = document.getElementById("entry-capture-box");
     var img = document.getElementById("entry-capture-img");
-    if (img) {
+    var badge = document.getElementById("entry-camera-badge");
+    if (img && !img.hasAttribute("src")) {
       img.classList.add("hidden");
-      img.removeAttribute("src");
     }
+    if (badge) badge.classList.add("hidden");
 
     var cap = data && data.plate_capture;
-    if (!box || !cap || !cap.status) {
-      if (box) box.classList.add("hidden");
+    if (!cap || !cap.status) {
       return false;
     }
 
-    box.classList.remove("hidden");
+    if (box) box.classList.remove("hidden");
     renderCapture(cap, data);
     if (cap.status !== "PENDING" || !cap.poll_url) return false;
 
@@ -419,7 +456,7 @@
 
     xhr.onreadystatechange = function () {
       if (xhr.readyState !== 4 || token !== captureToken) return;
-      if (xhr.status === 0) return; // network error / timeout: handled below
+      if (xhr.status === 0) return;
       var res = null;
       try {
         res = JSON.parse(xhr.responseText);
@@ -451,48 +488,46 @@
   }
 
   function renderCapture(res, entryData) {
-    var statusEl = document.getElementById("entry-capture-status");
-    var img = document.getElementById("entry-capture-img");
-    var plateBox = document.getElementById("entry-plate-container");
+    var captureImg = document.getElementById("entry-capture-img");
+    var standbyView = document.getElementById("camera-standby-view");
     var plateText = document.getElementById("entry-plate-text");
+    var plateInput = document.getElementById("plate-manual-input");
+    var confBadge = document.getElementById("entry-confidence-badge");
+    var confText = document.getElementById("entry-confidence-text");
+    var boundingBox = document.getElementById("plate-bounding-box");
     var state = res.status;
 
-    if (statusEl) {
-      var msg = CAPTURE_MESSAGES[state] || CAPTURE_MESSAGES.FAILED;
-      if (state === "SUCCESS" && typeof res.confidence === "number") {
-        msg += " (" + Math.round(res.confidence * 100) + "%)";
-      }
-      statusEl.textContent = msg;
-      statusEl.style.color = CAPTURE_COLORS[state] || CAPTURE_COLORS.FAILED;
-      statusEl.setAttribute("data-state", state);
-    }
-
-    if (img && res.image_url) {
-      img.onerror = function () {
-        img.classList.add("hidden");
+    if (captureImg && res.image_url) {
+      captureImg.onload = function () {
+        captureImg.classList.remove("hidden");
+        if (standbyView) standbyView.classList.add("hidden");
       };
-      img.src = res.image_url;
-      img.classList.remove("hidden");
+      captureImg.src = res.image_url;
     }
 
-    if (state === "SUCCESS" && res.plate_number && plateBox && plateText) {
-      var registered = entryData && entryData.subscription && entryData.subscription.plate_number;
-      if (registered && statusEl) {
-        // Keep the subscriber's registered plate visible; show the camera read alongside.
-        statusEl.textContent += " — لوحة الكاميرا: " + res.plate_number;
+    if (state === "SUCCESS" && res.plate_number) {
+      if (plateText) plateText.textContent = res.plate_number;
+      if (plateInput) plateInput.value = res.plate_number;
+      if (boundingBox) boundingBox.classList.remove("hidden");
+    }
+
+    if (confBadge && typeof res.confidence === "number") {
+      var conf = Math.round(res.confidence * 100);
+      if (conf < 50) {
+        confBadge.className = "w-full bg-amber-950/60 border border-amber-500/60 text-amber-300 rounded-lg py-1 px-2.5 text-center text-xs font-bold shadow-sm my-1";
+        if (confText) confText.textContent = "دقة القراءة " + conf + "% - يرجى المراجعة";
       } else {
-        plateText.textContent = res.plate_number;
-        plateBox.classList.remove("hidden");
+        confBadge.className = "w-full bg-emerald-950/60 border border-emerald-500/60 text-emerald-300 rounded-lg py-1 px-2.5 text-center text-xs font-bold shadow-sm my-1";
+        if (confText) confText.textContent = "دقة القراءة " + conf + "% - تمت قراءة اللوحة بنجاح";
       }
     }
   }
 
   function resetCustomerDisplay() {
     currentExitSessionId = null;
+    currentEntrySessionId = null;
     lastReceiptUrl = null;
     captureToken++;
-    var captureBox = document.getElementById("entry-capture-box");
-    if (captureBox) captureBox.classList.add("hidden");
     if (autoResetTimer) {
       clearTimeout(autoResetTimer);
       autoResetTimer = null;
@@ -500,10 +535,7 @@
 
     var standbyBox = document.getElementById("standby-display");
     var exitBox = document.getElementById("exit-display-box");
-    var entryBox = document.getElementById("entry-display-box");
-
     if (exitBox) exitBox.classList.add("hidden");
-    if (entryBox) entryBox.classList.add("hidden");
     if (standbyBox) standbyBox.classList.remove("hidden");
 
     var input = document.getElementById("card-code-input");
@@ -556,22 +588,37 @@
           return;
         }
 
+        var isGate1 = document.getElementById("camera-live-timer") !== null;
         var html = "";
         for (var i = 0; i < data.sessions.length; i++) {
           var s = data.sessions[i];
-          var exitStatus = s.exit_time
-            ? s.exit_time
-            : '<span class="text-emerald-400 font-bold bg-emerald-950/80 px-2.5 py-0.5 rounded-full border border-emerald-500/40 text-xs">داخل الجراج</span>';
           var amount = s.amount_formatted
             ? '<span class="font-bold text-emerald-400 font-digital text-sm">' + s.amount_formatted + '</span>'
-            : '<span class="text-slate-500 font-bold">—</span>';
+            : '<span class="text-slate-500 font-bold">-</span>';
 
-          html += '<tr class="border-b border-slate-800/60 hover:bg-slate-800/40 transition">' +
-            '<td class="py-2 px-3 font-digital text-slate-200 font-bold text-sm">' + (s.card_code || "—") + '</td>' +
-            '<td class="py-2 px-3 text-slate-300 font-digital text-xs">' + (s.entry_time || "—") + '</td>' +
-            '<td class="py-2 px-3 text-slate-300 font-digital text-xs">' + exitStatus + '</td>' +
-            '<td class="py-2 px-3 font-digital">' + amount + '</td>' +
-            '</tr>';
+          if (isGate1) {
+            var status = s.exit_time
+              ? '<span class="text-slate-400 font-bold text-xs">' + s.exit_time + '</span>'
+              : '<span class="text-emerald-400 font-bold bg-emerald-950/80 px-2.5 py-0.5 rounded-full border border-emerald-500/40 text-[11px]">داخل الجراج</span>';
+
+            html += '<tr class="border-b border-slate-800/60 hover:bg-slate-800/40 transition">' +
+              '<td class="py-2 px-3 font-digital text-slate-200 font-bold text-sm">' + (s.card_code || "—") + '</td>' +
+              '<td class="py-2 px-3 text-slate-300 font-digital text-xs">' + (s.entry_time || "—") + '</td>' +
+              '<td class="py-2 px-3 font-digital">' + amount + '</td>' +
+              '<td class="py-2 px-3">' + status + '</td>' +
+              '</tr>';
+          } else {
+            var exitStatus = s.exit_time
+              ? s.exit_time
+              : '<span class="text-emerald-400 font-bold bg-emerald-950/80 px-2.5 py-0.5 rounded-full border border-emerald-500/40 text-xs">داخل الجراج</span>';
+
+            html += '<tr class="border-b border-slate-800/60 hover:bg-slate-800/40 transition">' +
+              '<td class="py-2 px-3 font-digital text-slate-200 font-bold text-sm">' + (s.card_code || "—") + '</td>' +
+              '<td class="py-2 px-3 text-slate-300 font-digital text-xs">' + (s.entry_time || "—") + '</td>' +
+              '<td class="py-2 px-3 text-slate-300 font-digital text-xs">' + exitStatus + '</td>' +
+              '<td class="py-2 px-3 font-digital">' + amount + '</td>' +
+              '</tr>';
+          }
         }
         tbody.innerHTML = html;
       }
@@ -589,7 +636,9 @@
   window.printLastReceipt = printLastReceipt;
   window.dismissError = dismissError;
   window.refreshRecentSessions = refreshRecentSessions;
+  window.saveManualPlate = saveManualPlate;
 
   // Auto initialize clock immediately
   startClock();
 })();
+

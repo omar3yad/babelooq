@@ -1,15 +1,15 @@
-"""Plate recognition.
+"""Egyptian Plate recognition using trained YOLO models.
 
-`PlateRecognizer` is the only contract the agent depends on. `YoloOcrRecognizer`
-is a working default (Ultralytics YOLO locates the plate, EasyOCR reads it); if
-the garage already has its own trained pipeline, wrap it in a class with the
-same two methods and pass it to the agent instead.
+Implements the PlateRecognizer protocol required by Babelooq edge_agent.
+Uses plate_detection/best.pt for plate localization and
+plate_recognition/best.pt for Egyptian character/digit OCR.
 """
 import io
 import re
 from dataclasses import dataclass
-from typing import Protocol
-
+from typing import Protocol, Any
+import numpy as np
+import torch
 from PIL import Image
 
 
@@ -18,88 +18,103 @@ class Recognition:
     plate_text: str | None
     confidence: float
     bbox: tuple[int, int, int, int] | None = None
+    plate_crop: np.ndarray | None = None
 
 
 class PlateRecognizer(Protocol):
     def warmup(self) -> None: ...
-
     def recognize(self, image: Image.Image) -> Recognition: ...
 
 
-class YoloOcrRecognizer:
-    _LETTER = re.compile(r"[ء-ي]")
-    _DIGIT = re.compile(r"[0-9٠-٩]")
-    # Header band printed on Egyptian plates; not part of the registration.
-    _IGNORED = ("مصر", "EGYPT")
-
+class EgyptianPlateRecognizer:
     def __init__(
         self,
-        weights: str,
-        ocr_langs: list[str],
-        use_gpu: bool,
-        min_confidence: float,
+        detector_weights: str,
+        ocr_weights: str,
+        use_gpu: bool = True,
+        min_confidence: float = 0.25,
     ) -> None:
-        # Heavy imports kept local so the rest of the agent stays importable
-        # (and testable) without the ML stack installed.
-        import easyocr
         from ultralytics import YOLO
 
-        self._detector = YOLO(weights)
-        self._device = 0 if use_gpu else "cpu"
-        self._reader = easyocr.Reader(ocr_langs, gpu=use_gpu, verbose=False)
+        self.device = "cuda" if (use_gpu and torch.cuda.is_available()) else "cpu"
         self._min_confidence = min_confidence
 
+        self._detector = YOLO(detector_weights).to(self.device)
+        self._ocr = YOLO(ocr_weights).to(self.device)
+
     def warmup(self) -> None:
-        # The first inference allocates buffers/compiles kernels (~seconds);
-        # pay that at boot, not on the first car.
-        self.recognize(Image.new("RGB", (640, 480)))
+        """Warmup CUDA kernels so the first real car is not delayed."""
+        dummy = Image.new("RGB", (640, 480))
+        self.recognize(dummy)
 
     def recognize(self, image: Image.Image) -> Recognition:
-        import numpy as np
-
         frame = np.asarray(image)
-        result = self._detector.predict(
-            frame, conf=self._min_confidence, device=self._device, verbose=False
-        )[0]
-        boxes = result.boxes
-        if boxes is None or len(boxes) == 0:
-            return Recognition(None, 0.0)
+        # Convert RGB to BGR for OpenCV-trained YOLO if needed, but RGB is fine
+        results = self._detector(frame, conf=self._min_confidence, verbose=False)
 
-        best = int(boxes.conf.argmax())
-        det_conf = float(boxes.conf[best])
-        x1, y1, x2, y2 = (int(v) for v in boxes.xyxy[best].tolist())
-        bbox = (max(x1, 0), max(y1, 0), x2, y2)
-        crop = frame[bbox[1]:y2, bbox[0]:x2]
-        if crop.size == 0:
-            return Recognition(None, 0.0)
+        best_plate_crop = None
+        best_det_conf = 0.0
+        best_bbox = None
 
-        text, ocr_conf = self._assemble(self._reader.readtext(crop, detail=1, paragraph=False))
-        if not text:
-            return Recognition(None, det_conf, bbox)
-        return Recognition(text, round(det_conf * ocr_conf, 3), bbox)
+        for r in results:
+            if r.boxes and len(r.boxes) > 0:
+                for box in r.boxes:
+                    conf = float(box.conf[0])
+                    if conf > best_det_conf:
+                        best_det_conf = conf
+                        x1, y1, x2, y2 = map(int, box.xyxy[0])
+                        # ensure within bounds
+                        h, w = frame.shape[:2]
+                        x1, y1 = max(0, x1), max(0, y1)
+                        x2, y2 = min(w, x2), min(h, y2)
+                        if x2 > x1 and y2 > y1:
+                            best_bbox = (x1, y1, x2, y2)
+                            best_plate_crop = frame[y1:y2, x1:x2]
 
-    def _assemble(self, fragments: list) -> tuple[str | None, float]:
-        """Egyptian layout: letters on the right, digits on the left. Fragments
-        are visited right-to-left; output is "ب ن ر 1234"-style (the server
-        normalises Arabic-Indic digits)."""
-        letters: list[str] = []
-        digits: list[str] = []
-        confidences: list[float] = []
-        for box, text, conf in sorted(fragments, key=lambda f: -max(p[0] for p in f[0])):
-            if any(word in text for word in self._IGNORED):
-                continue
-            found_letters = self._LETTER.findall(text)
-            found_digits = self._DIGIT.findall(text)
-            if found_letters or found_digits:
-                letters.extend(found_letters)
-                digits.extend(found_digits)
-                confidences.append(float(conf))
-        if not confidences:
-            return None, 0.0
-        plate = " ".join(letters)
-        if digits:
-            plate = f"{plate} {''.join(digits)}".strip()
-        return plate, sum(confidences) / len(confidences)
+        if best_plate_crop is None or best_plate_crop.size == 0:
+            return Recognition(plate_text=None, confidence=0.0)
+
+        # Run Egyptian OCR model on the plate crop
+        ocr_results = self._ocr(best_plate_crop, verbose=False)
+        chars = []
+        char_confs = []
+
+        for ocr_res in ocr_results:
+            if ocr_res.boxes is not None and len(ocr_res.boxes) > 0:
+                for box in ocr_res.boxes:
+                    coords = box.data.tolist()[0]  # [x1, y1, x2, y2, conf, cls_id]
+                    char_confs.append(float(coords[4]))
+                    chars.append(coords)
+
+        if not chars:
+            return Recognition(
+                plate_text=None,
+                confidence=round(best_det_conf, 3),
+                bbox=best_bbox,
+                plate_crop=best_plate_crop,
+            )
+
+        # Sort characters right-to-left for Arabic plates (descending X coordinate)
+        chars.sort(key=lambda x: x[0], reverse=True)
+
+        names = ocr_results[0].names
+        plate_tokens = []
+        for c in chars:
+            cls_id = int(c[5])
+            char_name = str(names.get(cls_id, ""))
+            if char_name:
+                plate_tokens.append(char_name)
+
+        plate_text = " ".join(plate_tokens).strip()
+        avg_ocr_conf = sum(char_confs) / len(char_confs) if char_confs else 0.5
+        composite_conf = round(best_det_conf * avg_ocr_conf, 3)
+
+        return Recognition(
+            plate_text=plate_text if plate_text else None,
+            confidence=composite_conf,
+            bbox=best_bbox,
+            plate_crop=best_plate_crop,
+        )
 
 
 def decode_image(data: bytes) -> Image.Image:
@@ -113,6 +128,15 @@ def encode_webp(image: Image.Image, max_width: int, quality: int) -> bytes:
         height = round(image.height * max_width / image.width)
         image = image.resize((max_width, height), Image.Resampling.BILINEAR)
     buffer = io.BytesIO()
-    # method=3: noticeably faster than the default 4 for a negligible size cost.
     image.save(buffer, format="WEBP", quality=quality, method=3)
+    return buffer.getvalue()
+
+
+def encode_jpeg(image: Image.Image, max_width: int, quality: int = 80) -> bytes:
+    """Encodes as JPEG so that older browsers like Internet Explorer can display it."""
+    if image.width > max_width:
+        height = round(image.height * max_width / image.width)
+        image = image.resize((max_width, height), Image.Resampling.BILINEAR)
+    buffer = io.BytesIO()
+    image.save(buffer, format="JPEG", quality=quality, optimize=True)
     return buffer.getvalue()

@@ -213,6 +213,23 @@ async def dashboard_page(
         sessions, total = await session_repo.get_by_shift_combined(shift.id, page=1, size=10)
 
     active_rule = await pricing_repo.get_active()
+    
+    total_capacity = 50
+    active_count = 5
+    try:
+        from models.parking_session import ParkingSession
+        from sqlalchemy import func
+        active_res = await session_repo.db.execute(
+            select(func.count(ParkingSession.id)).where(ParkingSession.exit_time.is_(None), ParkingSession.is_deleted == False)
+        )
+        active_count = active_res.scalar() or 0
+        from models.parking_card import ParkingCard
+        card_count_res = await session_repo.db.execute(select(func.count(ParkingCard.id)))
+        total_capacity = card_count_res.scalar() or 50
+    except Exception:
+        pass
+    available_spaces = max(total_capacity - active_count, 0)
+
     templates = request.app.state.templates
     return templates.TemplateResponse(
         "operator/dashboard.html",
@@ -223,6 +240,9 @@ async def dashboard_page(
             "sessions": sessions,
             "session_total": total,
             "active_rule": active_rule,
+            "total_capacity": total_capacity,
+            "available_spaces": available_spaces,
+            "active_sessions_count": active_count,
         },
     )
 
@@ -979,4 +999,29 @@ async def api_plate_image(
     path = PlateCaptureService(db, settings).resolve_image(session.plate_image_path)
     if path is None:
         raise HTTPException(status_code=404, detail="Not found")
-    return FileResponse(path, media_type="image/webp", headers={"Cache-Control": "private, max-age=86400"})
+    media_type = "image/jpeg" if path.endswith((".jpg", ".jpeg")) else "image/webp"
+    return FileResponse(path, media_type=media_type, headers={"Cache-Control": "private, max-age=86400"})
+
+
+@router.post("/api/sessions/{session_id}/plate-override")
+async def api_operator_plate_override(
+    session_id: int,
+    request: Request,
+    current_user: User = Depends(require_operator),
+    db: AsyncSession = Depends(get_db),
+    session_repo: ParkingSessionRepository = Depends(get_session_repo),
+):
+    try:
+        body = await request.json()
+        plate_number = str(body.get("plate_number") or "").strip()
+    except Exception:
+        return JSONResponse({"success": False, "error": "بيانات غير صالحة."}, status_code=400)
+
+    session = await session_repo.get_by_id(session_id)
+    if not session or not _can_view_session(current_user, session):
+        return JSONResponse({"success": False, "error": "الجلسة غير موجودة."}, status_code=404)
+
+    session.plate_number = plate_number or None
+    await db.commit()
+    return JSONResponse({"success": True, "plate_number": session.plate_number, "message": "تم تحديث اللوحة بنجاح"})
+

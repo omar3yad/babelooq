@@ -210,9 +210,9 @@ def test_edge_cannot_write_other_gates_or_bad_images(edge_env):
 
         gate1.send_json({
             "event": "CAPTURE_RESULT", "session_id": session_id, "status": "SUCCESS",
-            "plate_number": "أ 1", "image_webp_b64": base64.b64encode(b"\xff\xd8\xff not webp").decode(),
+            "plate_number": "أ 1", "image_webp_b64": base64.b64encode(b"not a valid image format").decode(),
         })
-        assert gate1.receive_json()["reason"] == "image is not WebP"
+        assert gate1.receive_json()["reason"] == "image is not JPEG or WebP"
         assert client.get(body["plate_capture"]["poll_url"]).json()["status"] == "PENDING"
         assert not edge_env.image_dir.exists() or not any(edge_env.image_dir.rglob("*.webp"))
     finally:
@@ -226,3 +226,31 @@ def test_edge_rejected_without_valid_token(edge_env):
             "/ws/edge", headers={"Authorization": "Bearer wrong-token"}
         ) as ws:
             ws.receive_json()
+
+
+def test_jpeg_capture_flow_for_legacy_browsers(edge_env):
+    fake_jpeg = b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00" + b"\x00" * 20
+    client = edge_env.client
+    ctx, edge = connect_edge(client)
+    try:
+        body = scan(client, "CARD-1")
+        trigger = edge.receive_json()
+        edge.send_json({
+            "event": "CAPTURE_RESULT", "session_id": trigger["session_id"],
+            "status": "SUCCESS", "plate_number": "أ ب ج 5678", "confidence": 0.88,
+            "image_webp_b64": base64.b64encode(fake_jpeg).decode(),
+        })
+        ack = edge.receive_json()
+        assert ack["accepted"] is True
+
+        poll_res = client.get(body["plate_capture"]["poll_url"]).json()
+        assert poll_res["status"] == "SUCCESS"
+        assert poll_res["plate_number"] == "أ ب ج 5678"
+
+        image = client.get(poll_res["image_url"])
+        assert image.status_code == 200
+        assert image.headers["content-type"] == "image/jpeg"
+        assert image.content == fake_jpeg
+    finally:
+        ctx.__exit__(None, None, None)
+

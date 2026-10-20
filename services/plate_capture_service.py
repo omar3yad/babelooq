@@ -110,10 +110,10 @@ class PlateCaptureService:
         if session.plate_capture_status not in _LATE_RESULT_STATUSES:
             raise CaptureRejected(f"capture already {session.plate_capture_status}")
 
-        image_bytes = self._decode_image(result.image_webp_b64)
+        image_bytes, ext = self._decode_image(result.image_webp_b64)
         rel_path = None
         if image_bytes is not None:
-            rel_path = self._build_image_path(session.id)
+            rel_path = self._build_image_path(session.id, ext or ".jpg")
             await asyncio.to_thread(self._write_atomic, rel_path, image_bytes)
 
         status = _EDGE_STATUS_MAP[result.status]
@@ -157,24 +157,27 @@ class PlateCaptureService:
             raise CaptureRejected("capture finalised concurrently")
         return await self._get(session.id)
 
-    def _decode_image(self, b64: str | None) -> bytes | None:
+    def _decode_image(self, b64: str | None) -> tuple[bytes, str] | tuple[None, None]:
         if not b64:
-            return None
+            return None, None
         try:
             data = base64.b64decode(b64, validate=True)
         except (binascii.Error, ValueError):
             raise CaptureRejected("image is not valid base64")
         if len(data) > self.settings.PLATE_IMAGE_MAX_BYTES:
             raise CaptureRejected("image too large")
-        if len(data) < 12 or data[:4] != b"RIFF" or data[8:12] != b"WEBP":
-            raise CaptureRejected("image is not WebP")
-        return data
+        is_jpeg = len(data) >= 3 and data[:3] == b"\xff\xd8\xff"
+        is_webp = len(data) >= 12 and data[:4] == b"RIFF" and data[8:12] == b"WEBP"
+        if not (is_jpeg or is_webp):
+            raise CaptureRejected("image is not JPEG or WebP")
+        ext = ".jpg" if is_jpeg else ".webp"
+        return data, ext
 
     @staticmethod
-    def _build_image_path(session_id: int) -> str:
+    def _build_image_path(session_id: int, ext: str = ".jpg") -> str:
         day = datetime.utcnow()
         return os.path.join(
-            f"{day:%Y}", f"{day:%m}", f"{day:%d}", f"{session_id}_{uuid.uuid4().hex[:8]}.webp"
+            f"{day:%Y}", f"{day:%m}", f"{day:%d}", f"{session_id}_{uuid.uuid4().hex[:8]}{ext}"
         )
 
     def _write_atomic(self, rel_path: str, data: bytes) -> None:

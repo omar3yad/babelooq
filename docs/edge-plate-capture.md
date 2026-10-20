@@ -248,7 +248,7 @@ Pre-existing uncommitted user edits in `dashboard.html` / `dashboard.js` (stylin
 ### Not verified
 - Real YOLO/OCR models: only a stub recognizer was used. `YoloOcrRecognizer` is a reasonable default, but the Arabic fragment ordering in `_assemble` is heuristic. If the garage has its own trained pipeline, implement `PlateRecognizer` (`warmup()`, `recognize(PIL.Image) -> Recognition`) and pass it to `EdgeAgent`.
 - Dashboard layout on the real 1366×768 / 1280×1024 screens: no headless browser was available.
-- **IE11 cannot display WebP.** If the operator PC really uses IE11, the image will not render (`onerror` hides it); the plate text still shows.
+- **Legacy Browser Support (IE11 / Edge IE Mode):** IE11 cannot display WebP. `edge_agent` now defaults to `EDGE_IMAGE_FORMAT=jpeg`, and the server natively accepts and serves JPEG (`image/jpeg`) as `.jpg` files, enabling full image display on both modern and legacy browsers.
 - Behaviour under real Gunicorn with 3 workers end to end. Each piece was verified separately: the bus across instances, the hub logic, and the WS flow.
 
 ## 11. Deployment steps (not yet done)
