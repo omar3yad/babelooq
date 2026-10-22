@@ -3,155 +3,89 @@
 {% block title %}إنهاء الشيفت - garage4u{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-6 max-w-md flex flex-col justify-center flex-grow">
+<div class="container mx-auto px-4 py-8 max-w-md flex flex-col justify-center flex-grow">
     
     {% if user.gate_number == 1 %}
     <!-- ========================================================== -->
-    <!-- GATE 1: ENTRY OPERATOR SHIFT SUMMARY (NO CASH)              -->
+    <!-- GATE 1: ENTRY OPERATOR SHIFT CLOSING (NO COUNTS)            -->
     <!-- ========================================================== -->
-    <div class="bg-gray-800 border border-gray-700 rounded-2xl shadow-xl overflow-hidden mb-6">
-        <div class="bg-gray-750 px-6 py-4 border-b border-gray-700 text-center">
-            <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 mb-2">
+    <div class="bg-gray-800 border border-gray-700 rounded-2xl shadow-2xl overflow-hidden">
+        <div class="bg-gray-750 px-6 py-6 border-b border-gray-700 text-center">
+            <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 mb-3">
                 <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
                 <span>بوابة الدخول الرئيسية (#1)</span>
             </div>
-            <span class="text-xs text-emerald-400 block mb-1">ملخص حركة الدخول للشيفت</span>
-            <h2 class="text-xl font-bold text-white">الشيفت رقم #{{ shift.id }}</h2>
+            <h2 class="text-2xl font-black text-white">إنهاء الشيفت رقم #{{ shift.id }}</h2>
+            <p class="text-xs text-gray-400 mt-1.5">تأكيد إنهاء الوردية الحالية وتسجيل الخروج</p>
         </div>
         
-        <div class="p-6 flex flex-col gap-4 text-sm">
-            <div class="flex justify-between border-b border-gray-700 pb-3">
-                <span class="text-gray-400">إجمالي السيارات التي تم إدخالها بالشيفت:</span>
-                <span class="font-bold text-emerald-400 text-base">{{ (entry_stats.total_entered if entry_stats else summary.total_sessions) }} سيارة</span>
+        <div class="p-6">
+            <div class="bg-slate-900/60 border border-slate-700/60 rounded-xl p-4 text-center text-sm text-slate-300 font-medium mb-6">
+                هل أنت متأكد من رغبتك في إنهاء الوردية وتسجيل الخروج؟
             </div>
-            <div class="flex justify-between border-b border-gray-700 pb-3">
-                <span class="text-gray-400">سيارات لا تزال داخل الجراج:</span>
-                <span class="font-bold text-amber-400 text-base">{{ (entry_stats.active_count if entry_stats else summary.active_sessions) }} سيارة</span>
-            </div>
-            <div class="flex justify-between border-b border-gray-700 pb-3">
-                <span class="text-gray-400">سيارات غادرت الجراج لاحقاً:</span>
-                <span class="font-bold text-white text-base">{{ (entry_stats.completed_count if entry_stats else summary.completed_sessions) }} سيارة</span>
-            </div>
-            {% if entry_stats and entry_stats.subs_count > 0 %}
-            <div class="flex justify-between border-b border-gray-700 pb-3">
-                <span class="text-gray-400">اشتراكات تم تمريرها بالدخول:</span>
-                <span class="font-bold text-cyan-400 text-base">{{ entry_stats.subs_count }} اشتراك</span>
-            </div>
-            {% endif %}
-            
-            <div class="bg-emerald-950/40 border border-emerald-500/30 rounded-xl p-3 text-center text-xs text-emerald-300 font-medium mt-1">
-                ℹ️ هذه بوابة دخول فقط — لا توجد عهدة نقدية أو مبالغ تحصيل مسجلة على العامل.
-            </div>
-        </div>
-    </div>
 
-    <!-- Confirm shift end form without cash inputs -->
-    <div class="bg-gray-800 border border-gray-700 rounded-2xl p-6 shadow-xl mb-6">
-        <form method="POST" action="/ui/operator/shift/end" class="flex flex-col gap-4">
-            <input type="hidden" name="closing_cash_egp" value="0">
-            <button type="submit" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-3.5 rounded-lg shadow-md transition duration-200 min-h-[56px] text-lg cursor-pointer">
-                {{ t("operator.shift.end_button") }}
-            </button>
-        </form>
+            <form method="POST" action="/ui/operator/shift/end" class="flex flex-col gap-3">
+                <input type="hidden" name="closing_cash_egp" value="0">
+                <button type="submit" class="w-full bg-amber-600 hover:bg-amber-500 text-white font-black py-4 rounded-xl shadow-lg transition duration-200 min-h-[52px] text-lg cursor-pointer">
+                    {{ t("operator.shift.end_button") }}
+                </button>
+                <a href="/ui/operator/dashboard" class="w-full text-center py-2.5 text-xs text-slate-400 hover:text-white transition">
+                    ← إلغاء والرجوع للوحة التحكم
+                </a>
+            </form>
+        </div>
     </div>
 
     {% else %}
     <!-- ========================================================== -->
-    <!-- GATE 2+: EXIT OPERATOR SHIFT SUMMARY (WITH CASH)            -->
+    <!-- GATE 2+: EXIT OPERATOR SHIFT CLOSING (BLIND CASH ENTRY)     -->
     <!-- ========================================================== -->
-    <!-- Read-only shift summary -->
-    <div class="bg-gray-800 border border-gray-700 rounded-2xl shadow-xl overflow-hidden mb-6">
-        <div class="bg-gray-750 px-6 py-4 border-b border-gray-700 text-center">
-            <span class="text-xs text-indigo-400 block mb-1">ملخص العمليات الحالية للشيفت</span>
-            <h2 class="text-xl font-bold text-white">الشيفت رقم #{{ shift.id }}</h2>
+    <div class="bg-gray-800 border border-gray-700 rounded-2xl shadow-2xl overflow-hidden">
+        <div class="bg-gray-750 px-6 py-6 border-b border-gray-700 text-center">
+            <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-cyan-950/80 text-cyan-300 border border-cyan-500/40 mb-3">
+                <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
+                <span>بوابة الخروج والمحاسبة</span>
+            </div>
+            <h2 class="text-2xl font-black text-white">إنهاء الشيفت رقم #{{ shift.id }}</h2>
+            <p class="text-xs text-slate-400 mt-1.5">إدخال المبلغ المحصل الفعلي لتسليم الوردية</p>
         </div>
         
-        <div class="p-6 flex flex-col gap-4 text-sm">
-            <div class="flex justify-between border-b border-gray-700 pb-3">
-                <span class="text-gray-400">إجمالي عمليات الشيفت (مُخرَجة + نشطة):</span>
-                <span class="font-bold text-white text-base">{{ summary.total_sessions }} جلسة</span>
-            </div>
-            <div class="flex justify-between border-b border-gray-700 pb-3">
-                <span class="text-gray-400">الجلسات المكتملة (تم تحصيلها في هذا الشيفت):</span>
-                <span class="font-bold text-white text-base">{{ summary.completed_sessions }} جلسة</span>
-            </div>
-            <div class="flex justify-between border-b border-gray-700 pb-3">
-                <span class="text-gray-400">كرت مفقود تم تسويته:</span>
-                <span class="font-bold text-white text-base">{{ summary.lost_card_sessions }} جلسة</span>
-            </div>
-            <div class="flex justify-between border-b border-gray-700 pb-3">
-                <span class="text-gray-400">الجلسات النشطة حالياً (داخل الجراج):</span>
-                <span class="font-bold text-amber-400 text-base">{{ summary.active_sessions }} جلسة نشطة</span>
-            </div>
-            <div class="flex justify-between items-center pt-2">
-                <span class="text-gray-300 font-bold">المبلغ المستحق الدفتري:</span>
-                <span class="text-2xl font-black text-indigo-400">{{ summary.computed_total_piastres | format_egp }}</span>
-            </div>
+        <div class="p-6">
+            <form method="POST" action="/ui/operator/shift/end" class="flex flex-col gap-5">
+                <!-- Closing Cash Input -->
+                <div class="text-right">
+                    <label class="block text-sm font-bold text-slate-200 mb-2">
+                        المبلغ الفعلي الموجود في الخزينة / الدرج (بالجنيه):
+                    </label>
+                    <div class="relative">
+                        <input id="closing-cash-input"
+                               type="number" 
+                               name="closing_cash_egp" 
+                               required 
+                               min="0" 
+                               step="1" 
+                               autofocus
+                               placeholder="0"
+                               class="w-full bg-gray-900 border-2 border-slate-700 focus:border-cyan-500 rounded-xl p-4 text-center text-white text-2xl font-digital font-black min-h-[56px] focus:outline-none transition duration-200 shadow-inner">
+                        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-slate-400 font-bold pointer-events-none">
+                            ج.م (EGP)
+                        </span>
+                    </div>
+                    <span class="text-[11px] text-slate-400 block mt-2 text-right">
+                        * أدخل المبلغ النقدي الإجمالي الفعلي الموجود معك لإتمام إنهاء الوردية.
+                    </span>
+                </div>
+
+                <button type="submit" class="w-full bg-amber-600 hover:bg-amber-500 text-white font-black py-4 rounded-xl shadow-lg transition duration-200 min-h-[56px] text-lg mt-1 cursor-pointer">
+                    {{ t("operator.shift.end_button") }}
+                </button>
+                <a href="/ui/operator/dashboard" class="w-full text-center py-2 text-xs text-slate-400 hover:text-white transition">
+                    ← إلغاء والرجوع للوحة التحكم
+                </a>
+            </form>
         </div>
-    </div>
-
-    <!-- Closing cash entry form -->
-    <div class="bg-gray-800 border border-gray-700 rounded-2xl p-6 shadow-xl mb-6">
-        <form method="POST" action="/ui/operator/shift/end" class="flex flex-col gap-4">
-            <!-- Closing Cash Input -->
-            <div class="text-right">
-                <label class="block text-sm text-gray-400 mb-1">الكاش الختامي (بالجنيه)</label>
-                <input id="closing-cash-input"
-                       type="number" 
-                       name="closing_cash_egp" 
-                       required 
-                       min="0" 
-                       step="1" 
-                       placeholder="0"
-                       class="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-center text-white text-xl font-bold min-h-[48px] focus:outline-none focus:border-indigo-500 transition duration-200">
-            </div>
-
-            <!-- Live discrepancy display -->
-            <div id="discrepancy-container" class="flex justify-between items-center bg-gray-900 border border-gray-700/50 p-3 rounded-lg text-sm">
-                <span class="text-gray-400">العجز/الزيادة في الخزنة:</span>
-                <span id="discrepancy-display" class="font-bold text-gray-300">0.00 EGP</span>
-            </div>
-
-            <button type="submit" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-3.5 rounded-lg shadow-md transition duration-200 min-h-[56px] text-lg mt-2 cursor-pointer">
-                {{ t("operator.shift.end_button") }}
-            </button>
-        </form>
     </div>
     {% endif %}
 
 </div>
-<div id="shift-summary-data" data-computed-total="{{ summary.computed_total_piastres }}" style="display:none;"></div>
-{% endblock %}
-
-{% block scripts %}
-<script>
-  function formatEgp(piastres) {
-    var isNegative = piastres < 0;
-    var absPiastres = Math.abs(piastres);
-    var egp = Math.floor(absPiastres / 100);
-    var fils = absPiastres % 100;
-    var filsStr = (fils < 10 ? '0' : '') + fils;
-    var sign = isNegative ? "-" : "";
-    return sign + egp + "." + filsStr + " EGP";
-  }
-
-  var input = document.getElementById("closing-cash-input");
-  var el = document.getElementById("discrepancy-display");
-  var summaryData = document.getElementById("shift-summary-data");
-  var computedTotal = summaryData ? parseInt(summaryData.getAttribute("data-computed-total"), 10) || 0 : 0;
-
-  if (input && el) {
-    input.addEventListener('input', function() {
-      var closingCash = (parseInt(input.value, 10) || 0) * 100;
-      var diff = closingCash - computedTotal;
-      el.textContent = formatEgp(diff);
-      
-      if (diff >= 0) {
-        el.className = "text-green-500 font-bold";
-      } else {
-        el.className = "text-red-500 font-bold";
-      }
-    });
-  }
-</script>
 {% endblock %}

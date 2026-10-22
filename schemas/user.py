@@ -17,7 +17,7 @@ class UserBase(BaseModel):
         return self
 
 class UserCreate(UserBase):
-    password: str = Field(min_length=8, max_length=128)
+    password: str = Field(min_length=4, max_length=128)
 
 class UserResponse(UserBase):
     id: int
@@ -28,4 +28,4 @@ class UserResponse(UserBase):
     model_config = ConfigDict(from_attributes=True)
 
 class UserUpdatePassword(BaseModel):
-    new_password: str = Field(min_length=8, max_length=128)
+    new_password: str = Field(min_length=4, max_length=128)

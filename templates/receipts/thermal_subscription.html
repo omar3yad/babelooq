@@ -1,31 +1,69 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>إيصال اشتراك</title>
   <link rel="stylesheet" href="/static/print.css">
   <style>
-    body { width: 80mm; font-family: 'Courier New', Courier, monospace;
-           font-size: 13pt; direction: rtl; margin: 0; padding: 4mm; background: #fff; color: #000; }
-    .sep { white-space: pre; margin: 3px 0; text-align: center; }
-    .lbl { font-size: 12pt; }
-    .val { font-weight: bold; }
-    .total-line { font-size: 17pt; font-weight: bold; }
-    .center { text-align: center; }
-    .bold { font-weight: bold; }
-    .row { display: flex; justify-content: space-between; margin: 4px 0; }
+    body {
+      width: 80mm;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 13pt;
+      direction: rtl;
+      margin: 0;
+      padding: 4mm;
+      background: #fff;
+      color: #000;
+    }
+
+    .sep {
+      white-space: pre;
+      margin: 3px 0;
+      text-align: center;
+    }
+
+    .lbl {
+      font-size: 12pt;
+    }
+
+    .val {
+      font-weight: bold;
+    }
+
+    .total-line {
+      font-size: 17pt;
+      font-weight: bold;
+    }
+
+    .center {
+      text-align: center;
+    }
+
+    .bold {
+      font-weight: bold;
+    }
+
+    .row {
+      display: flex;
+      justify-content: space-between;
+      margin: 4px 0;
+    }
   </style>
 </head>
+
 <body class="receipt-body">
 
-  <div class="center bold" style="font-size: 15pt; letter-spacing: 1.5px;">{{ receipt.company_name or "garage4u" }}</div>
+  <div class="center bold" style="font-size: 15pt; letter-spacing: 1.5px;">{{ receipt.company_name or "garage4u" }}
+  </div>
   <div class="center bold" style="font-size: 13pt; margin-top: 3px;">{{ receipt.garage_name or "جراج باب اللوق" }}</div>
   <p class="sep">--------------------------------</p>
-  
+
   <div class="center bold" style="font-size: 11pt;">{{ t("receipt.subscription_title") }}</div>
-  <div class="center font-mono">رقم العملية: {{ receipt.session_id | string | zfill(8) }}</div>
-  
+  <div class="center font-mono">رقم العملية: {{ receipt.session_id | string | zfill(8) }}
+  </div>
+
   <p class="sep">--------------------------------</p>
 
   <div class="row">
@@ -48,7 +86,7 @@
     <span class="lbl">المشغل:</span>
     <span class="val">{{ receipt.operator_name }}</span>
   </div>
-  
+
   <p class="sep">--------------------------------</p>
 
   <div class="row">
@@ -89,9 +127,14 @@
   <p class="sep">--------------------------------</p>
   <div class="center bold">{{ t("receipt.footer") }}</div>
 
-  <div class="no-print" style="margin-top: 30px; text-align: center; font-family: sans-serif; border-top: 1px solid #ccc; padding-top: 15px;">
-    <button onclick="doPrint()" style="background: #4f46e5; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 11pt; margin-bottom: 12px; display: block; width: 100%;">🖨️ طباعة مرة أخرى</button>
-    <a href="/ui/operator/dashboard" style="display: block; background: #16a34a; color: white; padding: 10px 20px; border-radius: 5px; text-decoration: none; font-size: 11pt; font-weight: bold;">✔ رجوع للوحة التحكم</a>
+  <div class="no-print"
+    style="margin-top: 30px; text-align: center; font-family: sans-serif; border-top: 1px solid #ccc; padding-top: 15px;">
+    <button onclick="doPrint()"
+      style="background: #4f46e5; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 11pt; margin-bottom: 12px; display: block; width: 100%;">🖨️
+      طباعة مرة أخرى</button>
+    <a href="/ui/operator/dashboard"
+      style="display: block; background: #16a34a; color: white; padding: 10px 20px; border-radius: 5px; text-decoration: none; font-size: 11pt; font-weight: bold;">✔
+      رجوع للوحة التحكم</a>
   </div>
 
   <script>
@@ -103,9 +146,10 @@
       }
     }
 
-    window.addEventListener('load', function() {
+    window.addEventListener('load', function () {
       setTimeout(doPrint, 600);
     });
   </script>
 </body>
+
 </html>

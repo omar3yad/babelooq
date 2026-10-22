@@ -108,9 +108,11 @@ def cairo_datetime_filter(dt: datetime | None, fmt: str | None = None) -> str:
 
 
 def piastres_to_egp_filter(piastres: int | None) -> str:
-    """Convert integer piastres to EGP currency format string (e.g. 10000 -> 100.00)."""
+    """Convert integer piastres to EGP currency format string (e.g. 10000 -> 100)."""
     if piastres is None:
-        return "0.00"
+        return "0"
+    if piastres % 100 == 0:
+        return str(piastres // 100)
     return f"{Decimal(piastres) / Decimal(100):.2f}"
 
 

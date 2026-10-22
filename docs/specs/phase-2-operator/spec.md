@@ -482,10 +482,10 @@ clause on update queries to prevent race conditions.
 
 | ID | Scenario | Expected Behaviour |
 |---|---|---|
-| EC-SCAN-001 | Operator scans a card that is already `in_use` (ACTIVE session exists) on the **entry** screen | `409` with code `CARD_ALREADY_ACTIVE`. Page shows: "الكرت ده جوه الجراج بالفعل". Entry is not created. Card is not touched. |
+| EC-SCAN-001 | Operator scans a card that is already `in_use` (ACTIVE session exists) on the **entry** screen | `409` with code `CARD_ALREADY_ACTIVE`. Page shows: "تم ادخال هذا الكارت بالفعل". Entry is not created. Card is not touched. |
 | EC-SCAN-002 | Operator scans a card that is marked `lost` on the entry screen | `409` with code `CARD_NOT_AVAILABLE`. Page shows: "الكرت ده متعطل — تواصل مع الإدارة". |
 | EC-SCAN-003 | Operator scans a card that is marked `damaged` on the entry screen | `409` with code `CARD_NOT_AVAILABLE`. Same message as EC-SCAN-002. |
-| EC-SCAN-004 | Operator scans a `card_code` that does not exist in the `parking_cards` table | `404` with code `CARD_NOT_FOUND`. Page shows: "الكرت ده مش مسجل في النظام". |
+| EC-SCAN-004 | Operator scans a `card_code` that does not exist in the `parking_cards` table | `404` with code `CARD_NOT_FOUND`. Page shows: "هذا الكارت غير مسجل في النظام". |
 | EC-SCAN-005 | Operator scans an `available` card on the **exit** screen (no active session) | `404` with code `CARD_HAS_NO_ACTIVE_SESSION`. Page shows: "مفيش جلسة مفتوحة لهذا الكرت". |
 | EC-SCAN-006 | Operator scans a `COMPLETED` session's card on the exit screen (card already freed) | Card will be `available`; falls through to EC-SCAN-005 behaviour. |
 | EC-SCAN-007 | Scanner injects barcode with leading/trailing whitespace or newline characters | `CardService.normalize_code` strips whitespace before lookup. The raw input is never logged or stored. |

@@ -935,8 +935,7 @@ async def api_operator_scan(
             except Exception as cam_exc:
                 logger.error("Could not trigger exit camera snapshot: %s", cam_exc)
 
-            # 3. Format response details with safe fallbacks
-            total_egp = f"{amount_piastres / 100:.2f}"
+            total_egp = str(amount_piastres // 100) if amount_piastres % 100 == 0 else f"{amount_piastres / 100:.2f}"
             try:
                 total_formatted = format_egp(amount_piastres)
             except Exception:

@@ -314,7 +314,15 @@
     var durationEl = document.getElementById("exit-duration");
     var rateLabelEl = document.getElementById("exit-rate-label");
 
-    if (priceEl) priceEl.textContent = data.total_egp || "0.00";
+    if (priceEl) {
+      var p = (data.total_egp !== undefined && data.total_egp !== null) ? data.total_egp : "0";
+      var pNum = parseFloat(p);
+      if (!isNaN(pNum)) {
+        priceEl.textContent = (pNum % 1 === 0) ? String(Math.round(pNum)) : pNum.toFixed(2);
+      } else {
+        priceEl.textContent = String(p).replace(/\.00$/, "");
+      }
+    }
     if (cardCodeEl) cardCodeEl.textContent = data.card_code || "—";
     if (entryTimeEl) entryTimeEl.textContent = data.entry_time || "—";
     if (durationEl) durationEl.textContent = data.duration_display || "—";

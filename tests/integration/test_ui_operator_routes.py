@@ -105,7 +105,7 @@ async def test_entry_post_card_not_found_rerenders(async_client, db_session, aut
         data={"card_code": "CARD-NONEXISTENT"}
     )
     assert response.status_code == 200 # Re-renders page
-    assert "الكرت ده مش مسجل في النظام" in response.text
+    assert "هذا الكارت غير مسجل في النظام" in response.text
 
 @pytest.mark.asyncio
 async def test_exit_scan_page_renders(async_client, db_session, auth_service):
