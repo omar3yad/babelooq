@@ -140,6 +140,16 @@
             </td>
             <td class="p-3">
               <div class="flex items-center gap-2">
+                <button type="button" 
+                        data-user-id="{{ u.id }}" 
+                        data-full-name="{{ u.full_name }}" 
+                        data-username="{{ u.username }}"
+                        data-role="{{ u.role.value if u.role.value is defined else u.role }}"
+                        data-gate-number="{{ u.gate_number or '' }}"
+                        class="edit-user-btn bg-indigo-600/90 hover:bg-indigo-500 text-white text-xs px-2.5 py-1 rounded transition flex items-center gap-1 shadow-sm font-medium">
+                  <span>✏️</span>
+                  <span>تعديل</span>
+                </button>
                 <button type="button" data-user-id="{{ u.id }}" data-full-name="{{ u.full_name }}" class="reset-pwd-btn bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs px-2.5 py-1 rounded transition">
                   إعادة كلمة المرور
                 </button>
@@ -161,6 +171,53 @@
     </div>
   </div>
 </div>
+
+<!-- Edit User Modal -->
+<dialog id="edit-user-dialog" class="bg-gray-900 border border-gray-700 text-white rounded-2xl p-6 max-w-sm w-full backdrop:bg-black/70 shadow-2xl">
+  <div class="space-y-4">
+    <div class="flex items-center justify-between border-b border-gray-800 pb-3">
+      <div class="flex items-center gap-2">
+        <span class="text-indigo-400 text-base">✏️</span>
+        <h3 class="text-base font-bold text-white">تعديل بيانات العامل</h3>
+      </div>
+      <button type="button" onclick="document.getElementById('edit-user-dialog').close()" class="text-gray-400 hover:text-white text-xl leading-none">&times;</button>
+    </div>
+
+    <div id="edit-error-msg" class="hidden bg-red-950/80 border border-red-500 text-red-200 text-xs p-2 rounded"></div>
+
+    <form id="edit-user-form" class="space-y-3">
+      <input type="hidden" id="edit-user-id">
+      
+      <!-- Username (Readonly) -->
+      <div>
+        <label class="block text-xs font-medium text-gray-400 mb-1">اسم المستخدم</label>
+        <input type="text" id="edit-username" readonly disabled class="w-full bg-gray-800/60 border border-gray-700/60 rounded-lg px-3 py-2 text-sm text-gray-400 cursor-not-allowed font-mono">
+      </div>
+
+      <!-- Full Name -->
+      <div>
+        <label class="block text-xs font-medium text-gray-300 mb-1">الاسم بالكامل *</label>
+        <input type="text" id="edit-fullname" required placeholder="مثال: أحمد محمود" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500">
+      </div>
+
+      <!-- Operator Type / Gate Number -->
+      <div id="edit-gate-container">
+        <label class="block text-xs font-medium text-gray-300 mb-1">نوع العامل والصلاحية *</label>
+        <select id="edit-gate" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500">
+          <option value="1">🟢 عامل دخول (بوابة 1 - تسجيل دخول السيارات فقط)</option>
+          <option value="2">🔵 عامل خروج (بوابة 2 - تسجيل خروج وحساب التكلفة)</option>
+        </select>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2 border-t border-gray-800">
+        <button type="button" onclick="document.getElementById('edit-user-dialog').close()" class="bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded-lg text-xs transition">إلغاء</button>
+        <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-4 py-1.5 rounded-lg text-xs transition shadow flex items-center gap-1">
+          <span>حفظ التعديلات</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</dialog>
 
 <!-- Reset Password Modal -->
 <dialog id="reset-password-dialog" class="bg-gray-900 border border-gray-700 text-white rounded-2xl p-6 max-w-sm w-full backdrop:bg-black/70 shadow-2xl">
@@ -277,6 +334,74 @@
       alert(err.message);
     }
   }
+
+  // Edit User Dialog
+  const editDialog = document.getElementById('edit-user-dialog');
+  const editForm = document.getElementById('edit-user-form');
+  const editErr = document.getElementById('edit-error-msg');
+  const editGateContainer = document.getElementById('edit-gate-container');
+
+  function openEditModal(userId, fullName, username, role, gateNumber) {
+    document.getElementById('edit-user-id').value = userId;
+    document.getElementById('edit-username').value = username;
+    document.getElementById('edit-fullname').value = fullName;
+    editErr.classList.add('hidden');
+
+    if (role === 'admin') {
+      editGateContainer.classList.add('hidden');
+    } else {
+      editGateContainer.classList.remove('hidden');
+      document.getElementById('edit-gate').value = gateNumber ? String(gateNumber) : '1';
+    }
+
+    editDialog.showModal();
+  }
+
+  document.querySelectorAll('.edit-user-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      openEditModal(
+        btn.dataset.userId,
+        btn.dataset.fullName,
+        btn.dataset.username,
+        btn.dataset.role,
+        btn.dataset.gateNumber
+      );
+    });
+  });
+
+  editForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    editErr.classList.add('hidden');
+
+    const userId = document.getElementById('edit-user-id').value;
+    const fullName = document.getElementById('edit-fullname').value.trim();
+    const isGateVisible = !editGateContainer.classList.contains('hidden');
+    const gateVal = isGateVisible ? parseInt(document.getElementById('edit-gate').value, 10) : null;
+
+    const payload = {
+      full_name: fullName,
+      gate_number: gateVal
+    };
+
+    try {
+      const res = await fetch(`/api/v1/users/${userId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || 'فشل تحديث بيانات المستخدم');
+      }
+
+      editDialog.close();
+      window.location.reload();
+    } catch (err) {
+      editErr.textContent = err.message;
+      editErr.classList.remove('hidden');
+    }
+  });
 
   // Reset Password Dialog
   const resetDialog = document.getElementById('reset-password-dialog');

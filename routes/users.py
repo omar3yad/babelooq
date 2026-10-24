@@ -7,7 +7,7 @@ from dependencies import require_admin
 from models.user import User, UserRole
 from repositories.user_repo import UserRepository
 from schemas.common import PaginatedResponse
-from schemas.user import UserCreate, UserResponse, UserUpdatePassword
+from schemas.user import UserCreate, UserResponse, UserUpdatePassword, UserUpdate
 from services.audit_service import AuditService
 from services.auth_service import AuthService
 from services.user_service import UserService
@@ -91,3 +91,15 @@ async def reset_password(
 ):
     user = await user_service.reset_password(user_id, data.new_password, actor_id=current_user.id)
     return {"data": UserResponse.model_validate(user).model_dump(mode="json")}
+
+
+@router.patch("/{user_id}")
+async def update_user(
+    user_id: int,
+    data: UserUpdate,
+    current_user: User = Depends(require_admin),
+    user_service: UserService = Depends(get_user_service),
+):
+    user = await user_service.update_user(user_id, data, actor_id=current_user.id)
+    return {"data": UserResponse.model_validate(user).model_dump(mode="json")}
+

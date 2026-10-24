@@ -127,8 +127,10 @@
     <!-- Main Content Area -->
     <main class="flex-1 flex flex-col min-w-0 overflow-y-auto">
       <!-- Topbar -->
-      <header
-        class="h-14 border-b border-gray-800 bg-gray-950/60 backdrop-blur px-4 flex items-center justify-between flex-shrink-0">
+    <header
+        class="relative h-14 border-b border-gray-800 bg-gray-950/60 backdrop-blur px-4 flex items-center justify-between flex-shrink-0">
+        
+        <!-- الجانب الأيمن -->
         <div class="flex items-center gap-3">
           <button id="sidebar-toggle"
             class="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition focus:outline-none">
@@ -136,11 +138,20 @@
           </button>
           <span class="text-sm font-semibold text-gray-300">مواقف السيارات الذكية</span>
         </div>
+
+        <!-- النص في المنتصف تماماً بخط عريض -->
+        <div class="absolute left-1/2 -translate-x-1/2 pointer-events-none">
+          <span class="text-lg md:text-xl font-bold tracking-wide text-white drop-shadow-sm">
+            جراج باب اللوق
+          </span>
+        </div>
+
+        <!-- الجانب الأيسر -->
         <div class="flex items-center gap-4 text-sm">
           <span class="text-gray-300 font-medium">{{ user.full_name if user else "" }}</span>
           <span class="inline-block w-2 h-2 rounded-full bg-emerald-500"></span>
         </div>
-      </header>
+      </header> 
 
       <!-- Content Container -->
       <section class="flex-1 p-4 md:p-6 lg:p-8 max-w-7xl w-full mx-auto">

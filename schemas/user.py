@@ -29,3 +29,9 @@ class UserResponse(UserBase):
 
 class UserUpdatePassword(BaseModel):
     new_password: str = Field(min_length=4, max_length=128)
+
+class UserUpdate(BaseModel):
+    full_name: str | None = Field(default=None, min_length=1, max_length=120)
+    gate_number: int | None = Field(default=None, ge=1, le=5)
+    role: UserRole | None = None
+

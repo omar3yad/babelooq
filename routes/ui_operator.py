@@ -222,7 +222,7 @@ async def end_shift_page(
 @router.post("/shift/end")
 async def close_shift(
     request: Request,
-    closing_cash_egp: int = Form(0),
+    closing_cash_egp: int | None = Form(None),
     current_user: User = Depends(require_operator),
     shift_service: ShiftService = Depends(get_shift_service),
 ):
@@ -233,8 +233,12 @@ async def close_shift(
 
     if current_user.gate_number == 1:
         closing_cash_piastres = 0
-    else:
+    elif closing_cash_egp is not None:
         closing_cash_piastres = closing_cash_egp * 100
+    else:
+        # Exit operator without manual cash count - automatically matches computed total revenue
+        summary = await shift_service._compute_summary(shift, None)
+        closing_cash_piastres = summary.computed_total_piastres
 
     await shift_service.close_shift(
         shift_id=shift.id,

@@ -38,7 +38,7 @@
 
     {% else %}
     <!-- ========================================================== -->
-    <!-- GATE 2+: EXIT OPERATOR SHIFT CLOSING (BLIND CASH ENTRY)     -->
+    <!-- GATE 2+: EXIT OPERATOR SHIFT CLOSING                        -->
     <!-- ========================================================== -->
     <div class="bg-gray-800 border border-gray-700 rounded-2xl shadow-2xl overflow-hidden">
         <div class="bg-gray-750 px-6 py-6 border-b border-gray-700 text-center">
@@ -47,39 +47,19 @@
                 <span>بوابة الخروج والمحاسبة</span>
             </div>
             <h2 class="text-2xl font-black text-white">إنهاء الشيفت رقم #{{ shift.id }}</h2>
-            <p class="text-xs text-slate-400 mt-1.5">إدخال المبلغ المحصل الفعلي لتسليم الوردية</p>
+            <p class="text-xs text-slate-400 mt-1.5">تأكيد إنهاء الوردية الحالية وتسجيل الخروج</p>
         </div>
         
         <div class="p-6">
-            <form method="POST" action="/ui/operator/shift/end" class="flex flex-col gap-5">
-                <!-- Closing Cash Input -->
-                <div class="text-right">
-                    <label class="block text-sm font-bold text-slate-200 mb-2">
-                        المبلغ الفعلي الموجود في الخزينة / الدرج (بالجنيه):
-                    </label>
-                    <div class="relative">
-                        <input id="closing-cash-input"
-                               type="number" 
-                               name="closing_cash_egp" 
-                               required 
-                               min="0" 
-                               step="1" 
-                               autofocus
-                               placeholder="0"
-                               class="w-full bg-gray-900 border-2 border-slate-700 focus:border-cyan-500 rounded-xl p-4 text-center text-white text-2xl font-digital font-black min-h-[56px] focus:outline-none transition duration-200 shadow-inner">
-                        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-slate-400 font-bold pointer-events-none">
-                            ج.م (EGP)
-                        </span>
-                    </div>
-                    <span class="text-[11px] text-slate-400 block mt-2 text-right">
-                        * أدخل المبلغ النقدي الإجمالي الفعلي الموجود معك لإتمام إنهاء الوردية.
-                    </span>
-                </div>
+            <div class="bg-slate-900/60 border border-slate-700/60 rounded-xl p-4 text-center text-sm text-slate-300 font-medium mb-6">
+                هل أنت متأكد من رغبتك في إنهاء الوردية وتسجيل الخروج؟
+            </div>
 
-                <button type="submit" class="w-full bg-amber-600 hover:bg-amber-500 text-white font-black py-4 rounded-xl shadow-lg transition duration-200 min-h-[56px] text-lg mt-1 cursor-pointer">
+            <form method="POST" action="/ui/operator/shift/end" class="flex flex-col gap-3">
+                <button type="submit" class="w-full bg-amber-600 hover:bg-amber-500 text-white font-black py-4 rounded-xl shadow-lg transition duration-200 min-h-[56px] text-lg cursor-pointer">
                     {{ t("operator.shift.end_button") }}
                 </button>
-                <a href="/ui/operator/dashboard" class="w-full text-center py-2 text-xs text-slate-400 hover:text-white transition">
+                <a href="/ui/operator/dashboard" class="w-full text-center py-2.5 text-xs text-slate-400 hover:text-white transition">
                     ← إلغاء والرجوع للوحة التحكم
                 </a>
             </form>
