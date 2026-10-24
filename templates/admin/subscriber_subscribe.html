@@ -60,8 +60,13 @@
             <!-- Card Code Input (Direct Text/Scan) -->
             <div>
                 <label class="block text-sm font-semibold text-gray-300 mb-1.5">رقم / كود كرت الدخول (مطلوب)</label>
-                <input type="text" id="subCardCode" required placeholder="أدخل أو امسح كود الكرت (مثلاً 3160)" autofocus
+                <input type="text" id="subCardCode" list="availableCards" required placeholder="أدخل أو امسح كود الكرت (مثلاً 3160)" autofocus
                     class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white font-mono text-base focus:outline-none focus:border-indigo-500">
+                <datalist id="availableCards">
+                    {% for card in cards %}
+                    <option value="{{ card.card_code }}">{{ card.card_code }}</option>
+                    {% endfor %}
+                </datalist>
                 <p class="text-xs text-gray-500 mt-1">اكتب رقم الكرت المتاح أو امسحه بالماسح الضوئي (Barcode / RFID)</p>
             </div>
 

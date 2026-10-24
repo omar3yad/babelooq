@@ -945,108 +945,108 @@ Name the constraint `"ck_users_role_gate_consistency"`.
 
 ### 16a — Auth Endpoint Integration Tests
 
-- [ ] **Task 16.1:** Create `tests/integration/test_auth_routes.py`. Write test
+- [x] **Task 16.1:** Create `tests/integration/test_auth_routes.py`. Write test
   `test_login_success` (async): POSTs valid credentials to `/api/v1/auth/login`.
   Asserts status `200`, response body contains `data.role`, and `pgms_token` cookie is
   set.
 
-- [ ] **Task 16.2:** Add test `test_login_wrong_password` (async): POSTs wrong
+- [x] **Task 16.2:** Add test `test_login_wrong_password` (async): POSTs wrong
   password. Asserts status `401` and `code == "INVALID_CREDENTIALS"`.
 
-- [ ] **Task 16.3:** Add test `test_login_unknown_username` (async): POSTs unknown
+- [x] **Task 16.3:** Add test `test_login_unknown_username` (async): POSTs unknown
   username. Asserts status `401` and `code == "INVALID_CREDENTIALS"`.
 
-- [ ] **Task 16.4:** Add test `test_login_inactive_user` (async): creates an inactive
+- [x] **Task 16.4:** Add test `test_login_inactive_user` (async): creates an inactive
   user, POSTs their credentials. Asserts `401`.
 
-- [ ] **Task 16.5:** Add test `test_logout_clears_cookie` (async): logs in, then POSTs
+- [x] **Task 16.5:** Add test `test_logout_clears_cookie` (async): logs in, then POSTs
   to `/api/v1/auth/logout`. Asserts status `200` and `pgms_token` cookie `max-age` is
   `0` or the cookie is absent.
 
-- [ ] **Task 16.6:** Add test `test_logout_without_session` (async): POSTs to
+- [x] **Task 16.6:** Add test `test_logout_without_session` (async): POSTs to
   `/api/v1/auth/logout` with no cookie. Asserts status `200` (idempotent).
 
-- [ ] **Task 16.7:** Add test `test_get_me_authenticated` (async): logs in, then GETs
+- [x] **Task 16.7:** Add test `test_get_me_authenticated` (async): logs in, then GETs
   `/api/v1/auth/me`. Asserts status `200` and response contains `user_id`.
 
-- [ ] **Task 16.8:** Add test `test_get_me_unauthenticated` (async): GETs
+- [x] **Task 16.8:** Add test `test_get_me_unauthenticated` (async): GETs
   `/api/v1/auth/me` with no cookie. Asserts status `401`.
 
-- [ ] **Task 16.9:** Add test `test_get_me_expired_token` (async): creates a token with
+- [x] **Task 16.9:** Add test `test_get_me_expired_token` (async): creates a token with
   `exp` set to the past using `freezegun`. Sets it as cookie. GETs `/api/v1/auth/me`.
   Asserts `401`.
 
 ### 16b — User Management Integration Tests
 
-- [ ] **Task 16.10:** Create `tests/integration/test_user_routes.py`. Write test
+- [x] **Task 16.10:** Create `tests/integration/test_user_routes.py`. Write test
   `test_create_user_as_admin` (async): logs in as admin, POSTs to `/api/v1/users/`
   with valid operator data. Asserts status `201` and response contains `id`.
 
-- [ ] **Task 16.11:** Add test `test_create_user_as_operator_forbidden` (async): logs
+- [x] **Task 16.11:** Add test `test_create_user_as_operator_forbidden` (async): logs
   in as operator, POSTs to `/api/v1/users/`. Asserts status `403`.
 
-- [ ] **Task 16.12:** Add test `test_create_user_duplicate_username` (async): creates
+- [x] **Task 16.12:** Add test `test_create_user_duplicate_username` (async): creates
   a user, then creates another with the same username. Asserts `409` with code
   `USERNAME_ALREADY_EXISTS`.
 
-- [ ] **Task 16.13:** Add test `test_create_operator_without_gate` (async): POSTs
+- [x] **Task 16.13:** Add test `test_create_operator_without_gate` (async): POSTs
   operator with `gate_number=null`. Asserts `422`.
 
-- [ ] **Task 16.14:** Add test `test_create_operator_invalid_gate` (async): POSTs
+- [x] **Task 16.14:** Add test `test_create_operator_invalid_gate` (async): POSTs
   `gate_number=6`. Asserts `422`.
 
-- [ ] **Task 16.15:** Add test `test_create_admin_with_gate` (async): POSTs admin with
+- [x] **Task 16.15:** Add test `test_create_admin_with_gate` (async): POSTs admin with
   `gate_number=1`. Asserts `422`.
 
-- [ ] **Task 16.16:** Add test `test_list_users_as_admin` (async): creates 3 users,
+- [x] **Task 16.16:** Add test `test_list_users_as_admin` (async): creates 3 users,
   GETs `/api/v1/users/`. Asserts status `200` and `total >= 3`.
 
-- [ ] **Task 16.17:** Add test `test_list_users_filter_by_role` (async): creates one
+- [x] **Task 16.17:** Add test `test_list_users_filter_by_role` (async): creates one
   operator and one admin, GETs `/api/v1/users/?role=operator`. Asserts all returned
   users have `role == "operator"`.
 
-- [ ] **Task 16.18:** Add test `test_get_user_by_id` (async): creates a user, GETs
+- [x] **Task 16.18:** Add test `test_get_user_by_id` (async): creates a user, GETs
   `/api/v1/users/{id}`. Asserts `200` and matching `username`.
 
-- [ ] **Task 16.19:** Add test `test_get_user_not_found` (async): GETs
+- [x] **Task 16.19:** Add test `test_get_user_not_found` (async): GETs
   `/api/v1/users/99999`. Asserts `404` and `code == "USER_NOT_FOUND"`.
 
-- [ ] **Task 16.20:** Add test `test_deactivate_user` (async): creates an active user,
+- [x] **Task 16.20:** Add test `test_deactivate_user` (async): creates an active user,
   PATCHes `/api/v1/users/{id}/deactivate`. Asserts `200` and `is_active == false`.
 
-- [ ] **Task 16.21:** Add test `test_deactivate_self_forbidden` (async): admin tries
+- [x] **Task 16.21:** Add test `test_deactivate_self_forbidden` (async): admin tries
   to deactivate their own account. Asserts `403`.
 
-- [ ] **Task 16.22:** Add test `test_deactivate_already_inactive` (async): PATCHes
+- [x] **Task 16.22:** Add test `test_deactivate_already_inactive` (async): PATCHes
   deactivate twice. Asserts second call returns `409`.
 
-- [ ] **Task 16.23:** Add test `test_reset_password` (async): resets a user's password,
+- [x] **Task 16.23:** Add test `test_reset_password` (async): resets a user's password,
   then attempts login with the new password. Asserts login returns `200`.
 
-- [ ] **Task 16.24:** Add test `test_hashed_password_never_in_response` (async):
+- [x] **Task 16.24:** Add test `test_hashed_password_never_in_response` (async):
   creates a user and checks that the string `"hashed_password"` does not appear anywhere
   in the response body of `POST /api/v1/users/`, `GET /api/v1/users/`,
   `GET /api/v1/users/{id}`, or `GET /api/v1/auth/me`.
 
 ### 16c — UI Route Integration Tests
 
-- [ ] **Task 16.25:** Create `tests/integration/test_ui_auth_routes.py`. Write test
+- [x] **Task 16.25:** Create `tests/integration/test_ui_auth_routes.py`. Write test
   `test_login_page_renders` (async): GETs `/ui/login`. Asserts status `200` and
   response content-type is `text/html`. Asserts the Arabic string for `"login.title"`
   appears in the response body.
 
-- [ ] **Task 16.26:** Add test `test_ui_login_success_operator_redirect` (async): POSTs
+- [x] **Task 16.26:** Add test `test_ui_login_success_operator_redirect` (async): POSTs
   to `/ui/login` with valid operator credentials. Asserts redirect to
   `/ui/operator/dashboard` (status `303` and `Location` header).
 
-- [ ] **Task 16.27:** Add test `test_ui_login_failure_rerenders_form` (async): POSTs
+- [x] **Task 16.27:** Add test `test_ui_login_failure_rerenders_form` (async): POSTs
   to `/ui/login` with wrong password. Asserts status `200` (re-render) and Arabic
   error message appears in response body.
 
-- [ ] **Task 16.28:** Add test `test_ui_logout_redirects_to_login` (async): POSTs to
+- [x] **Task 16.28:** Add test `test_ui_logout_redirects_to_login` (async): POSTs to
   `/ui/logout`. Asserts redirect to `/ui/login` with status `303`.
 
-- [ ] **Task 16.29:** Add test `test_protected_ui_route_redirects_unauthenticated`
+- [x] **Task 16.29:** Add test `test_protected_ui_route_redirects_unauthenticated`
   (async): GETs `/ui/operator/dashboard` with no cookie. Asserts redirect to
   `/ui/login`.
 
@@ -1054,12 +1054,12 @@ Name the constraint `"ck_users_role_gate_consistency"`.
 
 ## Group 17 — Static Assets & Final Verification
 
-- [ ] **Task 17.1:** Install Tailwind CSS CLI locally. Create `tailwind.config.js`
+- [x] **Task 17.1:** Install Tailwind CSS CLI locally. Create `tailwind.config.js`
   with `content: ["./templates/**/*.html"]`. Run `tailwind build -o
   static/css/tailwind.min.css --minify`. Commit the output file. Add the build command
   to a `Makefile` target named `css`.
 
-- [ ] **Task 17.2:** Create a `Makefile` in the project root with the following
+- [x] **Task 17.2:** Create a `Makefile` in the project root with the following
   targets:
   - `install`: `pip install -r requirements.txt`.
   - `css`: Tailwind build command from Task 17.1.
@@ -1070,16 +1070,16 @@ Name the constraint `"ck_users_role_gate_consistency"`.
   - `lint`: `ruff check . && black --check .`.
   - `typecheck`: `mypy .`.
 
-- [ ] **Task 17.3:** Run the full test suite with `pytest -v`. Confirm all tests pass.
+- [x] **Task 17.3:** Run the full test suite with `pytest -v`. Confirm all tests pass.
   Confirm coverage of `services/auth_service.py` is 100% by running
   `pytest --cov=services/auth_service --cov-report=term-missing`. Fix any failures
   before marking this task complete.
 
-- [ ] **Task 17.4:** Run `black .` and `ruff check .` on the entire project. Fix all
+- [x] **Task 17.4:** Run `black .` and `ruff check .` on the entire project. Fix all
   formatting and lint errors. Run `mypy .` and fix all type errors. No warnings or
   errors may remain when this task is checked.
 
-- [ ] **Task 17.5:** Manually start the server with `make run`. Open
+- [x] **Task 17.5:** Manually start the server with `make run`. Open
   `http://localhost:8000/ui/login` in a browser resized to 360px width. Verify:
   - Page renders in Arabic RTL with no horizontal scrollbar.
   - All text is visible and not clipped.

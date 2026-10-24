@@ -71,7 +71,6 @@ async def test_preview_and_execute_import(db_session):
     card_existing = ParkingCard(
         card_code="7001",
         status=CardStatus.AVAILABLE,
-        created_by=admin.id,
     )
     db_session.add(card_existing)
     await db_session.flush()

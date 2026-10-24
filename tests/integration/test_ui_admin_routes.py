@@ -88,7 +88,7 @@ async def test_sessions_page_renders(
     await setup_admin(db_session, auth_service, async_client)
     res = await async_client.get("/ui/admin/sessions")
     assert res.status_code == 200
-    assert "الجلسات" in res.text
+    assert "دخول وخروج" in res.text
 
 
 @pytest.mark.asyncio

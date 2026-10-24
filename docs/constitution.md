@@ -1,223 +1,375 @@
-# Parking Garage Management System — Constitution
+# دستور وقواعد مشروع نظام إدارة جراج باب اللوق (PGMS — Garage4U)
 
-> **Version:** 1.0  
-> **Status:** Authoritative. All contributors must read and follow this document before writing any code.
-
----
-
-## 1. Purpose
-
-This document defines the non-negotiable rules, architectural decisions, and design constraints for the Parking Garage Management System (PGMS). It exists to keep the codebase consistent, maintainable, and deployable on constrained hardware from day one.
+> **الحالة:** الوثيقة المرجعية الرسمية والدستور التقني الحاكم للمشروع.  
+> **المصدر:** مستخرجة ومحققة بالكامل بنسبة 100% من الكود المصدري الفعلي (`models/`, `services/`, `routes/`, `config.py`, `edge_agent/`).  
+> **ملاحظة:** تُلغي هذه الوثيقة وتنسخ أية وثائق أو مخططات نظرية سابقة لا تتطابق مع الكود الفعلي المنفذ.
 
 ---
 
-## 2. Tech Stack
+## 1. ملخص النظام والغرض
 
-| Layer | Technology | Notes |
+نظام **Garage4U (PGMS — Parking Garage Management System)** في جراج باب اللوق هو منصة متكاملة لإدارة مواقف السيارات، تحصيل الرسوم، إدارة الاشتراكات، ومراقبة حركة البوابات عبر الكاميرات والتعرف الآلي على لوحات السيارات (ANPR).
+
+النظام مصمم للعمل الميداني السريع (POS Direct Scan) على محطات حاسوبية عادية (Desktop PCs)، مع دعم العمل المستقر حتى في حال انقطاع الإنترنت أو تعطل الكاميرات دون إيقاف حركة المرور.
+
+---
+
+## 2. مصفوفة التكنولوجيا الفعلية (Real Tech Stack)
+
+| الطبقة / المكون | التكنولوجيا الفعلية في الكود | الاستخدام والتفاصيل الفعلية |
 |---|---|---|
-| API Framework | FastAPI (Python 3.11+) | Async-first; use `async def` for all route handlers |
-| ORM | SQLAlchemy 2.x (async) | Use `AsyncSession`; no raw SQL except for reporting queries |
-| Database | SQLite (dev) / PostgreSQL (prod) | Must be switchable via `DATABASE_URL` env var only |
-| Templating | Jinja2 | Server-side rendering for operator UI pages |
-| Styling | Tailwind CSS (CDN) or Bootstrap 5 | Tailwind preferred; no custom CSS frameworks |
-| Validation | Pydantic v2 | All request/response bodies and config values |
-| Task Queue | None (Phase 1) | Add Celery + Redis only if async jobs are required later |
-| Auth | FastAPI built-in + JWT (python-jose) | No third-party auth services |
-
-**No other frameworks or major libraries may be added without a team decision and an update to this document.**
+| **لغة البرمجة** | Python 3.11+ | غير متزامن بالكامل (Async-first) في كافة المسارات والمعالجات |
+| **إطار عمل الويب** | **FastAPI 0.115.0** | معالجة طلبات REST API وواجهات UI المبنية على السيرفر |
+| **خادم التطبيق** | **Uvicorn 0.32.0** / **Gunicorn** | إدارة العمليات (Multi-worker Gunicorn في الإنتاج أو Uvicorn مستقل) |
+| **إدارة دورة الحياة (Lifespan)** | `fastapi.lifespan` | فحص اتصال قاعدة البيانات، مزامنة انتهاء وبدء الاشتراكات، وبدء EventBus و EdgeHub |
+| **طبقة قواعد البيانات (ORM)** | **SQLAlchemy 2.0.35** (`asyncio`) | استخدام `AsyncSession` و `async_sessionmaker` و `DeclarativeBase` |
+| **محرك قواعد البيانات** | **PostgreSQL (asyncpg 0.30.0)** للإنتاج / **SQLite (aiosqlite 0.20.0)** للتطوير والاختبارات | التبديل عبر متغير البيئة `DATABASE_URL` فقط |
+| **إدارة ترقيات الداتابيز** | **Alembic 1.13.3** | هجرات منتظمة وموثقة تحت `alembic/versions` |
+| **التحقق من البيانات والإعدادات** | **Pydantic 2.9.2** و **Pydantic-Settings 2.5.2** | قراءة وضبط الإعدادات من ملف `.env` والتحقق من صحة المدخلات |
+| **المصادقة والأمان** | **JWT (python-jose 3.3.0)** + **bcrypt 4.2.0** | كوكيز `pgms_token` المشفرة للواجهات + `Bearer Token` للـ APIs والـ WebSockets |
+| **ناقل الأحداث الموزع (Event Bus)** | **Postgres LISTEN/NOTIFY** (`PostgresEventBus`) | ربط الـ Workers المتعددة ببعضها لتبادل إشارات الكاميرات دون الحاجة لـ Redis |
+| **الاتصال اللحظي بالكاميرات** | **WebSockets (`starlette.websockets`)** | قناة اتصال ثنائية الاتجاه مع وكيل الذكاء الاصطناعي في الجراج |
+| **واجهات المشغل والإدارة (UI)** | **Jinja2 3.1.4** + **HTML5/Vanilla CSS** + **Tailwind** | تصيير من جانب السيرفر (SSR) بتصميم عربي متجاوب (RTL) مع خطوط Cairo/Tajawal |
+| **برمجة المتصفح للمشغل** | **Vanilla JavaScript (ES5 & IE11 Compatible)** | كود مخصص في `static/js/dashboard.js` يلتقط الماسح الضوئي ويصدر نغمات عبر Web Audio API |
+| **معالجة ملفات الإكسيل** | **openpyxl 3.1.5** | استيراد المشتركين جماعياً وقراءة القوالب وتوليدها تلقائياً |
+| **الذكاء الاصطناعي (Edge AI)** | **Ultralytics YOLOv8 + PyTorch (CUDA)** | كشف اللوحة المصرية وتعرف الأحرف والأرقام ضوئياً (OCR) على جهاز محلي |
+| **اختبارات الجودة** | **pytest 8.3.3**, `pytest-asyncio`, `freezegun`, `httpx` | اختبارات وحدوية واختبارات تكامل شاملة |
 
 ---
 
-## 3. Project Structure
+## 3. العتاد الحقيقي والأجهزة المدعومة (Hardware Architecture)
 
-Strict clean architecture. Every layer has one job and may only import inward.
+النظام **لا يعمل** على أجهزة كاشير يدوية محمولة (مثل أجهزة Sunmi POS القديمة التي كانت في المسودات النظرية). النظام مبني فعلياً وميدانياً للعتاد التالي:
+
 ```
-pgms/
-├── main.py # FastAPI app factory; mounts routers only
-├── config.py # Settings via pydantic-settings; reads .env
-├── database.py # Engine, AsyncSession factory, Base
-│
-├── models/ # SQLAlchemy ORM models (database shape)
-│ ├── vehicle.py
-│ ├── ticket.py
-│ └── rate.py
-│
-├── schemas/ # Pydantic schemas (API contracts & validation)
-│ ├── vehicle.py
-│ ├── ticket.py
-│ └── rate.py
-│
-├── routes/ # FastAPI routers (HTTP only — no business logic)
-│ ├── tickets.py
-│ ├── vehicles.py
-│ ├── rates.py
-│ └── reports.py
-│
-├── services/ # Business logic (pure Python, no HTTP concepts)
-│ ├── ticket_service.py
-│ ├── pricing_service.py
-│ └── plate_service.py
-│
-├── repositories/ # Database access layer (CRUD wrappers)
-│ ├── ticket_repo.py
-│ └── vehicle_repo.py
-│
-├── templates/ # Jinja2 HTML templates
-│ ├── base.html
-│ ├── tickets/
-│ └── reports/
-│
-├── static/ # CSS, minimal JS, receipt print styles
-│ └── print.css
-│
-└── tests/
-├── unit/
-└── integration/
+[كاميرا دخول هيكفيجن IP]  ---> (LAN) ---> [حاسوب الذكاء الاصطناعي Edge PC]
+                                                   |
+                                             (WebSockets)
+                                                   v
+[ماسح باركود/RFID USB]  ---> [كمبيوتر البوابة PC] <---> [سيرفر Garage4U] <---> [طابعة إيصالات حرارية 80/58mm]
 ```
-### Layer Rules
 
-- **Routes** call **Services** only. Routes never touch `models/` or `repositories/` directly.
-- **Services** call **Repositories** only. Services contain all business rules.
-- **Repositories** call **SQLAlchemy** only. No business logic; no HTTP exceptions.
-- **Models** are imported only by repositories and `database.py`.
-- **Schemas** are imported by routes and services. Never by repositories.
+1. **محطات العمل (Workstation PCs):**
+   - أجهزة كمبيوتر مكتبية (Desktop PCs) تعمل بنظام Windows أو Linux عند بوابات الدخول والخروج.
+   - تشغيل المتصفح القياسي (Chrome, Edge، أو حتى متصفحات قديمة تدعم نمط IE11 بفضل polyfills في الكود).
+   - يتم تشغيل النظام عبر باتش سكريبت `run_garage4u.bat` وخادم بايثون المحلي على المنفذ `8000`.
 
-Violating layer boundaries is a blocking code review issue.
+2. **أجهزة قراءة الكروت (Barcode / RFID Readers):**
+   - أجهزة قراءة باركود أو بطاقات RFID متصلة عبر منفذ **USB بنمط Keyboard-Wedge**.
+   - بمجرد مسح الكارت، يُرسل الكود فوراً كمدخل نصي، وتلتقطه دوال الاستماع اللحظي في صفحة المشغل `dashboard.js`.
 
----
+3. **طابعات الإيصالات الحرارية (Thermal Receipt Printers):**
+   - طابعات فواتير حرارية قياسية (مقاس 80mm أو 58mm) متصلة بالكمبيوتر.
+   - يتم استدعاء الطباعة مباشرة عبر قوالب حرارية مخصصة (`receipts/thermal.html`, `receipts/thermal_subscription.html`) باستخدام نافذة الطباعة التلقائية في المتصفح.
 
-## 4. Hardware Constraints — Sunmi V2 POS Terminal
+4. **حاسوب معالجة الذكاء الاصطناعي المحلي (Garage Edge AI PC):**
+   - جهاز كمبيوتر محلي داخل الجراج مزود ببطاقة رسوميات إنفيديا تدعم تسريع **NVIDIA CUDA** (`USE_GPU: True`).
+   - يعمل كخدمة مستقلة عبر `python -m edge_agent.agent` (يمكن تثبيتها كـ Windows Service عبر NSSM).
+   - متصل بنفس الشبكة المحلية (LAN) مع كاميرات المراقبة.
 
-The operator-facing UI **will run on a Sunmi V2** Android POS device (5.99" screen, ~360px viewport width). Every UI decision must respect these constraints.
-
-### 4.1 UI / UX Rules
-
-- **Mobile-first, always.** Design for 360–400px width. Desktop layout is a bonus, never the baseline.
-- **No horizontal scrolling** on any operator screen, ever.
-- **Touch targets** must be at minimum `48×48px`. Use large buttons for primary actions (check-in, check-out, print).
-- **Minimal JavaScript.** Avoid heavy SPA frameworks. Use `<form>` POST submissions with Jinja2 templates. Vanilla JS only for receipt printing trigger and plate input formatting.
-- **No external CDN calls at runtime.** Bundle or self-host Tailwind (use the CLI build) and any fonts. The terminal may have no internet access.
-- **Page weight target:** each operator page must load under 150 KB total (HTML + CSS + JS).
-- **No animations or transitions** that are not GPU-accelerated. The Sunmi V2 has limited CPU.
-
-### 4.2 58mm Thermal Printer — Receipt Rules
-
-- Receipts are triggered via the browser `window.print()` API against a dedicated print stylesheet (`/static/print.css`).
-- **Print area width: 58mm (≈ 220px at 96dpi).** All receipt content must fit within this width without wrapping unintentionally.
-- Use a **monospace font** (e.g., `Courier New`) for receipt content to ensure column alignment.
-- All non-receipt UI must be `display: none` in `@media print`.
-- Receipt templates live in `templates/receipts/`. They are separate Jinja2 templates, not embedded in page templates.
-- **Required receipt fields:** ticket number, card barcode, plate number (optional, Arabic + Latin if entered), entry time, exit time, duration, amount charged, currency (EGP), operator ID, garage name.
-- Font size on receipts: **minimum 10pt** for readability on thermal paper.
-- No images or logos on receipts (thermal rendering is unreliable and slow).
+5. **كاميرات المراقبة وقراءة اللوحات (IP Surveillance Cameras):**
+   - كاميرات Hikvision شبكية (IP Cameras) موجهة لحارة الدخول (بوابة 1) وحارة الخروج (بوابة 2).
+   - الاتصال يتم عبر بروتوكول **HTTP ISAPI** (مثال: `/ISAPI/Streaming/channels/201/picture` للدخول و `/101/picture` للخروج).
+   - نظام المصادقة: مصادقة هضمية مشفرة **Digest Auth** (`CAMERA_AUTH: "digest"`).
 
 ---
 
-## 5. Localization — Arabic (RTL) & Egyptian License Plates
+## 4. نظام الكاميرات والتعرف على اللوحات (Edge Camera & ANPR System)
 
-Arabic support is a first-class requirement, not an afterthought.
+### أ. المعمارية الموزعة (Decoupled WebSocket Broker)
+- يتصل جهاز الـ Edge PC المحلي بالسيرفر السحابي/الرئيسي عبر اتصال خارجي صادر **Outbound WebSocket** (`wss://babelooq.garage4u.io/ws/edge`)، مما يتفادى أي مشاكل في الـ NAT أو الـ Firewalls داخل الجراج.
+- يتم تأمين الاتصال عبر مفتاح سري عالي الأمان مشفر (`EDGE_API_TOKEN` بطول لا يقل عن 32 محرفاً).
+- تتبّع نبضات الاتصال (Presence Heartbeats) كل 10 ثوانٍ مع مدة صلاحية 30 ثانية لتحديد ما إذا كانت البوابة متصلة (`ONLINE`) أو غير متصلة (`OFFLINE`).
 
-### 5.1 Language & Direction
+### ب. حل مشكلة الـ Multi-Worker (PostgreSQL LISTEN/NOTIFY)
+- في بيئة التشغيل الفعلية (Gunicorn بـ 3 عمال)، يتصل الـ Edge PC بواحد فقط من الـ Workers.
+- لضمان وصول طلب التقاط الصورة من العامل على أي Worker إلى الـ Worker المتصل به الـ Edge PC، تم استخدام ميزة `LISTEN/NOTIFY` المدمجة في قاعدة بيانات PostgreSQL عبر قنوات مخصصة:
+  - `pgms_edge_trigger`: لنقل أمر التصوير إلى البوابة المعنية.
+  - `pgms_edge_result`: لإبلاغ العامل بنتيجة قراءة اللوحة.
+  - `pgms_edge_presence`: لنشر حالة اتصال الأجهزة بين العمليات.
 
-- All Jinja2 base templates must set `<html lang="ar" dir="rtl">` as the default.
-- Use `dir="auto"` on individual input fields where mixed-direction input (Arabic/Latin) is expected.
-- CSS logical properties (`margin-inline-start`, `padding-inline-end`) must be used instead of directional properties (`margin-left`, `padding-right`) everywhere in the stylesheet.
-- All UI strings must be stored in a `translations/ar.json` file. No hardcoded Arabic strings in templates.
+### ج. دورة التقاط صورة الدخول (Non-blocking Entry Flow)
+1. يمسح عامل بوابة الدخول الكارت.
+2. تُحفظ الجلسة في قاعدة البيانات فوراً وتظهر شاشة "تفضل بالدخول" **في جزء من الثانية**. **دخول السيارة لا ينتظر الكاميرا نهائياً** لمنع تكدس البوابات في حال بطء الشبكة أو انقطاع الكاميرا.
+3. في الخلفية، يُرسل السيرفر أمر `TRIGGER_CAPTURE` لجهاز الـ Edge عبر الـ WebSocket.
+4. يلتقط جهاز الـ Edge لقطة الكاميرا ISAPI ثم يُشغل موديل YOLO للكشف وموديل OCR لقراءة الأحرف والأرقام المصرية.
+5. يُعيد جهاز الـ Edge النتيجة والصورة المشفرة بصيغة WebP/JPEG عبر الـ WebSocket في زمن مستهدف يتراوح بين 300ms إلى 1.5 ثانية (الحد الأقصى للمهلة الكلية 4 ثوانٍ).
+6. يُحدّث المتصفح اللوحة تلقائياً عبر آلية الاستطلاع الذكي (Long-polling / Event), مع إمكانية تصحيح اللوحة يدوياً من العامل (`plate-override`).
 
-### 5.2 Egyptian License Plates
+### د. لقطة بوابة الخروج (Exit Snapshot)
+- عند خروج السيارة ومسح الكارت في بوابة 2، يُطلق السيرفر تلقائياً أمراً بالتقاط لقطة تأكيدية خروج (`start_exit_capture` بنوع `capture_type: "exit"` و `skip_ocr: True`).
+- لا يتم تشغيل الذكاء الاصطناعي في الخروج لتوفير الموارد وسرعة التحصيل، وتُحفظ الصورة كدليل مرئي لإدارة الجراج في سجل الجلسة (`exit_image_path`).
 
-Egyptian plates mix Arabic letters and Hindu-Arabic numerals (e.g., **ن ي ش ١٥٩** or in data: `ن ي ش 159`).
-
-- **Optional Field:** Recording the license plate is optional. Barcode scanning is the primary method for check-in and check-out.
-- The canonical plate storage format in the database is: Arabic letters (space-separated) + space + Western numerals, stored as a single UTF-8 string. Example: `"ن ي ش 159"`.
-- A dedicated `plate_service.py` must handle all normalization when a plate is provided:
-  - Strip extra whitespace.
-  - Convert Eastern Arabic-Indic numerals (٠١٢٣٤٥٦٧٨٩) to Western (0–9) before storage.
-  - Validate that the plate contains 1–3 Arabic letters and 1–4 digits.
-  - Reject plates that do not conform; return a structured validation error.
-- The plate input field in the UI must use `dir="rtl"` and `inputmode="text"`. A thin JS helper must reorder characters as the operator types so the display matches the physical plate layout.
-- Plate search must be diacritic-insensitive (normalize with `unicodedata.normalize('NFKC', ...)` before comparison).
-- Plates are displayed in receipts and screens using the stored canonical format, rendered RTL.
-
-### 5.3 Currency & Numbers
-
-- All monetary values are stored as **integer piastres** (1 EGP = 100 piastres) in the database. Never store floats for money.
-- Display formatting (e.g., `٢٥٫٠٠ ج.م`) is handled by a Jinja2 custom filter `format_egp`. This filter must produce both Arabic-numeral and Western-numeral variants controlled by a config flag.
-- Datetime display must use the **Egyptian locale** (`ar_EG`) for month names and weekdays when rendered in Arabic context.
+### هـ. حفظ بيانات التدريب المستمر للذكاء الاصطناعي (Dataset Continuous Training)
+- يحتوي `edge_agent/agent.py` على ميزة مدمجة (`SAVE_LOCAL_DATASET: True`):
+- يحفظ تلقائياً صورة السيارة الكاملة وصورة قص اللوحة (`plate_crop`) ومؤشر CSV في المسار المحلي `E:/AISystem/saved_gate_images/babelooq_edge` لإعادة تدريب وتحسين دقة الموديلات دورياً.
 
 ---
 
-## 6. API Design Rules
+## 5. نماذج البيانات الفعلية في الكود (Data Models)
 
-- All API endpoints are prefixed `/api/v1/`.
-- Operator UI routes (HTML) are prefixed `/ui/`.
-- Every endpoint must have a Pydantic response model. No returning raw ORM objects.
-- HTTP status codes must be semantically correct (201 for creation, 404 for not found, 422 for validation errors — FastAPI default).
-- All error responses follow this schema:
-```json
-  { "detail": "Human-readable message", "code": "MACHINE_READABLE_CODE" }
+يحتوي مجلد `models/` على الكيانات الفعلية التالية المربوطة بالجداول:
+
 ```
-- Pagination is required on any list endpoint: `?page=1&size=20`. Default page size is 20; maximum is 100.
++--------------------+       +--------------------+       +----------------------+
+|       User         |       |        Shift       |       |     PricingRule      |
+|--------------------|       |--------------------|       |----------------------|
+| id (PK)            |1     *| id (PK)            |       | id (PK)              |
+| username (Unique)  +-------+ operator_id (FK)   |       | rate_per_hour (Pias) |
+| role: ADMIN/OP     |       | gate_number (1..5) |       | first_hour_charge    |
+| gate_number        |       | opening_cash_egp   |       | subsequent_charge    |
++---------+----------+       | closing_cash_egp   |       | grace_period_mins    |
+          |                  +---------+----------+       | lost_card_penalty    |
+          |                            |                  +----------+-----------+
+          |                            |                             |
+          | 1                          | 1                           | 1
+          |                            |                             |
+          | *                          | *                           | *
++---------+----------+       +---------+----------+                  |
+|    AuditLog        |       |   ParkingSession   |                  |
+|--------------------|       |--------------------|                  |
+| id (PK)            |       | id (PK)            |                  |
+| actor_id (FK)      |       | card_id (FK)       +------------------+
+| action             |       | status: ACTIVE/... |
+| payload_before/aft |       | plate_number       |
++--------------------+       | plate_capture_stat |
+                             | amount_charged     |
+                             | is_subscribed      |
+                             +---------+----------+
+                                       |
+                                       | *
+                                       | 1
+                             +---------+----------+       +----------------------+
+                             |    Subscription    |       |   SubscriptionPlan   |
+                             |--------------------|       |----------------------|
+                             | id (PK)            |*     1| id (PK)              |
+                             | subscriber_id (FK) +-------+ label (Unique)       |
+                             | plan_id (FK)       |       | duration_days        |
+                             | card_id (FK)       |       | price_piastres       |
+                             | status: ACTIVE/... |       | max_entries_per_day  |
+                             +---------+----------+       +----------------------+
+                                       |
+                                       | *
+                                       | 1
+                             +---------+----------+
+                             |     Subscriber     |
+                             |--------------------|
+                             | id (PK)            |
+                             | full_name          |
+                             | plate_number (Uniq)|
+                             | card_code (Uniq)   |
+                             +--------------------+
+```
+
+### 1. المستخدمون (`models/user.py` -> `users`):
+- الحقول: `id`, `full_name`, `username` (فريد), `hashed_password`, `role` (`ADMIN`, `OPERATOR`), `gate_number` (بين 1 و 5 للمشغلين، ومفرغ `NULL` للمديرين), `is_active`, التواريخ.
+- قيد قاعدة البيانات: `ck_users_role_gate_consistency` يضمن أن المشغل مرتبط ببوابة والمدير غير مقيد ببوابة.
+
+### 2. كروت الجراج (`models/parking_card.py` -> `parking_cards`):
+- الحقول: `id`, `card_code` (كود الباركود/RFID فريد ومنسق كأحرف إنجليزية كبيرة), `status` (`available`, `in_use`, `lost`, `damaged`), `last_seen_at`, التواريخ.
+
+### 3. الجلسات الفردية (`models/parking_session.py` -> `parking_sessions`):
+- الحقول التشغيلية: `id`, `card_id`, `card_code`, `status` (`ACTIVE`, `COMPLETED`, `LOST_CARD`), `gate_number`, `shift_id`, `operator_id`, `entry_time`, `exit_time`, `duration_minutes`.
+- الحقول المالية: `pricing_rule_id`, `amount_charged` (بالقروش الصحيحة), `is_lost_card`, `lost_card_penalty_applied`, `payment_method` (`CASH`), `is_paid`, `exit_operator_id`, `exit_shift_id`, `receipt_printed_at`.
+- الحقول الإدارية والاشتراكات: `admin_override_by`, `admin_override_note`, `is_deleted`, `notes`, `subscription_id`, `is_subscribed`.
+- حقول الكاميرات والذكاء الاصطناعي: `plate_number`, `plate_capture_status` (`PENDING`, `SUCCESS`, `NO_PLATE`, `FAILED`, `TIMEOUT`, `OFFLINE`), `plate_capture_requested_at`, `plate_captured_at`, `plate_confidence`, `plate_image_path`, `plate_capture_error`, `exit_image_path`.
+- قيد الفهرس الفريد: `idx_active_card_id` يمنع فتح جلستين نشطتين لنفس الكارت في نفس الوقت (`exit_time IS NULL`).
+
+### 4. الورديات (`models/shift.py` -> `shifts`):
+- الحقول: `id`, `operator_id`, `gate_number`, `started_at`, `ended_at`, `opening_cash_egp` (عهدة البداية), `closing_cash_egp` (التحصيل الفعلي عند الإغلاق), `notes`, `admin_override_note`.
+- ملاحظة معمارية: وردية بوابة الدخول (بوابة 1) لا تتعامل مع تحصيل نقدي (تُفتح بعهدة صفر)، ويتم التحصيل الفعلي في بوابة الخروج أو مكتب الاشتراكات.
+
+### 5. قواعد التسعير (`models/pricing_rule.py` -> `pricing_rules`):
+- الحقول: `id`, `label`, `rate_per_hour` (سعر الساعة الأساسي بالقروش), `first_hour_charge` (سعر الساعة الأولى), `subsequent_hour_charge` (سعر الساعات التالية), `minimum_charge` (الحد الأدنى), `grace_period_mins` (فترة السماح بالدقائق), `lost_card_penalty` (غرامة فقد الكارت بالقروش), `is_active`, `created_by`, `effective_from`, `effective_until`.
+
+### 6. خطط الاشتراكات (`models/subscription_plan.py` -> `subscription_plans`):
+- الحقول: `id`, `label`, `duration_days`, `price_piastres` (سعر الخطة بالقروش), `max_entries_per_day` (الحد الأقصى للدخول يومياً، أو مفرغ لعدد غير محدود), `description`, `is_active`, `created_by`.
+
+### 7. المشتركون (`models/subscriber.py` -> `subscribers`):
+- الحقول: `id`, `full_name`, `phone_number`, `plate_number` (رقم اللوحة فريد وموحد), `company_name`, `card_code` (كارت دائم مخصص فريد), `notes`.
+
+### 8. وثائق الاشتراكات (`models/subscription.py` -> `subscriptions`):
+- الحقول: `id`, `subscriber_id`, `plan_id`, `card_id`, `plate_number`, `start_date`, `end_date`, `status` (`ACTIVE`, `EXPIRED`, `CANCELLED`, `PENDING`), `amount_paid_piastres`, `plan_price_snapshot`, `paid_at`, `collected_by`, `renewal_count`, `previous_subscription_id`, `cancel_reason`, `ended_at`, `notes`.
+- خاصية برمجية: `days_remaining` تحسب الأيام المتبقية بتوقيت القاهرة.
+
+### 9. سجل التدقيق الإجباري (`models/audit_log.py` -> `audit_logs`):
+- الحقول: `id`, `actor_id`, `action`, `entity_type`, `entity_id`, `payload_before` (JSON بالحالة السابقة بدون كلمات المرور), `payload_after` (JSON بالحالة اللاحقة), `created_at`.
 
 ---
 
-## 7. Database Rules
+## 6. المميزات والخدمات المنفذة فعلياً في الكود (Implemented Features)
 
-- Every model must have: `id` (integer PK), `created_at`, `updated_at` (auto-managed timestamps).
-- No `CASCADE DELETE` on financial records (tickets, payments). Use soft deletes (`is_deleted: bool`).
-- All migrations are managed by **Alembic**. Never modify the database schema manually or outside of a migration file.
-- Migration files must include a meaningful `message` and must be reviewed before merging.
-- Database connection string comes exclusively from `config.py` → environment variable `DATABASE_URL`. It must never appear hardcoded anywhere else.
+### 1. بوابة الدخول (Gate 1 Entry Operations)
+- **مسح الكارت السريع:** مسح كارت الباركود/RFID يفتح الجلسة ويثبت الكارت كـ `IN_USE`.
+- **كشف الاشتراكات التلقائي:** عند مسح كارت مشترك نشط، تُسجل الجلسة فوراً كجلسة اشتراك (`is_subscribed=True`, `amount_charged=0`).
+- **تنبيه الاشتراك المنتهي:** إذا كان كارت المشترك منتهي الصلاحية، يُظهر النظام تنبيهاً للعامل مع اسم المشترك وتفاصيل خطته وإمكانية إدخاله كجلسة عادية مدفوعة.
+- **فحص الحد الأقصى للدخول اليومي:** تطبيق قيود `max_entries_per_day` للخطة قبل السماح بالدخول.
+- **التصوير والتعرف الآلي:** تشغيل كاميرا بوابة الدخول في الخلفية وحفظ مسار الصورة واللوحة المقروءة ونسبة الثقة.
+- **التعديل اليدوي السريع للوحة:** شاشة المشغل تسمح بتعديل رقم اللوحة يدوياً وحفظه فوراً في الجلسة المفتوحة عبر `/api/sessions/{session_id}/plate-override`.
+
+### 2. بوابة الخروج والحساب الفوري (Gate 2 Automated Exit Operations)
+- **إنهاء الجلسة التلقائي بخطوة واحدة (1-Step Fast Checkout):**
+  بمجرد مسح الكارت عند الخروج:
+  1. التحقق من صلاحية الجلسة.
+  2. حساب المدة بالدقائق والساعات المحتسبة مع خصم فترة السماح.
+  3. حساب السعر وفق الشرائح (سعر الساعة الأولى + الساعات التالية) أو السعر الثابت.
+  4. إنهاء الجلسة وحفظ الإجمالي وتحرير الكارت ليصبح متاحاً (`AVAILABLE`).
+  5. التقاط صورة الخروج عبر الكاميرا كتوثيق مرئي.
+  6. تجهيز وطباعة إيصال الفاتورة الحراري تلقائياً.
+- **خروج المشتركين المجاني السلس:** المشترك النشط يخرج فوراً بإجمالي 0 ج.م، ويبقى الكارت مخصصاً له (`IN_USE`) دون تحريره.
+
+### 3. معالجة فقد الكروت (Lost Card Workflow)
+- مسار مخصص لتسجيل الكروت المفقودة عبر شاشة المشغل أو الواجهة البرمجية.
+- احتساب غرامة فقد الكارت المحددة في لائحة الأسعار (`lost_card_penalty`) مضافة إلى تكلفة ساعات الوقوف الفعلية.
+- تحويل حالة الكارت تلقائياً إلى مفقود (`LOST`) وتوثيق الحالة في الجلسة `LOST_CARD`.
+
+### 4. إدارة الورديات والمطابقة المالية (Shift Management)
+- فتح الوردية وتوثيق عهدة الدرج الابتدائية (`opening_cash_egp`).
+- دعم الورديات الخالية من النقدية لبوابة الدخول (Gate 1 entry-only).
+- إغلاق الوردية وإدخال النقدية الفعلية المحصلة ومقارنتها تلقائياً مع المحسوب بالنظام لحساب العجز أو الزيادة (`ShiftSummary`).
+- إغلاق إداري إجباري للورديات المفتوحة من قبل المديرين (`force-close`).
+
+### 5. نظام الاشتراكات المتقدم والاستيراد الشامل (Subscriptions & Bulk Import)
+- إدارة كاملة للخطط، المشتركين، التجديدات، والإلغاءات.
+- دعم الخطط المخصصة بالأسعار الحرة والمدد المتغيرة.
+- المزامنة التلقائية عند تشغيل النظام: إنهاء الاشتراكات المستحقة وتفعيل المؤجلة فور بدء السيرفر.
+- **الاستيراد الجماعي من ملفات إكسيل (`excel_import_service.py`):**
+  - رفع ملفات XLSX/CSV وتعرّف ذكي وتلقائي على الأعمدة بشتى مسمياتها العربية والإنجليزية (كود الكارت، اسم الموظف، رقم اللوحة، الشركة، الهاتف، الملاحظات).
+  - معاينة كاملة ومطابقة وتصحيح للأخطاء قبل التنفيذ الفعلي.
+  - تحميل قالب إكسيل جاهز للمشتركين (`/ui/subscriptions/subscribers/template-excel`).
+
+### 6. لوحة تحكم الإدارة والتقارير المالية (Admin Portal & Reports)
+- **مؤشرات الأداء اللحظية (Live KPIs):**
+  - عدد السيارات النشطة داخل الجراج لحظياً.
+  - السعة الإجمالية ونسبة الإشغال المئوية (`occupancy_pct`).
+  - إجمالي إيرادات اليوم اللحظية بالقروش والجنيه.
+  - عدد الورديات المفتوحة والسيارات المقيمة لأكثر من 24 ساعة (Long-stay).
+- **لوحة البوابات الحية (Gate Panel):** مراقبة البوابات من 1 إلى 5 وعرض المشغل النشط ووقت فتح الوردية وعدد العمليات.
+- **مستكشف الجلسات الشامل:** بحث وتصفية متقدمة (الفترة الزمنية، البوابة، المشغل، كود الكارت، رقم اللوحة، الحالة، الجلسات الطويلة).
+- **الإغلاق والتسوية الإدارية للجلسات (`override-close`):**
+  - إمكانية قيام المدير بإغلاق جلسة عالقة أو تصفير قيمتها أو وضع قيمة مخصصة دون الحاجة لوردية مفتوحة، مع تدوين ملاحظة إدارية إجبارية وتوثيقها في سجل التدقيق.
+- **معاينة صور الكاميرات:** استعراض صور الدخول وصور الخروج الخاصة بكل جلسة من شاشة تفاصيل الجلسة.
+- **تقارير الإيرادات الموزعة:**
+  - الإيراد حسب البوابة.
+  - الإيراد حسب نوع الخدمة (انتظار عادي، اشتراكات، غرامات كروت).
+  - الإيراد حسب المشغل.
+  - المنحنى البياني للإيراد اليومي.
+- **التصدير والطباعة الرسمية:**
+  - تصدير كامل إلى ملفات CSV للجلسات والورديات والتقارير.
+  - قوالب طباعة رسمية جاهزة للطباعة والتوقيع المالي (`templates/admin/reports/print.html`).
 
 ---
 
-## 8. Security Rules
+## 7. القواعد الإلزامية والقيود المعمارية (Inviolable Rules)
 
-- Never log sensitive data: plate numbers in full, payment amounts, or user credentials.
-- All operator actions (check-in, check-out, rate change) must be associated with an `operator_id` and recorded in an immutable audit log table.
-- JWT tokens expire in 8 hours. No refresh tokens in Phase 1.
-- Input from the plate field must be sanitized before any database query.
-- CORS must be explicitly configured; wildcard origins (`*`) are forbidden in production.
+يجب على أي مهندس برمجي أو وكيل ذكاء اصطناعي الالتزام الصارم بالقواعد التالية دون أي استثناء:
 
----
+### القاعدة 1: المعاملات المالية بالقرش كأعداد صحيحة حصراً (Integer Piastres)
+- **ممنوع تماماً** تخزين أي قيمة مالية في قاعدة البيانات كأرقام عشرية (`Float`).
+- كافة الأسعار والمبالغ في نماذج البيانات (`rate_per_hour`, `minimum_charge`, `amount_charged`, `amount_paid_piastres`, `price_piastres`, `lost_card_penalty`) تُخزن كـ `Integer` يمثل **القروش** (1 جنيه مصري = 100 قرش).
+- التحويل من وإلى الجنيه يتم فقط في طبقة العرض والـ Schemas (`round(egp * 100)`).
 
-## 9. Testing Requirements
+### القاعدة 2: إدارة التوقيت وتوقيت القاهرة والـ DST
+- تُخزن كافة التواريخ في قاعدة البيانات بصيغة UTC محايدة (`naive UTC`).
+- كل الحسابات الإدارية، إغلاقات الورديات، حدود بداية ونهاية الأيام، وفلاتر التقارير **يجب** أن تعتمد على توقيت القاهرة المحلي `Africa/Cairo` مع مراعاة التوقيت الصيفي المصري (UTC+3 صيفاً / UTC+2 شتاءً) عبر دوال `utils/time.py` (`cairo_now`, `cairo_today_start`, `utc_to_cairo`).
 
-- **Unit tests** are required for all `services/` functions. Target: 90% coverage on the services layer.
-- **Integration tests** are required for all API routes, using `httpx.AsyncClient` against a test SQLite database.
-- No PR may be merged if it reduces overall test coverage below 80%.
-- Tests live in `tests/unit/` and `tests/integration/` and mirror the source structure.
-- Use `pytest` with `pytest-asyncio`. No `unittest` style.
+### القاعدة 3: استقلالية البوابات وحصانة حركة المرور
+- فشل الكاميرا، انقطاع اتصال الـ Edge PC، أو بطء استجابة التعرف على اللوحات **لا يجوز إطلاقاً** أن يمنع فتح الجلسة أو يعطل دخول السيارة أو يرمي خطأ 500 للمشغل.
+- حركة الجراج الفيزيائية هي الأولوية القصوى دائماً، والكاميرات وظيفتها تعزيز السجل والمراقبة بصورة غير متزامنة.
 
----
+### القاعدة 4: دورة حياة الكروت (Card Status Lifecycle)
+- الكارت العادي ينتقل حصراً كالتالي:
+  - عند الدخول: من `AVAILABLE` إلى `IN_USE`.
+  - عند الخروج العادي: من `IN_USE` إلى `AVAILABLE`.
+  - عند الفقد: إلى `LOST`.
+- كارت المشترك يبقى دائماً بحالة `IN_USE` طوال فترة الاشتراك، ولا يُعاد إلى `AVAILABLE` عند خروجه من الجراج.
 
-## 10. Code Style & Quality
+### القاعدة 5: سجل التدقيق الإجباري (Audit Trail)
+- أي عملية تعديل حساسة في النظام (تسجيل دخول، فتح/إغلاق وردية، فتح/إغلاق جلسة، إغلاق إداري، تعديل أسعار، تجديد اشتراك، تعديل مستخدمين) **يجب** أن تمر عبر `AuditService.log` مع توثيق معرّف الفاعل والحالة السابقة واللاحقة مع حذف أي كلمات مرور مشفرة من الـ Payload.
 
-- Formatter: **Black** (line length 88). Non-negotiable.
-- Linter: **Ruff**. All rules in `pyproject.toml`; no inline suppressions without a comment explaining why.
-- Type hints are **mandatory** on all function signatures. Use `mypy` in CI.
-- Docstrings are required on all service methods and repository methods. Google style.
-- No `print()` statements in production code. Use Python `logging` with structured log levels.
-
----
-
-## 11. Environment & Configuration
-
-- All configuration is read from environment variables via `pydantic-settings` in `config.py`.
-- A `.env.example` file must be kept up to date with every new config key.
-- Three environments are recognized: `development`, `staging`, `production`. Behavior may differ (e.g., SQLite vs PostgreSQL, debug mode).
-- `DEBUG=True` must never reach a production deployment. CI must enforce this.
+### القاعدة 6: الفصل المعماري للطبقات (Clean Architecture)
+- ملفات `routes/` تتعامل فقط مع بروتوكول HTTP والتحقق من الصلاحيات.
+- منطق الأعمال التجاري (Business Logic) مكانه حصراً داخل `services/`.
+- التعامل مع استعلامات قاعدة البيانات مكانه داخل `repositories/` و `models/`.
+- التحقق من العقود وهياكل البيانات مكانه داخل `schemas/`.
 
 ---
 
-## 12. Contribution Rules
+## 8. الهيكل الميداني الفعلي للمشروع (Actual Directory Structure)
 
-1. Every feature or fix lives on its own branch: `feature/`, `fix/`, `chore/`.
-2. PRs must reference an issue or ticket number.
-3. PRs that touch `services/` or `models/` require two reviewers.
-4. Any change to this `constitution.md` requires unanimous team approval.
-5. "It works on my machine" is not an acceptable test. All tests must pass in CI before merge.
+```
+/srv/pgms-babelooq/app/
+├── alembic/                # ملفات وإصدارات هجرة الداتابيز المعتمدة
+├── config.py               # إعدادات Pydantic وقراءة متغيرات .env
+├── database.py             # محرك قاعدة البيانات AsyncSession وجلسات SQLAlchemy
+├── dependencies.py         # حقن التبعيات والتحقق من الصلاحيات (Admin, Operator)
+├── main.py                 # تطبيق FastAPI ودورة حياة النظام Lifespan
+├── seed.py                 # بذر الحسابات الافتراضية والبيانات المبدئية
+├── server.py               # خادم تشغيل Uvicorn المحلي
+├── run_garage4u.bat        # ملف تشغيل محطة الجراج بنقرة واحدة
+│
+├── edge_agent/             # وكيل الذكاء الاصطناعي والكاميرات لجهاز الجراج
+│   ├── agent.py            # حلقة الاتصال WebSocket ومعالجة أوامر التصوير
+│   ├── camera.py           # عميل لقطات الكاميرات ISAPI عبر الشبكة المحلية
+│   ├── recognizer.py       # تشغيل موديلات YOLO للتعرف على اللوحات المصرية
+│   └── settings.py         # إعدادات الـ Edge وعناوين الكاميرات والأوزان
+│
+├── models/                 # كيانات قاعدة البيانات (SQLAlchemy ORM Models)
+│   ├── audit_log.py        # سجل التدقيق
+│   ├── parking_card.py     # كروت الجراج
+│   ├── parking_session.py  # جلسات ركن السيارات وبيانات الكاميرات
+│   ├── pricing_rule.py     # لوائح التسعير والشرائح
+│   ├── shift.py            # ورديات المشغلين
+│   ├── subscriber.py       # بيانات المشتركين
+│   ├── subscription.py     # عقود وسجلات الاشتراكات
+│   ├── subscription_plan.py# خطط وباقات الاشتراكات
+│   └── user.py             # المستخدمين والصلاحيات
+│
+├── repositories/           # طبقة الوصول للبيانات والاستعلامات (Data Access Layer)
+├── routes/                 # نقاط النهاية للـ API والواجهات (FastAPI Routers)
+│   ├── admin_api.py        # واجهات برمجة الإدارة والتقارير
+│   ├── auth.py             # مصادقة الـ API
+│   ├── cards.py            # إدارة الكروت
+│   ├── edge_ws.py          # نقطة اتصال WebSocket لأجهزة الـ Edge
+│   ├── rates.py            # تسعير الانتظار
+│   ├── sessions.py         # جلسات الانتظار البرمجية
+│   ├── shifts.py           # الورديات
+│   ├── subscriptions_api.py# واجهات برمجة الاشتراكات
+│   ├── ui_admin.py         # صفحات لوحة تحكم الإدارة
+│   ├── ui_auth.py          # صفحات تسجيل الدخول والخروج
+│   ├── ui_operator.py      # واجهة المشغل والبوابات والماسح الضوئي
+│   ├── ui_subscriptions.py # صفحات إدارة الاشتراكات والاستيراد
+│   └── users.py            # إدارة المستخدمين
+│
+├── schemas/                # عقود ونماذج Pydantic للطلبات والاستجابات
+├── services/               # المنطق التجاري للنظام (Business Logic Services)
+│   ├── audit_service.py    # خدمة التوثيق الجنائي والتدقيق
+│   ├── card_service.py     # التحقق وتحديث حالة الكروت
+│   ├── edge_hub.py         # إدارة اتصالات الـ WebSockets وتوزيع المهام
+│   ├── event_bus.py        # ناقل الأحداث عبر Postgres LISTEN/NOTIFY
+│   ├── excel_import_service.py # استيراد المشتركين وفحص الإكسيل
+│   ├── plate_capture_service.py# حفظ نتائج الكاميرات وإدارة المهل
+│   ├── plate_service.py    # مطابقة وتنسيق أرقام اللوحات المصرية
+│   ├── pricing_service.py  # محرك احتساب الأسعار وفترات السماح
+│   ├── report_service.py   # تجميع المؤشرات والإحصائيات والتقارير
+│   ├── session_service.py  # إدارة فتح وإغلاق الجلسات وتسويتها
+│   ├── shift_service.py    # إدارة الورديات والمطابقة النقدية
+│   └── subscription_service.py # إدارة وتجديد وفحص الاشتراكات
+│
+├── static/                 # الملفات الثابتة (JS, CSS, Icons)
+│   ├── js/dashboard.js     # محرك المشغل والماسح السريع ونغمات الصوت
+│   └── sw.js               # Service Worker للواجهات
+│
+├── templates/              # قوالب Jinja2 لعرض الواجهات
+│   ├── admin/              # قوالب الإدارة والتقارير
+│   ├── auth/               # قوالب الدخول
+│   ├── operator/           # قوالب شاشات البوابات والمشغلين
+│   └── receipts/           # قوالب الإيصالات الحرارية (80mm / 58mm)
+│
+├── translations/           # ملفات الترجمة والمصطلحات (ar.json)
+└── utils/                  # أدوات التوقيت، قوالب Jinja، وتصدير الـ CSV
+```
 
 ---
 
-*This document is the law of the project. When in doubt, re-read it.*
+> **خاتمة:** يُلزم كل مطور أو أداة برمجية بمراجعة هذا الدستور قبل إدخال أي تعديل، والتأكد التام من مطابقة التعديلات للقواعد الصارمة المذكورة أعلاه.

@@ -1,5 +1,5 @@
 import asyncio
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -350,10 +350,25 @@ class SubscriptionService:
             except Exception:
                 return 0
 
-        active_cnt, expiring_cnt, unrenewed_cnt = await asyncio.gather(
+        async def get_total_subscribers():
+            try:
+                res = await self.db.execute(select(func.count()).select_from(Subscriber))
+                return res.scalar_one()
+            except Exception:
+                return 0
+
+        active_cnt, expiring_cnt, unrenewed_cnt, total_subs = await asyncio.gather(
             get_active_count(),
             get_expiring_count(),
             get_expired_unrenewed_count(),
+            get_total_subscribers(),
+        )
+
+        return SubscriptionDashboardStats(
+            active_subscriptions_count=active_cnt,
+            expiring_soon_count=expiring_cnt,
+            expired_unrenewed_count=unrenewed_cnt,
+            total_subscribers=total_subs,
         )
 
     async def delete_subscription(self, subscription_id: int, admin_id: int) -> None:

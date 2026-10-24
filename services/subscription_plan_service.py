@@ -99,9 +99,6 @@ class SubscriptionPlanService:
                 raise PlanLabelAlreadyExistsError(f"Plan with label '{data.label}' already exists")
             updates["label"] = data.label
 
-        if data.duration_days is not None:
-            updates["duration_days"] = data.duration_days
-
         if data.price_egp is not None:
             updates["price_piastres"] = round(data.price_egp * 100)
 

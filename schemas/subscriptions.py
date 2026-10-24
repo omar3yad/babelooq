@@ -21,7 +21,6 @@ class PlanCreate(BaseModel):
 
 class PlanUpdate(BaseModel):
     label: str | None = Field(None, min_length=1, max_length=100)
-    duration_days: int | None = Field(None, ge=1)
     price_egp: float | None = Field(None, ge=0)
     max_entries_per_day: int | None = Field(None, ge=1)
     description: str | None = None
@@ -203,6 +202,11 @@ class SubscriptionDashboardStats(BaseModel):
     active_subscriptions_count: int
     expiring_soon_count: int
     expired_unrenewed_count: int
+    total_subscribers: int = 0
+
+    @property
+    def active_subscriptions(self) -> int:
+        return self.active_subscriptions_count
 
     model_config = ConfigDict(from_attributes=True)
 

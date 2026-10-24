@@ -309,7 +309,6 @@ class ExcelImportService:
                 card = ParkingCard(
                     card_code=card_code,
                     status=CardStatus.IN_USE if selected_plan else CardStatus.AVAILABLE,
-                    created_by=current_user_id,
                 )
                 db.add(card)
                 await db.flush()

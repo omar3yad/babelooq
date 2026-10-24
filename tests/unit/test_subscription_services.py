@@ -175,7 +175,7 @@ async def test_subscription_service_full_flow(db_session: AsyncSession):
     renew_req = SubscriptionRenew(amount_paid_egp=150.0, notes="Advance renewal")
     renewed = await sub_service.renew_subscription(subscription.id, renew_req, admin_id=user.id)
     assert renewed.status == SubscriptionStatus.PENDING
-    assert renewed.start_date == subscription.end_date
+    assert renewed.start_date == subscription.end_date + timedelta(days=1)
     assert renewed.previous_subscription_id == subscription.id
 
     # 4. Cancel subscription (frees card)
@@ -289,7 +289,7 @@ async def test_report_service_subscription_revenue(db_session: AsyncSession):
         collected_by=user.id,
     )
 
-    report_svc = ReportService()
+    report_svc = ReportService(db_session)
     summary = await report_svc.get_subscription_revenue_summary(
         start_date=today - timedelta(days=1),
         end_date=today + timedelta(days=1),

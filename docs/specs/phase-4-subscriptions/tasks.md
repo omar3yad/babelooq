@@ -16,7 +16,7 @@
 
 ### 1a — Enums
 
-- [ ] **Task 1.1:** Create `models/subscription.py`. Define a
+- [x] **Task 1.1:** Create `models/subscription.py`. Define a
   `SubscriptionStatus` Python `enum.Enum` with exactly four values:
   `ACTIVE = "ACTIVE"`, `EXPIRED = "EXPIRED"`, `CANCELLED = "CANCELLED"`,
   `PENDING = "PENDING"`. Add `__all__ = ["SubscriptionStatus"]`. No other
@@ -24,7 +24,7 @@
 
 ### 1b — SubscriptionPlan Model
 
-- [ ] **Task 1.2:** Create `models/subscription_plan.py`. Import `Base` from
+- [x] **Task 1.2:** Create `models/subscription_plan.py`. Import `Base` from
   `database` and `TimestampMixin` from `models/mixins.py`. Define the
   `SubscriptionPlan` class inheriting from `Base` and `TimestampMixin`.
   Set `__tablename__ = "subscription_plans"`. Add these columns only:
@@ -32,7 +32,7 @@
   - `label: Mapped[str]` — `VARCHAR(100)`, unique, not nullable, indexed.
   - `duration_days: Mapped[int]` — `SMALLINT`, not nullable.
 
-- [ ] **Task 1.3:** In `models/subscription_plan.py`, add remaining columns
+- [x] **Task 1.3:** In `models/subscription_plan.py`, add remaining columns
   to `SubscriptionPlan`:
   - `price_piastres: Mapped[int]` — `INTEGER`, not nullable. Stored in
     piastres. Never a float.
@@ -46,22 +46,24 @@
 
 ### 1c — Subscriber Model
 
-- [ ] **Task 1.4:** Create `models/subscriber.py`. Import `Base` and
+- [x] **Task 1.4:** Create `models/subscriber.py`. Import `Base` and
   `TimestampMixin`. Define the `Subscriber` class inheriting from both.
   Set `__tablename__ = "subscribers"`. Add these columns only:
   - `id: Mapped[int]` — primary key, autoincrement.
   - `full_name: Mapped[str]` — `VARCHAR(120)`, not nullable.
   - `phone_number: Mapped[str | None]` — `VARCHAR(20)`, nullable.
 
-- [ ] **Task 1.5:** In `models/subscriber.py`, add remaining columns:
+- [x] **Task 1.5:** In `models/subscriber.py`, add remaining columns:
   - `plate_number: Mapped[str]` — `VARCHAR(30)`, unique, not nullable,
     indexed.
+  - `company_name: Mapped[str | None]` — `VARCHAR(150)`, nullable, indexed.
+  - `card_code: Mapped[str | None]` — `VARCHAR(50)`, unique, nullable, indexed.
   - `notes: Mapped[str | None]` — `TEXT`, nullable.
   Add `__all__ = ["Subscriber"]`.
 
 ### 1d — Subscription Model
 
-- [ ] **Task 1.6:** In `models/subscription.py`, add imports for `Base`,
+- [x] **Task 1.6:** In `models/subscription.py`, add imports for `Base`,
   `TimestampMixin`, and `SubscriptionStatus`. Define the `Subscription`
   class inheriting from `Base` and `TimestampMixin`.
   Set `__tablename__ = "subscriptions"`. Add these columns only:
@@ -73,7 +75,7 @@
   - `card_id: Mapped[int]` — `INTEGER`, FK → `parking_cards.id`,
     not nullable, indexed.
 
-- [ ] **Task 1.7:** In `models/subscription.py`, add these columns to
+- [x] **Task 1.7:** In `models/subscription.py`, add these columns to
   `Subscription`:
   - `plate_number: Mapped[str]` — `VARCHAR(30)`, not nullable. Snapshot
     at creation time.
@@ -82,7 +84,7 @@
   - `status: Mapped[SubscriptionStatus]` — `SQLAlchemy Enum(SubscriptionStatus)`,
     not nullable, `server_default="ACTIVE"`, indexed.
 
-- [ ] **Task 1.8:** In `models/subscription.py`, add these columns to
+- [x] **Task 1.8:** In `models/subscription.py`, add these columns to
   `Subscription`:
   - `amount_paid_piastres: Mapped[int]` — `INTEGER`, not nullable.
   - `plan_price_snapshot: Mapped[int]` — `INTEGER`, not nullable. Snapshot
@@ -93,7 +95,7 @@
   - `renewal_count: Mapped[int]` — `SMALLINT`, not nullable,
     `server_default="0"`.
 
-- [ ] **Task 1.9:** In `models/subscription.py`, add final columns to
+- [x] **Task 1.9:** In `models/subscription.py`, add final columns to
   `Subscription`:
   - `previous_subscription_id: Mapped[int | None]` — `INTEGER`,
     FK → `subscriptions.id`, nullable. Self-referential for renewal chain.
@@ -104,7 +106,7 @@
 
 ### 1e — ParkingSession Model Additions
 
-- [ ] **Task 1.10:** Open `models/parking_session.py`. Add two new columns
+- [x] **Task 1.10:** Open `models/parking_session.py`. Add two new columns
   to the `ParkingSession` class. Do not alter any existing column:
   - `subscription_id: Mapped[int | None]` — `INTEGER`,
     FK → `subscriptions.id`, nullable.
@@ -114,7 +116,7 @@
 
 ### 1f — Models `__init__.py`
 
-- [ ] **Task 1.11:** Update `models/__init__.py` to import and re-export:
+- [x] **Task 1.11:** Update `models/__init__.py` to import and re-export:
   `SubscriptionPlan`, `Subscriber`, `SubscriptionStatus`, `Subscription`.
   Add all four to `__all__`. Verify all previously exported names are still
   present. Do not remove any existing export.
@@ -123,7 +125,7 @@
 
 ## Group 2 — Alembic Migrations
 
-- [ ] **Task 2.1:** Generate a new Alembic migration by running:
+- [x] **Task 2.1:** Generate a new Alembic migration by running:
   `alembic revision --autogenerate -m "phase4_subscriptions_initial"`.
   Open the generated file. Verify `upgrade()` creates tables in this exact
   order:
@@ -134,7 +136,7 @@
   Verify `downgrade()` drops all three tables in reverse order.
   Commit the migration file. Do not edit any logic.
 
-- [ ] **Task 2.2:** Generate a second migration manually with message
+- [x] **Task 2.2:** Generate a second migration manually with message
   `"phase4_parking_session_subscription_columns"`. In `upgrade()`:
   1. `op.add_column('parking_sessions', Column('subscription_id', Integer,
      ForeignKey('subscriptions.id'), nullable=True))`.
@@ -144,7 +146,7 @@
      'parking_sessions', ['subscription_id'])`.
   In `downgrade()`: drop the index, then drop both columns. Commit.
 
-- [ ] **Task 2.3:** Generate a third migration manually with message
+- [x] **Task 2.3:** Generate a third migration manually with message
   `"phase4_subscriptions_check_constraint"`. In `upgrade()`, add a CHECK
   constraint to `parking_sessions`:
 ```python
@@ -157,7 +159,7 @@
 ```
   In `downgrade()`: drop the constraint by name. Commit.
 
-- [ ] **Task 2.4:** Generate a fourth migration manually with message
+- [x] **Task 2.4:** Generate a fourth migration manually with message
   `"phase4_subscriptions_performance_indexes"`. In `upgrade()`, add:
   - `ix_subscriptions_subscriber_id_status` on
     `subscriptions(subscriber_id, status)`.
@@ -167,7 +169,7 @@
     if exists using `if_not_exists=True` or an existence check.
   In `downgrade()`: drop all added indexes. Commit.
 
-- [ ] **Task 2.5:** Run `alembic upgrade head` against the local SQLite dev
+- [x] **Task 2.5:** Run `alembic upgrade head` against the local SQLite dev
   database. Confirm all tables, columns, indexes, and the CHECK constraint
   exist. Fix any migration errors. Delete any `test_verify.db` artifact.
   Commit no source changes in this task.
@@ -176,7 +178,7 @@
 
 ## Group 3 — Pydantic Schemas
 
-- [ ] **Task 3.1:** Create `schemas/subscriptions.py`. Add at the top:
+- [x] **Task 3.1:** Create `schemas/subscriptions.py`. Add at the top:
   imports from `pydantic` (`BaseModel`, `ConfigDict`, `Field`,
   `model_validator`, `computed_field`), from `datetime` (`date`, `datetime`),
   and `SubscriptionStatus` from `models`. Define:
@@ -199,7 +201,7 @@
           return round(self.price_egp * 100)
 ```
 
-- [ ] **Task 3.2:** In `schemas/subscriptions.py`, define:
+- [x] **Task 3.2:** In `schemas/subscriptions.py`, define:
 
 ```python
   class PlanUpdate(BaseModel):
@@ -225,7 +227,7 @@
       updated_at: datetime
 ```
 
-- [ ] **Task 3.3:** In `schemas/subscriptions.py`, define:
+- [x] **Task 3.3:** In `schemas/subscriptions.py`, define:
 
 ```python
   class SubscriberCreate(BaseModel):
@@ -239,18 +241,23 @@
   class SubscriberUpdate(BaseModel):
       full_name: str | None = Field(None, min_length=1, max_length=120)
       phone_number: str | None = Field(None, max_length=20)
+      company_name: str | None = Field(None, max_length=150)
+      card_code: str | None = Field(None, max_length=50)
       notes: str | None = None
       # plate_number intentionally excluded — immutable after creation
 ```
 
-- [ ] **Task 3.4:** In `schemas/subscriptions.py`, define:
+- [x] **Task 3.4:** In `schemas/subscriptions.py`, define:
 
 ```python
   class SubscriptionCreate(BaseModel):
       subscriber_id: int
-      plan_id: int
-      card_id: int
+      plan_id: int | None = None
+      card_id: int | None = None
+      card_code: str | None = None
+      duration_days: int | None = Field(None, ge=1)
       start_date: date
+      end_date: date | None = None
       amount_paid_egp: float = Field(ge=0)
       notes: str | None = None
 
@@ -274,7 +281,7 @@
       cancel_reason: str | None = Field(None, max_length=500)
 ```
 
-- [ ] **Task 3.5:** In `schemas/subscriptions.py`, define:
+- [x] **Task 3.5:** In `schemas/subscriptions.py`, define:
 
 ```python
   class SubscriptionResponse(BaseModel):
@@ -306,7 +313,7 @@
           return max(remaining, 0)
 ```
 
-- [ ] **Task 3.6:** In `schemas/subscriptions.py`, define:
+- [x] **Task 3.6:** In `schemas/subscriptions.py`, define:
 
 ```python
   class SubscriberResponse(BaseModel):
@@ -344,7 +351,7 @@
       active_subscriptions_count: int
 ```
 
-- [ ] **Task 3.7:** Update `schemas/__init__.py` to import and re-export
+- [x] **Task 3.7:** Update `schemas/__init__.py` to import and re-export
   all names from `schemas/subscriptions.py`. Add all new schema class names
   to `__all__`. Verify no circular imports by running
   `python -c "from schemas import *"`.
@@ -355,7 +362,7 @@
 
 ### 4a — SubscriptionPlan Repository
 
-- [ ] **Task 4.1:** Create `repositories/subscription_plan_repo.py`. Define a
+- [x] **Task 4.1:** Create `repositories/subscription_plan_repo.py`. Define a
   `SubscriptionPlanRepository` class with `__init__(self, db: AsyncSession)`.
   Add method:
 ```python
@@ -364,14 +371,14 @@
   `SELECT * FROM subscription_plans WHERE id = :id LIMIT 1`. Returns the
   plan or `None`.
 
-- [ ] **Task 4.2:** In `repositories/subscription_plan_repo.py`, add method:
+- [x] **Task 4.2:** In `repositories/subscription_plan_repo.py`, add method:
 ```python
   async def get_by_label(self, label: str) -> SubscriptionPlan | None
 ```
   `SELECT * FROM subscription_plans WHERE label = :label LIMIT 1`. Returns
   plan or `None`. Used for duplicate label check.
 
-- [ ] **Task 4.3:** In `repositories/subscription_plan_repo.py`, add method:
+- [x] **Task 4.3:** In `repositories/subscription_plan_repo.py`, add method:
 ```python
   async def get_all(
       self,
@@ -382,7 +389,7 @@
   `active_only=True`. Orders by `price_piastres ASC`. Returns full list
   (no pagination — plan count is bounded and small).
 
-- [ ] **Task 4.4:** In `repositories/subscription_plan_repo.py`, add method:
+- [x] **Task 4.4:** In `repositories/subscription_plan_repo.py`, add method:
 ```python
   async def create(
       self,
@@ -397,7 +404,7 @@
   Creates `SubscriptionPlan(...)` with `is_active=True`. Adds to session,
   flushes. Does not commit. Returns the plan.
 
-- [ ] **Task 4.5:** In `repositories/subscription_plan_repo.py`, add method:
+- [x] **Task 4.5:** In `repositories/subscription_plan_repo.py`, add method:
 ```python
   async def update_fields(
       self, plan: SubscriptionPlan, **fields
@@ -409,7 +416,7 @@
 
 ### 4b — Subscriber Repository
 
-- [ ] **Task 4.6:** Create `repositories/subscriber_repo.py`. Define a
+- [x] **Task 4.6:** Create `repositories/subscriber_repo.py`. Define a
   `SubscriberRepository` class with `__init__(self, db: AsyncSession)`.
   Add method:
 ```python
@@ -417,14 +424,14 @@
 ```
   `SELECT * WHERE id = :id`. Returns subscriber or `None`.
 
-- [ ] **Task 4.7:** In `repositories/subscriber_repo.py`, add method:
+- [x] **Task 4.7:** In `repositories/subscriber_repo.py`, add method:
 ```python
   async def get_by_plate(self, plate_normalized: str) -> Subscriber | None
 ```
   `SELECT * WHERE plate_number = :plate LIMIT 1`. Returns subscriber or
   `None`. Caller must normalize the plate before calling this method.
 
-- [ ] **Task 4.8:** In `repositories/subscriber_repo.py`, add method:
+- [x] **Task 4.8:** In `repositories/subscriber_repo.py`, add method:
 ```python
   async def create(
       self,
@@ -437,7 +444,7 @@
   Creates `Subscriber(...)`. Adds, flushes. Does not commit. Returns the
   subscriber.
 
-- [ ] **Task 4.9:** In `repositories/subscriber_repo.py`, add method:
+- [x] **Task 4.9:** In `repositories/subscriber_repo.py`, add method:
 ```python
   async def update_fields(
       self, subscriber: Subscriber, **fields
@@ -445,7 +452,7 @@
 ```
   Sets each key-value pair as attribute. Flushes. Does not commit.
 
-- [ ] **Task 4.10:** In `repositories/subscriber_repo.py`, add method:
+- [x] **Task 4.10:** In `repositories/subscriber_repo.py`, add method:
 ```python
   async def get_filtered(
       self,
@@ -464,7 +471,7 @@
 
 ### 4c — Subscription Repository
 
-- [ ] **Task 4.11:** Create `repositories/subscription_repo.py`. Define a
+- [x] **Task 4.11:** Create `repositories/subscription_repo.py`. Define a
   `SubscriptionRepository` class with `__init__(self, db: AsyncSession)`.
   Add method:
 ```python
@@ -472,7 +479,7 @@
 ```
   `SELECT * WHERE id = :id`. Returns subscription or `None`.
 
-- [ ] **Task 4.12:** In `repositories/subscription_repo.py`, add method:
+- [x] **Task 4.12:** In `repositories/subscription_repo.py`, add method:
 ```python
   async def get_active_for_card(
       self, card_id: int, today: date
@@ -490,7 +497,7 @@
   Returns the subscription or `None`. This is the hot path — called on every
   entry scan. Must use the composite index `ix_subscriptions_card_id_status`.
 
-- [ ] **Task 4.13:** In `repositories/subscription_repo.py`, add method:
+- [x] **Task 4.13:** In `repositories/subscription_repo.py`, add method:
 ```python
   async def get_active_for_subscriber(
       self, subscriber_id: int
@@ -499,7 +506,7 @@
   Queries subscriptions where `subscriber_id = :id` and
   `status IN ('ACTIVE', 'PENDING')`. Returns one or `None`.
 
-- [ ] **Task 4.14:** In `repositories/subscription_repo.py`, add method:
+- [x] **Task 4.14:** In `repositories/subscription_repo.py`, add method:
 ```python
   async def create(
       self,
@@ -522,7 +529,7 @@
   Creates `Subscription(...)`. Adds, flushes. Does not commit. Returns the
   subscription.
 
-- [ ] **Task 4.15:** In `repositories/subscription_repo.py`, add method:
+- [x] **Task 4.15:** In `repositories/subscription_repo.py`, add method:
 ```python
   async def update_fields(
       self, subscription: Subscription, **fields
@@ -530,7 +537,7 @@
 ```
   Sets each key-value pair as attribute. Flushes. Does not commit.
 
-- [ ] **Task 4.16:** In `repositories/subscription_repo.py`, add method:
+- [x] **Task 4.16:** In `repositories/subscription_repo.py`, add method:
 ```python
   async def count_daily_entries(
       self,
@@ -548,7 +555,7 @@
 ```
   Returns integer count.
 
-- [ ] **Task 4.17:** In `repositories/subscription_repo.py`, add method:
+- [x] **Task 4.17:** In `repositories/subscription_repo.py`, add method:
 ```python
   async def bulk_expire_overdue(self, today_cairo: date) -> int
 ```
@@ -572,7 +579,7 @@
   Both UPDATEs are in the same transaction. Flushes but does not commit
   (caller commits).
 
-- [ ] **Task 4.18:** In `repositories/subscription_repo.py`, add method:
+- [x] **Task 4.18:** In `repositories/subscription_repo.py`, add method:
 ```python
   async def bulk_activate_pending(self, today_cairo: date) -> int
 ```
@@ -584,7 +591,7 @@
 ```
   Returns row count. Flushes, does not commit.
 
-- [ ] **Task 4.19:** In `repositories/subscription_repo.py`, add method:
+- [x] **Task 4.19:** In `repositories/subscription_repo.py`, add method:
 ```python
   async def get_expiring_soon(
       self, threshold_date: date
@@ -599,7 +606,7 @@
 ```
   Returns list.
 
-- [ ] **Task 4.20:** In `repositories/subscription_repo.py`, add method:
+- [x] **Task 4.20:** In `repositories/subscription_repo.py`, add method:
 ```python
   async def get_all_by_subscriber(
       self, subscriber_id: int
@@ -608,7 +615,7 @@
   Returns all subscriptions for a subscriber ordered by `created_at DESC`.
   No pagination (subscriber subscription history is bounded and small).
 
-- [ ] **Task 4.21:** In `repositories/subscription_repo.py`, add method:
+- [x] **Task 4.21:** In `repositories/subscription_repo.py`, add method:
 ```python
   async def get_filtered(
       self,
@@ -621,7 +628,7 @@
   Applies `WHERE status = :status` and/or `WHERE plan_id = :plan_id` when
   not `None`. Orders by `created_at DESC`. Returns `(subscriptions, total)`.
 
-- [ ] **Task 4.22:** In `repositories/subscription_repo.py`, add method:
+- [x] **Task 4.22:** In `repositories/subscription_repo.py`, add method:
 ```python
   async def get_revenue_by_plan(
       self,
@@ -649,7 +656,7 @@
 
 ### 4d — Repositories `__init__.py`
 
-- [ ] **Task 4.23:** Update `repositories/__init__.py` to import and
+- [x] **Task 4.23:** Update `repositories/__init__.py` to import and
   re-export `SubscriptionPlanRepository`, `SubscriberRepository`,
   `SubscriptionRepository`. Add all three to `__all__`. Rebuild the full
   `__all__` list to include all existing repositories.
@@ -658,7 +665,7 @@
 
 ## Group 5 — Service Exceptions
 
-- [ ] **Task 5.1:** Open `services/exceptions.py`. Add the following new
+- [x] **Task 5.1:** Open `services/exceptions.py`. Add the following new
   exception classes using the same pattern as existing ones (inherit from
   `Exception`, store `message: str` in `__init__`):
   - `PlanNotFoundError`
@@ -679,7 +686,7 @@
 
 ### 6a — SubscriptionPlanService
 
-- [ ] **Task 6.1:** Create `services/subscription_plan_service.py`. Define a
+- [x] **Task 6.1:** Create `services/subscription_plan_service.py`. Define a
   `SubscriptionPlanService` class with:
 ```python
   def __init__(
@@ -691,7 +698,7 @@
 ```
   Store all three as instance attributes.
 
-- [ ] **Task 6.2:** In `services/subscription_plan_service.py`, add method:
+- [x] **Task 6.2:** In `services/subscription_plan_service.py`, add method:
 ```python
   async def create_plan(
       self, data: PlanCreate, admin_id: int
@@ -712,7 +719,7 @@
      "price_piastres": plan.price_piastres})`.
   5. Returns plan.
 
-- [ ] **Task 6.3:** In `services/subscription_plan_service.py`, add method:
+- [x] **Task 6.3:** In `services/subscription_plan_service.py`, add method:
 ```python
   async def deactivate_plan(
       self, plan_id: int, admin_id: int
@@ -726,7 +733,7 @@
      `after={"is_active": False}`.
   5. Returns plan.
 
-- [ ] **Task 6.4:** In `services/subscription_plan_service.py`, add method:
+- [x] **Task 6.4:** In `services/subscription_plan_service.py`, add method:
 ```python
   async def update_plan(
       self, plan_id: int, data: PlanUpdate, admin_id: int
@@ -748,7 +755,7 @@
 
 ### 6b — SubscriberService
 
-- [ ] **Task 6.5:** Create `services/subscriber_service.py`. Define a
+- [x] **Task 6.5:** Create `services/subscriber_service.py`. Define a
   `SubscriberService` class with:
 ```python
   def __init__(
@@ -760,7 +767,7 @@
   )
 ```
 
-- [ ] **Task 6.6:** In `services/subscriber_service.py`, add method:
+- [x] **Task 6.6:** In `services/subscriber_service.py`, add method:
 ```python
   async def create_subscriber(
       self, data: SubscriberCreate, admin_id: int
@@ -774,7 +781,7 @@
      notes=data.notes)`.
   4. Commits. Logs `"SUBSCRIBER_CREATED"`. Returns subscriber.
 
-- [ ] **Task 6.7:** In `services/subscriber_service.py`, add method:
+- [x] **Task 6.7:** In `services/subscriber_service.py`, add method:
 ```python
   async def update_subscriber(
       self, subscriber_id: int, data: SubscriberUpdate, admin_id: int
@@ -786,7 +793,7 @@
   3. Calls `subscriber_repo.update_fields(subscriber, **updates)`.
   4. Commits. Logs `"SUBSCRIBER_UPDATED"`. Returns subscriber.
 
-- [ ] **Task 6.8:** In `services/subscriber_service.py`, add method:
+- [x] **Task 6.8:** In `services/subscriber_service.py`, add method:
 ```python
   async def get_filtered(
       self,
@@ -816,7 +823,7 @@
 
 ### 6c — SubscriptionService
 
-- [ ] **Task 6.9:** Create `services/subscription_service.py`. Define a
+- [x] **Task 6.9:** Create `services/subscription_service.py`. Define a
   `SubscriptionService` class with:
 ```python
   def __init__(
@@ -830,7 +837,7 @@
 ```
   Store all five as instance attributes.
 
-- [ ] **Task 6.10:** In `services/subscription_service.py`, add method:
+- [x] **Task 6.10:** In `services/subscription_service.py`, add method:
 ```python
   async def get_active_for_card(
       self, card_id: int
@@ -841,7 +848,7 @@
   must not raise — it is called on every entry scan and must silently return
   `None` on any unexpected state.
 
-- [ ] **Task 6.11:** In `services/subscription_service.py`, add method:
+- [x] **Task 6.11:** In `services/subscription_service.py`, add method:
 ```python
   async def check_daily_limit(
       self, subscription: Subscription
@@ -856,7 +863,7 @@
      day_start_utc, day_end_utc)`.
   5. Returns `count < plan.max_entries_per_day`.
 
-- [ ] **Task 6.12:** In `services/subscription_service.py`, add method:
+- [x] **Task 6.12:** In `services/subscription_service.py`, add method:
 ```python
   async def create_subscription(
       self,
@@ -894,7 +901,7 @@
   10. Commit `self.db`.
   11. Log `"SUBSCRIPTION_CREATED"`. Return subscription.
 
-- [ ] **Task 6.13:** In `services/subscription_service.py`, add method:
+- [x] **Task 6.13:** In `services/subscription_service.py`, add method:
 ```python
   async def renew_subscription(
       self,
@@ -925,7 +932,7 @@
       `after={"old_id": old.id, "new_id": new_sub.id}`. Return new
       subscription.
 
-- [ ] **Task 6.14:** In `services/subscription_service.py`, add method:
+- [x] **Task 6.14:** In `services/subscription_service.py`, add method:
 ```python
   async def cancel_subscription(
       self,
@@ -946,7 +953,7 @@
   6. Both changes flush together. Commit once.
   7. Log `"SUBSCRIPTION_CANCELLED"`. Return subscription.
 
-- [ ] **Task 6.15:** In `services/subscription_service.py`, add method:
+- [x] **Task 6.15:** In `services/subscription_service.py`, add method:
 ```python
   async def expire_overdue_subscriptions(self) -> int
 ```
@@ -955,7 +962,7 @@
   2. Commits.
   3. Returns the count of expired rows.
 
-- [ ] **Task 6.16:** In `services/subscription_service.py`, add method:
+- [x] **Task 6.16:** In `services/subscription_service.py`, add method:
 ```python
   async def activate_pending_subscriptions(self) -> int
 ```
@@ -964,7 +971,7 @@
   2. Commits.
   3. Returns the count of activated rows.
 
-- [ ] **Task 6.17:** In `services/subscription_service.py`, add method:
+- [x] **Task 6.17:** In `services/subscription_service.py`, add method:
 ```python
   async def get_dashboard_stats(self) -> SubscriptionDashboardStats
 ```
@@ -981,7 +988,7 @@
 
 ### 6d — SessionService Modifications
 
-- [ ] **Task 6.18:** Open `services/session_service.py`. Add
+- [x] **Task 6.18:** Open `services/session_service.py`. Add
   `SubscriptionService` as an optional dependency to `SessionService.__init__`:
 ```python
   def __init__(
@@ -994,7 +1001,7 @@
   optional (`None`) so that existing Phase 2 tests do not break without
   modification.
 
-- [ ] **Task 6.19:** In `services/session_service.py`, modify
+- [x] **Task 6.19:** In `services/session_service.py`, modify
   `open_session` to add a subscription check **after** card validation and
   **before** creating the session. Insert these steps between the card
   validation step and the `session_repo.create` call:
@@ -1012,7 +1019,7 @@
   Update the return type annotation to
   `tuple[ParkingSession, Subscription | None]`.
 
-- [ ] **Task 6.20:** In `services/session_service.py`, modify `close_session`
+- [x] **Task 6.20:** In `services/session_service.py`, modify `close_session`
   to check `session.is_subscribed` before pricing. Immediately after fetching
   the session and verifying `status == ACTIVE`, insert:
 ```python
@@ -1038,7 +1045,7 @@
 
 ### 6e — ReportService Extension
 
-- [ ] **Task 6.21:** Open `services/report_service.py`. Add method:
+- [x] **Task 6.21:** Open `services/report_service.py`. Add method:
 ```python
   async def get_subscription_revenue_summary(
       self,
@@ -1056,7 +1063,7 @@
 
 ### 6f — App Startup Lifespan
 
-- [ ] **Task 6.22:** Open `main.py`. Replace any existing `@app.on_event(
+- [x] **Task 6.22:** Open `main.py`. Replace any existing `@app.on_event(
   "startup")` decorator with a proper `@asynccontextmanager` lifespan
   function. If no startup event exists, add the lifespan from scratch.
   The lifespan function must:
@@ -1078,25 +1085,35 @@
 
 ### 6g — Services `__init__.py`
 
-- [ ] **Task 6.23:** Update `services/__init__.py` to import and re-export
+- [x] **Task 6.23:** Update `services/__init__.py` to import and re-export
   `SubscriptionPlanService`, `SubscriberService`, `SubscriptionService`.
   Rebuild `__all__`. Verify all nine new exceptions from Task 5.1 are
   exported.
 
+### 6h — Excel Import Service
+
+- [x] **Task 6.24:** Create `services/excel_import_service.py`. Implement `ExcelImportService`:
+  - `_normalize_string` & `_match_column_name` for intelligent Arabic & English column mapping.
+  - `parse_file` supporting `.xlsx` and multi-encoding `.csv` (UTF-8, CP1256, Latin-1).
+  - `generate_template` generating a formatted Excel template with styled Arabic headers.
+  - `preview` validating rows, card code availability, duplicate plates/phones, and error reporting.
+  - `execute_import` performing atomic batch import inside a single database transaction.
+
+---
 ---
 
 ## Group 7 — Jinja2 Filters & Translations
 
 ### 7a — New Jinja2 Filters
 
-- [ ] **Task 7.1:** Open `utils/jinja.py`. Add filter function:
+- [x] **Task 7.1:** Open `utils/jinja.py`. Add filter function:
 ```python
   def days_remaining_filter(end_date: date | None) -> int:
 ```
   If `end_date is None`: returns `0`. Computes
   `(end_date - cairo_now().date()).days`. Returns `max(result, 0)`.
 
-- [ ] **Task 7.2:** In `utils/jinja.py`, add filter:
+- [x] **Task 7.2:** In `utils/jinja.py`, add filter:
 ```python
   def subscription_status_label_filter(status: str) -> str:
 ```
@@ -1104,7 +1121,7 @@
   `"CANCELLED"` → `"ملغي"`, `"PENDING"` → `"معلق"`. Any other value
   → returns `status` unchanged.
 
-- [ ] **Task 7.3:** In `utils/jinja.py`, add filter:
+- [x] **Task 7.3:** In `utils/jinja.py`, add filter:
 ```python
   def subscription_status_class_filter(status: str) -> str:
 ```
@@ -1115,7 +1132,7 @@
   - `"PENDING"` → `"bg-amber-100 text-amber-700"`.
   - Any other → `"bg-gray-100 text-gray-500"`.
 
-- [ ] **Task 7.4:** In `utils/jinja.py`, update `create_jinja2_environment`
+- [x] **Task 7.4:** In `utils/jinja.py`, update `create_jinja2_environment`
   to register the three new filters:
   - `"days_remaining"` → `days_remaining_filter`
   - `"subscription_status_label"` → `subscription_status_label_filter`
@@ -1124,7 +1141,7 @@
 
 ### 7b — Translations
 
-- [ ] **Task 7.5:** Open `translations/ar.json`. Add all translation keys
+- [x] **Task 7.5:** Open `translations/ar.json`. Add all translation keys
   listed in `spec.md` Section 3.10. Do not remove any existing key.
   Validate JSON syntax by running:
   `python -c "import json; json.load(open('translations/ar.json'))"`.
@@ -1135,7 +1152,7 @@
 
 ### 8a — Subscription Plans API
 
-- [ ] **Task 8.1:** Create `routes/subscriptions_api.py`. Define
+- [x] **Task 8.1:** Create `routes/subscriptions_api.py`. Define
   `router = APIRouter(prefix="/api/v1/subscriptions", tags=["subscriptions"])`.
   All routes in this file use `Depends(require_admin)` unless noted. Add
   `POST /plans` endpoint:
@@ -1147,27 +1164,27 @@
     code="PLAN_LABEL_ALREADY_EXISTS")`.
   - Returns `{"data": PlanResponse(...).model_dump()}` with status `201`.
 
-- [ ] **Task 8.2:** In `routes/subscriptions_api.py`, add `GET /plans`
+- [x] **Task 8.2:** In `routes/subscriptions_api.py`, add `GET /plans`
   endpoint:
   - Query param: `active_only: bool = False`.
   - Calls `plan_repo.get_all(active_only=active_only)`.
   - Returns `{"data": [PlanResponse(...) for p in plans]}`.
 
-- [ ] **Task 8.3:** In `routes/subscriptions_api.py`, add
+- [x] **Task 8.3:** In `routes/subscriptions_api.py`, add
   `GET /plans/active` endpoint:
   - No auth restriction — uses `Depends(require_any_role)`.
   - Calls `plan_repo.get_all(active_only=True)`.
   - Returns list of `PlanResponse`. Used by subscription creation form
     dropdowns.
 
-- [ ] **Task 8.4:** In `routes/subscriptions_api.py`, add
+- [x] **Task 8.4:** In `routes/subscriptions_api.py`, add
   `PATCH /plans/{plan_id}` endpoint:
   - Body: `PlanUpdate`.
   - Calls `plan_service.update_plan(plan_id, data, current_user.id)`.
   - Maps `PlanNotFoundError` → `404`, `PlanLabelAlreadyExistsError` → `409`.
   - Returns `{"data": PlanResponse(...)}`.
 
-- [ ] **Task 8.5:** In `routes/subscriptions_api.py`, add
+- [x] **Task 8.5:** In `routes/subscriptions_api.py`, add
   `PATCH /plans/{plan_id}/deactivate` endpoint:
   - Calls `plan_service.deactivate_plan(plan_id, current_user.id)`.
   - Maps `PlanNotFoundError` → `404`.
@@ -1175,7 +1192,7 @@
 
 ### 8b — Subscribers API
 
-- [ ] **Task 8.6:** In `routes/subscriptions_api.py`, add
+- [x] **Task 8.6:** In `routes/subscriptions_api.py`, add
   `POST /subscribers` endpoint:
   - Body: `SubscriberCreate`.
   - Instantiates all required services.
@@ -1184,7 +1201,7 @@
     code="SUBSCRIBER_PLATE_ALREADY_EXISTS")`.
   - Returns `{"data": SubscriberResponse(...)}` with status `201`.
 
-- [ ] **Task 8.7:** In `routes/subscriptions_api.py`, add
+- [x] **Task 8.7:** In `routes/subscriptions_api.py`, add
   `GET /subscribers` endpoint:
   - Query params: `search: str | None = None`,
     `status: str | None = None`, `plan_id: int | None = None`,
@@ -1194,7 +1211,7 @@
   - Calls `subscriber_service.get_filtered(...)`.
   - Returns `PaginatedResponse[SubscriberResponse]`.
 
-- [ ] **Task 8.8:** In `routes/subscriptions_api.py`, add
+- [x] **Task 8.8:** In `routes/subscriptions_api.py`, add
   `GET /subscribers/{subscriber_id}` endpoint:
   - Fetches subscriber via `subscriber_repo.get_by_id`. Raises `404` if
     absent.
@@ -1203,7 +1220,7 @@
   - Fetches all subscriptions via `subscription_repo.get_all_by_subscriber`.
   - Returns `{"data": SubscriberResponse(active_subscription=..., ...)}`.
 
-- [ ] **Task 8.9:** In `routes/subscriptions_api.py`, add
+- [x] **Task 8.9:** In `routes/subscriptions_api.py`, add
   `PATCH /subscribers/{subscriber_id}` endpoint:
   - Body: `SubscriberUpdate`.
   - Calls `subscriber_service.update_subscriber(subscriber_id, data,
@@ -1213,7 +1230,7 @@
 
 ### 8c — Subscriptions API
 
-- [ ] **Task 8.10:** In `routes/subscriptions_api.py`, add `POST /`
+- [x] **Task 8.10:** In `routes/subscriptions_api.py`, add `POST /`
   endpoint (creates subscription):
   - Body: `SubscriptionCreate`.
   - Calls `subscription_service.create_subscription(data, current_user.id)`.
@@ -1225,19 +1242,19 @@
       `SUBSCRIBER_ALREADY_HAS_ACTIVE_SUBSCRIPTION`
   - Returns `{"data": SubscriptionResponse(...)}` with status `201`.
 
-- [ ] **Task 8.11:** In `routes/subscriptions_api.py`, add `GET /`
+- [x] **Task 8.11:** In `routes/subscriptions_api.py`, add `GET /`
   endpoint (list subscriptions):
   - Query params: `status: SubscriptionStatus | None = None`,
     `plan_id: int | None = None`, `page`, `size`.
   - Calls `subscription_repo.get_filtered(status, plan_id, page, size)`.
   - Returns `PaginatedResponse[SubscriptionResponse]`.
 
-- [ ] **Task 8.12:** In `routes/subscriptions_api.py`, add
+- [x] **Task 8.12:** In `routes/subscriptions_api.py`, add
   `GET /{subscription_id}` endpoint:
   - Fetches subscription. Raises `404` if absent.
   - Returns `{"data": SubscriptionResponse(...)}`.
 
-- [ ] **Task 8.13:** In `routes/subscriptions_api.py`, add
+- [x] **Task 8.13:** In `routes/subscriptions_api.py`, add
   `POST /{subscription_id}/renew` endpoint:
   - Body: `SubscriptionRenewRequest`.
   - Calls `subscription_service.renew_subscription(subscription_id, data,
@@ -1246,7 +1263,7 @@
     `SubscriptionNotActiveError` → `409` `SUBSCRIPTION_NOT_ACTIVE`.
   - Returns `{"data": SubscriptionResponse(...)}` with status `201`.
 
-- [ ] **Task 8.14:** In `routes/subscriptions_api.py`, add
+- [x] **Task 8.14:** In `routes/subscriptions_api.py`, add
   `PATCH /{subscription_id}/cancel` endpoint:
   - Body: `SubscriptionCancelRequest`.
   - Calls `subscription_service.cancel_subscription(subscription_id,
@@ -1257,7 +1274,7 @@
 
 ### 8d — Reporting API Extension
 
-- [ ] **Task 8.15:** Open `routes/admin_api.py`. Add endpoint
+- [x] **Task 8.15:** Open `routes/admin_api.py`. Add endpoint
   `GET /reports/subscriptions`:
   - Auth: `Depends(require_admin)`.
   - Query params: `start_date: date | None`, `end_date: date | None`,
@@ -1266,7 +1283,7 @@
     end_date, plan_id, subscription_repo)`.
   - Returns `{"data": SubscriptionRevenueSummary(...).model_dump()}`.
 
-- [ ] **Task 8.16:** Open `routes/admin_api.py`. Add endpoint
+- [x] **Task 8.16:** Open `routes/admin_api.py`. Add endpoint
   `GET /stats/subscriptions`:
   - Auth: `Depends(require_admin)`.
   - Calls `subscription_service.get_dashboard_stats()`.
@@ -1274,7 +1291,7 @@
 
 ### 8e — Router Registration
 
-- [ ] **Task 8.17:** Open `main.py`. Import `router` from
+- [x] **Task 8.17:** Open `main.py`. Import `router` from
   `routes/subscriptions_api.py` as `subscriptions_api_router`. Add
   `app.include_router(subscriptions_api_router)` after existing routers.
   No other changes to `main.py` in this task.
@@ -1283,7 +1300,7 @@
 
 ## Group 9 — Operator UI Modifications
 
-- [ ] **Task 9.1:** Open `routes/ui_operator.py`. Modify the `POST /entry`
+- [x] **Task 9.1:** Open `routes/ui_operator.py`. Modify the `POST /entry`
   handler to:
   1. Pass `subscription_service` to `SessionService` when instantiating it.
   2. Unpack the returned `(session, subscription)` tuple from
@@ -1293,7 +1310,7 @@
   4. Map `SubscriptionDailyLimitReachedError` → re-render entry page with
      `error=t("errors.subscription_daily_limit")`.
 
-- [ ] **Task 9.2:** Open `routes/ui_operator.py`. Modify the
+- [x] **Task 9.2:** Open `routes/ui_operator.py`. Modify the
   `GET /entry/confirm/{session_id}` handler to:
   1. Also fetch the subscription for the session via
      `subscription_repo.get_by_id(session.subscription_id)` if
@@ -1304,7 +1321,7 @@
   3. Pass `subscription=subscription` and `subscriber=subscriber` in the
      template context.
 
-- [ ] **Task 9.3:** Open `routes/ui_operator.py`. Modify the
+- [x] **Task 9.3:** Open `routes/ui_operator.py`. Modify the
   `POST /exit/lookup` handler to:
   1. Unpack `(session, subscription)` returned by `close_session` — wait,
      lookup does not close. Instead: after computing the price preview, also
@@ -1313,14 +1330,14 @@
   2. Pass `is_subscribed=session.is_subscribed`,
      `subscription=subscription` to `exit_confirm.html`.
 
-- [ ] **Task 9.4:** Open `routes/ui_operator.py`. Modify the
+- [x] **Task 9.4:** Open `routes/ui_operator.py`. Modify the
   `POST /exit/{session_id}/confirm` handler to:
   1. Unpack `(session, calc)` from `close_session` — `calc` may be `None`
      for subscribed sessions.
   2. Redirect to `/ui/operator/receipt/{session_id}` regardless (same as
      before). No change to redirect target.
 
-- [ ] **Task 9.5:** Open `routes/ui_operator.py`. Modify the
+- [x] **Task 9.5:** Open `routes/ui_operator.py`. Modify the
   `GET /receipt/{session_id}` handler to:
   1. Check `session.is_subscribed`.
   2. If `True`: render `receipts/thermal_subscription.html` instead of
@@ -1331,7 +1348,7 @@
 
 ## Group 10 — Operator Templates Modifications
 
-- [ ] **Task 10.1:** Open `templates/operator/entry_confirm.html`. Add a
+- [x] **Task 10.1:** Open `templates/operator/entry_confirm.html`. Add a
   conditional block after the existing success card:
 ```jinja2
   {% if subscription %}
@@ -1349,7 +1366,7 @@
 ```
   Do not alter any existing template structure outside of this addition.
 
-- [ ] **Task 10.2:** Open `templates/operator/exit_confirm.html`. Add a
+- [x] **Task 10.2:** Open `templates/operator/exit_confirm.html`. Add a
   conditional block that replaces the pricing section when
   `is_subscribed=True`:
 ```jinja2
@@ -1381,7 +1398,7 @@
 
 ## Group 11 — Subscription Receipt Template
 
-- [ ] **Task 11.1:** Create `templates/receipts/thermal_subscription.html`.
+- [x] **Task 11.1:** Create `templates/receipts/thermal_subscription.html`.
   This is a **standalone** HTML file — does NOT extend `base.html`.
   Structure mirrors `thermal.html` but with subscription-specific content:
 ```html
@@ -1404,7 +1421,7 @@
   </html>
 ```
 
-- [ ] **Task 11.2:** In `templates/receipts/thermal_subscription.html`, add
+- [x] **Task 11.2:** In `templates/receipts/thermal_subscription.html`, add
   the receipt body inside `<body>`. Required fields in order:
   1. Garage name (`{{ receipt.garage_name }}`), centred, bold.
   2. Separator: `<p class="sep">--------------------------------</p>`.
@@ -1437,14 +1454,14 @@
 
 ### 12a — Admin Subscription UI Router
 
-- [ ] **Task 12.2:** Create `routes/ui_subscriptions.py`. Define
+- [x] **Task 12.2:** Create `routes/ui_subscriptions.py`. Define
   `router = APIRouter(prefix="/ui/admin", tags=["ui-subscriptions"])`.
   All routes use `Depends(require_admin)`. Add `GET /plans` endpoint:
   - Fetches all plans via `plan_repo.get_all(active_only=False)`.
   - Returns `TemplateResponse("admin/plans.html", {"request": request,
     "user": current_user, "plans": plans})`.
 
-- [ ] **Task 12.3:** In `routes/ui_subscriptions.py`, add
+- [x] **Task 12.3:** In `routes/ui_subscriptions.py`, add
   `GET /subscribers` endpoint:
   - Parses `search`, `status`, `plan_id`, `expiring_days`, `page`, `size`
     from query params.
@@ -1452,12 +1469,12 @@
   - Fetches all active plans for the filter dropdown.
   - Returns `TemplateResponse("admin/subscribers.html", {...})`.
 
-- [ ] **Task 12.4:** In `routes/ui_subscriptions.py`, add
+- [x] **Task 12.4:** In `routes/ui_subscriptions.py`, add
   `GET /subscribers/new` endpoint:
   - Returns `TemplateResponse("admin/subscriber_new.html", {"request":
     request, "user": current_user})`.
 
-- [ ] **Task 12.5:** In `routes/ui_subscriptions.py`, add
+- [x] **Task 12.5:** In `routes/ui_subscriptions.py`, add
   `GET /subscribers/{subscriber_id}` endpoint:
   - Fetches subscriber. Redirects to `/ui/admin/subscribers` if absent.
   - Fetches active subscription and all historical subscriptions.
@@ -1468,21 +1485,21 @@
     LIMIT 10`.
   - Returns `TemplateResponse("admin/subscriber_detail.html", {...})`.
 
-- [ ] **Task 12.6:** In `routes/ui_subscriptions.py`, add
+- [x] **Task 12.6:** In `routes/ui_subscriptions.py`, add
   `GET /subscribers/{subscriber_id}/subscribe` endpoint:
   - Fetches subscriber. Fetches active plans.
   - Fetches all available cards via `card_repo.get_all(status=
     CardStatus.AVAILABLE, page=1, size=200)`.
   - Returns `TemplateResponse("admin/subscriber_subscribe.html", {...})`.
 
-- [ ] **Task 12.7:** In `routes/ui_subscriptions.py`, add
+- [x] **Task 12.7:** In `routes/ui_subscriptions.py`, add
   `GET /subscribers/{subscriber_id}/renew` endpoint:
   - Fetches subscriber and their active subscription.
   - If no active subscription: redirects to
     `/ui/admin/subscribers/{id}/subscribe`.
   - Returns `TemplateResponse("admin/subscriber_renew.html", {...})`.
 
-- [ ] **Task 12.8:** In `routes/ui_subscriptions.py`, add
+- [x] **Task 12.8:** In `routes/ui_subscriptions.py`, add
   `GET /subscriptions` endpoint:
   - Parses `status`, `plan_id`, `page`, `size` from query params.
   - Calls `subscription_repo.get_filtered(status, plan_id, page, size)`.
@@ -1490,19 +1507,19 @@
     batch query each.
   - Returns `TemplateResponse("admin/subscriptions.html", {...})`.
 
-- [ ] **Task 12.9:** Register `ui_subscriptions.router` in `main.py`.
+- [x] **Task 12.9:** Register `ui_subscriptions.router` in `main.py`.
   Import as `ui_subscriptions_router`. Add
   `app.include_router(ui_subscriptions_router)`. No other changes.
 
 ### 12b — Dashboard Extension
 
-- [ ] **Task 12.10:** Open `routes/ui_admin.py`. Modify `GET /dashboard`
+- [x] **Task 12.10:** Open `routes/ui_admin.py`. Modify `GET /dashboard`
   to additionally call `subscription_service.get_dashboard_stats()`
   concurrently in the existing `asyncio.gather`. Pass
   `sub_stats: SubscriptionDashboardStats` in the template context. Update
   the `asyncio.gather` call to include the new coroutine.
 
-- [ ] **Task 12.11:** Open `templates/admin/dashboard.html`. Add a new
+- [x] **Task 12.11:** Open `templates/admin/dashboard.html`. Add a new
   alert card below the existing amber/red banners:
 ```jinja2
   {% if sub_stats.expiring_soon_count > 0 %}
@@ -1527,7 +1544,7 @@
 
 ### 12c — Admin Templates
 
-- [ ] **Task 12.12:** Create `templates/admin/plans.html` extending
+- [x] **Task 12.12:** Create `templates/admin/plans.html` extending
   `templates/admin/base_admin.html`. Must include:
   - "إنشاء خطة جديدة" button that shows/hides an inline `<div>` form via
     a JavaScript toggle (`display: none` / `display: block`).
@@ -1543,7 +1560,7 @@
     deactivate` via `fetch`, updates badge on success).
   - Deactivated plans show grey "غير نشط" badge; "تعطيل" button disabled.
 
-- [ ] **Task 12.13:** Create `templates/admin/subscribers.html` extending
+- [x] **Task 12.13:** Create `templates/admin/subscribers.html` extending
   `base_admin.html`. Must include:
   - Filter bar: `search` text input, `status` dropdown
     (نشط/منتهي/ملغي/الكل), `plan_id` dropdown, `expiring_days` hidden
@@ -1556,7 +1573,7 @@
   - "إضافة مشترك" button links to `/ui/admin/subscribers/new`.
   - Pagination controls.
 
-- [ ] **Task 12.14:** Create `templates/admin/subscriber_new.html` extending
+- [x] **Task 12.14:** Create `templates/admin/subscriber_new.html` extending
   `base_admin.html`. Must include:
   - A `<form method="POST" action="/api/v1/subscriptions/subscribers">`
     (submits via `fetch`, redirects to new subscriber page on success).
@@ -1567,7 +1584,7 @@
   - On success: JavaScript redirects to
     `/ui/admin/subscribers/{new_id}/subscribe`.
 
-- [ ] **Task 12.15:** Create `templates/admin/subscriber_detail.html`
+- [x] **Task 12.15:** Create `templates/admin/subscriber_detail.html`
   extending `base_admin.html`. Must include:
   - Subscriber info card: full name, phone, plate number, notes.
   - Active subscription card (if any): plan label, start date, end date,
@@ -1584,7 +1601,7 @@
   - Past subscriptions list: plan label, start, end, status badge, amount
     paid.
 
-- [ ] **Task 12.16:** Create `templates/admin/subscriber_subscribe.html`
+- [x] **Task 12.16:** Create `templates/admin/subscriber_subscribe.html`
   extending `base_admin.html`. Must include:
   - Subscriber name and plate displayed at top (read-only).
   - Form submits to `POST /api/v1/subscriptions/` via `fetch`.
@@ -1601,7 +1618,7 @@
   - Submit button: "إنشاء الاشتراك", green, full-width.
   - On success: redirect to `/ui/admin/subscribers/{{ subscriber.id }}`.
 
-- [ ] **Task 12.17:** Create `templates/admin/subscriber_renew.html`
+- [x] **Task 12.17:** Create `templates/admin/subscriber_renew.html`
   extending `base_admin.html`. Must include:
   - Current subscription info (plan label, current end date, days remaining).
   - New subscription preview: new start date (= current end date if not
@@ -1612,7 +1629,7 @@
   - Submit button: "تجديد الاشتراك", amber, full-width.
   - On success: redirect to subscriber detail page.
 
-- [ ] **Task 12.18:** Create `templates/admin/subscriptions.html` extending
+- [x] **Task 12.18:** Create `templates/admin/subscriptions.html` extending
   `base_admin.html`. Must include:
   - Filter bar: `status` dropdown, `plan_id` dropdown, `page`, `size`.
   - Table: subscription ID, subscriber name, plate, plan label, start date,
@@ -1622,7 +1639,7 @@
 
 ### 12d — Sidebar Navigation Update
 
-- [ ] **Task 12.19:** Open `templates/admin/base_admin.html`. Add two new
+- [x] **Task 12.19:** Open `templates/admin/base_admin.html`. Add two new
   sidebar links:
   - `<a href="/ui/admin/subscribers">{{ t("subscriptions.subscriber.title") }}</a>`
   - `<a href="/ui/admin/plans">{{ t("subscriptions.plan.title") }}</a>`
@@ -1631,9 +1648,22 @@
 
 ---
 
+### 12e — Excel Bulk Import UI & Template
+
+- [x] **Task 12.20:** Open `routes/ui_subscriptions.py`. Add Excel import routes:
+  - `GET /ui/admin/subscribers/import`: renders `admin/subscribers_import.html` with active plans.
+  - `GET /ui/admin/subscribers/template-excel`: downloads styled `subscribers_template.xlsx`.
+  - `POST /ui/admin/subscribers/import-preview`: receives file, calls `ExcelImportService.parse_file` and `preview()`, returns validation statistics.
+  - `POST /ui/admin/subscribers/import-confirm`: executes `ExcelImportService.execute_import()`.
+
+- [x] **Task 12.21:** Create `templates/admin/subscribers_import.html` extending `base_admin.html`.
+  Includes drag-and-drop file upload, template download button, interactive preview table showing card code status (existing vs new), subscriber status, warning banners, and confirmation button.
+
+---
+
 ## Group 13 — Tailwind Rebuild
 
-- [ ] **Task 13.1:** Run `make css` to rebuild `static/css/tailwind.min.css`
+- [x] **Task 13.1:** Run `make css` to rebuild `static/css/tailwind.min.css`
   including all new template classes from Group 12. Verify `tailwind.config.js`
   `content` array still includes both `"templates/operator/**/*.html"` and
   `"templates/admin/**/*.html"`. Mark complete only after a successful build
@@ -1645,7 +1675,7 @@
 
 ### 14a — Filter Tests
 
-- [ ] **Task 14.1:** Create `tests/unit/test_subscription_schemas.py`. Write
+- [x] **Task 14.1:** Create `tests/unit/test_subscription_schemas.py`. Write
   tests for `PlanCreate`:
   - `test_price_egp_converts_to_piastres`: `PlanCreate(price_egp=10.0,
     ...)`. Asserts `plan.price_piastres == 1000`.
@@ -1657,14 +1687,14 @@
   - `test_duration_days_zero_invalid`: `duration_days=0`. Asserts
     `ValidationError`.
 
-- [ ] **Task 14.2:** In `tests/unit/test_subscription_schemas.py`, write
+- [x] **Task 14.2:** In `tests/unit/test_subscription_schemas.py`, write
   tests for `SubscriberUpdate`:
   - `test_plate_number_not_in_schema`: asserts `"plate_number"` is not a
     field of `SubscriberUpdate` (use `model_fields`).
   - `test_all_fields_optional`: `SubscriberUpdate()` with no args. Asserts
     no `ValidationError`.
 
-- [ ] **Task 14.3:** In `tests/unit/test_subscription_schemas.py`, write
+- [x] **Task 14.3:** In `tests/unit/test_subscription_schemas.py`, write
   tests for `SubscriptionResponse.days_remaining`:
   - `test_days_remaining_future`: freeze today, set `end_date = today + 5`.
     Asserts `days_remaining == 5`.
@@ -1675,7 +1705,7 @@
 
 ### 14b — Jinja2 Filter Tests
 
-- [ ] **Task 14.4:** Create `tests/unit/test_subscription_filters.py`. Write
+- [x] **Task 14.4:** Create `tests/unit/test_subscription_filters.py`. Write
   tests for `subscription_status_label_filter`:
   - `"ACTIVE"` → `"نشط"`.
   - `"EXPIRED"` → `"منتهي"`.
@@ -1683,14 +1713,14 @@
   - `"PENDING"` → `"معلق"`.
   - `"UNKNOWN"` → `"UNKNOWN"` (passthrough).
 
-- [ ] **Task 14.5:** In `tests/unit/test_subscription_filters.py`, write
+- [x] **Task 14.5:** In `tests/unit/test_subscription_filters.py`, write
   tests for `subscription_status_class_filter`:
   - `"ACTIVE"` → asserts contains `"green"`.
   - `"EXPIRED"` → asserts contains `"gray"`.
   - `"CANCELLED"` → asserts contains `"red"`.
   - `"PENDING"` → asserts contains `"amber"`.
 
-- [ ] **Task 14.6:** In `tests/unit/test_subscription_filters.py`, write
+- [x] **Task 14.6:** In `tests/unit/test_subscription_filters.py`, write
   tests for `days_remaining_filter` using `freezegun.freeze_time`:
   - `None` → `0`.
   - `end_date = frozen_today + 7` → `7`.
@@ -1699,127 +1729,137 @@
 
 ### 14c — SubscriptionPlanService Unit Tests
 
-- [ ] **Task 14.7:** Create `tests/unit/test_subscription_plan_service.py`.
+- [x] **Task 14.7:** Create `tests/unit/test_subscription_plan_service.py`.
   Use `db_session` and `audit_service` fixtures. Write test
   `test_create_plan_success` (async): calls `plan_service.create_plan(
   PlanCreate(label="شهري", duration_days=30, price_egp=150.0), admin_id=1)`.
   Asserts returned plan has `price_piastres == 15000` and `is_active == True`.
 
-- [ ] **Task 14.8:** Write test `test_create_plan_duplicate_label_raises`
+- [x] **Task 14.8:** Write test `test_create_plan_duplicate_label_raises`
   (async): creates a plan with label "شهري", then creates another with the
   same label. Asserts `PlanLabelAlreadyExistsError`.
 
-- [ ] **Task 14.9:** Write test `test_deactivate_plan_success` (async):
+- [x] **Task 14.9:** Write test `test_deactivate_plan_success` (async):
   creates a plan, deactivates it. Asserts `plan.is_active == False` in DB.
 
-- [ ] **Task 14.10:** Write test `test_update_plan_price` (async): creates
+- [x] **Task 14.10:** Write test `test_update_plan_price` (async): creates
   plan with `price_egp=100.0`, updates with `price_egp=200.0`. Asserts
   `plan.price_piastres == 20000`.
 
-- [ ] **Task 14.11:** Write test `test_update_plan_duration_not_possible`
+- [x] **Task 14.11:** Write test `test_update_plan_duration_not_possible`
   (async): asserts `"duration_days"` is not a field in `PlanUpdate`
   (cannot be passed). Does not test service — tests the schema directly.
 
 ### 14d — SubscriptionService Unit Tests
 
-- [ ] **Task 14.12:** Create `tests/unit/test_subscription_service.py`.
+- [x] **Task 14.12:** Create `tests/unit/test_subscription_service.py`.
   Use all fixtures. Write `test_get_active_for_card_found` (async): seeds
   a subscription with `status=ACTIVE`, `start_date=today`,
   `end_date=today+30`. Calls `get_active_for_card(card.id)`. Asserts the
   subscription is returned.
 
-- [ ] **Task 14.13:** Write `test_get_active_for_card_expired` (async):
+- [x] **Task 14.13:** Write `test_get_active_for_card_expired` (async):
   seeds subscription with `end_date=yesterday`. Calls
   `get_active_for_card`. Asserts `None` returned.
 
-- [ ] **Task 14.14:** Write `test_get_active_for_card_pending_future`
+- [x] **Task 14.14:** Write `test_get_active_for_card_pending_future`
   (async): seeds subscription with `status=PENDING`,
   `start_date=tomorrow`. Calls `get_active_for_card`. Asserts `None`
   (future start not yet active).
 
-- [ ] **Task 14.15:** Write `test_get_active_for_card_pending_today`
+- [x] **Task 14.15:** Write `test_get_active_for_card_pending_today`
   (async): seeds subscription with `status=PENDING`,
   `start_date=today`, `end_date=today+30`. Calls `get_active_for_card`.
   Asserts the subscription is returned.
 
-- [ ] **Task 14.16:** Write `test_check_daily_limit_no_limit` (async):
+- [x] **Task 14.16:** Write `test_check_daily_limit_no_limit` (async):
   plan has `max_entries_per_day=None`. Asserts `check_daily_limit` returns
   `True` without querying `parking_sessions` (mock `count_daily_entries`
   to verify it is NOT called).
 
-- [ ] **Task 14.17:** Write `test_check_daily_limit_within_limit` (async):
+- [x] **Task 14.17:** Write `test_check_daily_limit_within_limit` (async):
   plan has `max_entries_per_day=3`, existing entry count = 2. Asserts
   `check_daily_limit` returns `True`.
 
-- [ ] **Task 14.18:** Write `test_check_daily_limit_at_limit` (async):
+- [x] **Task 14.18:** Write `test_check_daily_limit_at_limit` (async):
   plan has `max_entries_per_day=3`, existing count = 3. Asserts
   `check_daily_limit` returns `False`.
 
-- [ ] **Task 14.19:** Write `test_create_subscription_success` (async):
+- [x] **Task 14.19:** Write `test_create_subscription_success` (async):
   seeds subscriber, active plan, available card. Calls
   `create_subscription(...)`. Asserts subscription `status=ACTIVE`,
   card `status=IN_USE` in DB, audit log created.
 
-- [ ] **Task 14.20:** Write `test_create_subscription_card_not_available`
+- [x] **Task 14.20:** Write `test_create_subscription_card_not_available`
   (async): card has `status=IN_USE`. Asserts `CardNotAvailableError`.
 
-- [ ] **Task 14.21:** Write `test_create_subscription_duplicate_active`
+- [x] **Task 14.21:** Write `test_create_subscription_duplicate_active`
   (async): subscriber already has `ACTIVE` subscription. Asserts
   `SubscriberAlreadyHasActiveSubscriptionError`.
 
-- [ ] **Task 14.22:** Write `test_cancel_subscription_success` (async):
+- [x] **Task 14.22:** Write `test_cancel_subscription_success` (async):
   seeds ACTIVE subscription. Calls `cancel_subscription(...)`. Asserts
   `status=CANCELLED`, card `status=AVAILABLE`, `cancel_reason` stored.
 
-- [ ] **Task 14.23:** Write `test_cancel_subscription_not_active` (async):
+- [x] **Task 14.23:** Write `test_cancel_subscription_not_active` (async):
   subscription already `EXPIRED`. Asserts `SubscriptionNotActiveError`.
 
-- [ ] **Task 14.24:** Write `test_renew_before_expiry` (async): active
+- [x] **Task 14.24:** Write `test_renew_before_expiry` (async): active
   subscription ending in 5 days. Calls `renew_subscription(...)`. Asserts
   new subscription `status=PENDING`, `start_date = old.end_date`. Asserts
   old subscription stays `ACTIVE`.
 
-- [ ] **Task 14.25:** Write `test_renew_after_expiry` (async): subscription
+- [x] **Task 14.25:** Write `test_renew_after_expiry` (async): subscription
   already `EXPIRED`. Calls `renew_subscription(...)`. Asserts new
   subscription `status=ACTIVE`, `start_date = today`.
 
-- [ ] **Task 14.26:** Write `test_expire_overdue_bulk` (async): seeds 3
+- [x] **Task 14.26:** Write `test_expire_overdue_bulk` (async): seeds 3
   ACTIVE subscriptions with `end_date = yesterday` and 1 with
   `end_date = tomorrow`. Calls `expire_overdue_subscriptions()`. Asserts
   return value is `3`. Asserts 3 subscriptions have `status=EXPIRED` in DB.
   Asserts 1 subscription remains `ACTIVE`.
 
-- [ ] **Task 14.27:** Write `test_activate_pending_bulk` (async): seeds 2
+- [x] **Task 14.27:** Write `test_activate_pending_bulk` (async): seeds 2
   PENDING subscriptions with `start_date = today` and 1 with
   `start_date = tomorrow`. Calls `activate_pending_subscriptions()`.
   Asserts return value is `2`. Asserts 2 subscriptions `status=ACTIVE`.
 
 ### 14e — SessionService Subscription Integration Unit Tests
 
-- [ ] **Task 14.28:** Create `tests/unit/test_session_subscription.py`.
+- [x] **Task 14.28:** Create `tests/unit/test_session_subscription.py`.
   Write `test_open_session_subscribed_sets_flag` (async): seeds card,
   operator, open shift, active plan, active subscription. Calls
   `session_service.open_session("CARD-0001", operator_id)`. Asserts
   returned session has `is_subscribed=True` and
   `subscription_id=subscription.id`.
 
-- [ ] **Task 14.29:** Write `test_open_session_not_subscribed_flag_false`
+- [x] **Task 14.29:** Write `test_open_session_not_subscribed_flag_false`
   (async): card has no subscription. Asserts returned session has
   `is_subscribed=False` and `subscription_id=None`.
 
-- [ ] **Task 14.30:** Write `test_open_session_daily_limit_blocks` (async):
+- [x] **Task 14.30:** Write `test_open_session_daily_limit_blocks` (async):
   plan has `max_entries_per_day=1`, subscriber already entered today (seed
   one session with `subscription_id` set). Calls `open_session`. Asserts
   `SubscriptionDailyLimitReachedError`.
 
-- [ ] **Task 14.31:** Write `test_close_subscribed_session_zero_charge`
+- [x] **Task 14.31:** Write `test_close_subscribed_session_zero_charge`
   (async): seeds ACTIVE subscribed session (is_subscribed=True), active
   pricing rule. Calls `close_session(...)`. Asserts `amount_charged=0`,
   `is_paid=True`, `pricing_rule_id=None`.
 
-- [ ] **Task 14.32:** Write `test_close_subscribed_returns_none_calc`
+- [x] **Task 14.32:** Write `test_close_subscribed_returns_none_calc`
   (async): same setup as Task 14.31. Asserts the second element of the
   returned tuple is `None` (no `PriceCalculation` for subscribed sessions).
+
+---
+
+### 14h — Excel Import Unit Tests
+
+- [x] **Task 14.33:** Create `tests/unit/test_excel_import.py`. Add unit tests:
+  - `test_generate_template`: asserts generated bytes are valid openpyxl workbook with correct Arabic headers.
+  - `test_parse_template`: parses the generated template and verifies row structures.
+  - `test_parse_csv`: parses UTF-8 / CP1256 encoded CSV content.
+  - `test_preview_and_execute_import`: verifies preview statistics, card auto-creation, subscriber creation, and subscription activation.
 
 ---
 
@@ -1827,80 +1867,80 @@
 
 ### 15a — Plan API Tests
 
-- [ ] **Task 15.1:** Create `tests/integration/test_subscription_plan_api.py`.
+- [x] **Task 15.1:** Create `tests/integration/test_subscription_plan_api.py`.
   Write `test_create_plan_as_admin` (async): POST
   `/api/v1/subscriptions/plans`. Asserts `201` and
   `data.price_piastres == 15000` for `price_egp=150.0`.
 
-- [ ] **Task 15.2:** Write `test_create_plan_duplicate_label` (async):
+- [x] **Task 15.2:** Write `test_create_plan_duplicate_label` (async):
   creates plan twice with same label. Asserts `409` and
   `code == "PLAN_LABEL_ALREADY_EXISTS"`.
 
-- [ ] **Task 15.3:** Write `test_create_plan_as_operator_forbidden` (async):
+- [x] **Task 15.3:** Write `test_create_plan_as_operator_forbidden` (async):
   logs in as operator, POSTs plan. Asserts `403`.
 
-- [ ] **Task 15.4:** Write `test_deactivate_plan` (async): creates plan,
+- [x] **Task 15.4:** Write `test_deactivate_plan` (async): creates plan,
   deactivates. Asserts `200` and `data.is_active == False`.
 
-- [ ] **Task 15.5:** Write `test_active_plans_endpoint_excludes_inactive`
+- [x] **Task 15.5:** Write `test_active_plans_endpoint_excludes_inactive`
   (async): creates one active and one deactivated plan. GET
   `/api/v1/subscriptions/plans/active`. Asserts only the active plan
   is returned.
 
 ### 15b — Subscriber API Tests
 
-- [ ] **Task 15.6:** Create `tests/integration/test_subscriber_api.py`.
+- [x] **Task 15.6:** Create `tests/integration/test_subscriber_api.py`.
   Write `test_create_subscriber_success` (async): POST
   `/api/v1/subscriptions/subscribers` with valid data. Asserts `201` and
   `data.plate_number` is normalized.
 
-- [ ] **Task 15.7:** Write `test_create_subscriber_duplicate_plate` (async):
+- [x] **Task 15.7:** Write `test_create_subscriber_duplicate_plate` (async):
   creates subscriber, creates again with same plate. Asserts `409` and
   `code == "SUBSCRIBER_PLATE_ALREADY_EXISTS"`.
 
-- [ ] **Task 15.8:** Write `test_create_subscriber_plate_normalized` (async):
+- [x] **Task 15.8:** Write `test_create_subscriber_plate_normalized` (async):
   POSTs `plate_number = "ن ي ش ١٥٩"` (Eastern numerals). Asserts stored
   `plate_number == "ن ي ش 159"` (Western numerals).
 
-- [ ] **Task 15.9:** Write `test_get_subscriber_detail` (async): creates
+- [x] **Task 15.9:** Write `test_get_subscriber_detail` (async): creates
   subscriber and subscription. GET
   `/api/v1/subscriptions/subscribers/{id}`. Asserts `active_subscription`
   is populated.
 
-- [ ] **Task 15.10:** Write `test_update_subscriber_cannot_change_plate`
+- [x] **Task 15.10:** Write `test_update_subscriber_cannot_change_plate`
   (async): PATCH with `{"plate_number": "أ ب ج 999"}`. Asserts the stored
   plate number is unchanged (schema ignores the field).
 
 ### 15c — Subscription Lifecycle API Tests
 
-- [ ] **Task 15.11:** Create `tests/integration/test_subscription_api.py`.
+- [x] **Task 15.11:** Create `tests/integration/test_subscription_api.py`.
   Write `test_create_subscription_full_flow` (async):
   1. Creates subscriber, active plan, available card.
   2. POST `/api/v1/subscriptions/` with valid data.
   3. Asserts `201`, `data.status == "ACTIVE"`.
   4. Queries DB: asserts card `status == "in_use"`.
 
-- [ ] **Task 15.12:** Write `test_create_subscription_inactive_plan` (async):
+- [x] **Task 15.12:** Write `test_create_subscription_inactive_plan` (async):
   deactivates plan, then tries to create subscription. Asserts `409`
   `PLAN_NOT_ACTIVE`.
 
-- [ ] **Task 15.13:** Write `test_create_subscription_card_in_use` (async):
+- [x] **Task 15.13:** Write `test_create_subscription_card_in_use` (async):
   card `status=IN_USE`. Asserts `409` `CARD_NOT_AVAILABLE`.
 
-- [ ] **Task 15.14:** Write `test_renew_subscription_before_expiry` (async):
+- [x] **Task 15.14:** Write `test_renew_subscription_before_expiry` (async):
   creates subscription ending in 5 days. POST `.../renew`. Asserts new
   subscription `status=PENDING` and `start_date == old.end_date`.
 
-- [ ] **Task 15.15:** Write `test_cancel_subscription` (async): creates
+- [x] **Task 15.15:** Write `test_cancel_subscription` (async): creates
   subscription, cancels. Asserts `data.status == "CANCELLED"`. Queries
   DB: asserts card `status == "available"`.
 
-- [ ] **Task 15.16:** Write `test_cancel_already_cancelled` (async):
+- [x] **Task 15.16:** Write `test_cancel_already_cancelled` (async):
   cancels twice. Asserts second call returns `409` `SUBSCRIPTION_NOT_ACTIVE`.
 
 ### 15d — Entry/Exit Subscription Integration Tests
 
-- [ ] **Task 15.17:** Create
+- [x] **Task 15.17:** Create
   `tests/integration/test_subscription_entry_exit.py`. Write
   `test_subscribed_entry_sets_is_subscribed_true` (async):
   1. Seeds subscriber, active plan, subscription, card.
@@ -1908,29 +1948,29 @@
   3. Asserts `201`, `data.is_subscribed == True`,
      `data.subscription_id == subscription.id`.
 
-- [ ] **Task 15.18:** Write `test_subscribed_exit_zero_charge` (async):
+- [x] **Task 15.18:** Write `test_subscribed_exit_zero_charge` (async):
   1. Opens subscribed session (Task 15.17 flow).
   2. PATCH `/api/v1/sessions/{id}/exit`.
   3. Asserts `data.amount_charged == 0`, `data.is_paid == True`,
      `data.pricing_rule_id == None`.
 
-- [ ] **Task 15.19:** Write `test_expired_subscription_entry_paid` (async):
+- [x] **Task 15.19:** Write `test_expired_subscription_entry_paid` (async):
   seeds subscription with `end_date = yesterday`. POST session. Asserts
   `data.is_subscribed == False` (expired subscription not recognized as
   active).
 
-- [ ] **Task 15.20:** Write `test_daily_limit_blocks_second_entry` (async):
+- [x] **Task 15.20:** Write `test_daily_limit_blocks_second_entry` (async):
   plan has `max_entries_per_day=1`. Opens first session (close it). Opens
   second session same day. Asserts `409`
   `SUBSCRIPTION_DAILY_LIMIT_REACHED`.
 
-- [ ] **Task 15.21:** Write `test_unlimited_entries_allowed` (async): plan
+- [x] **Task 15.21:** Write `test_unlimited_entries_allowed` (async): plan
   has `max_entries_per_day=None`. Opens and closes 3 sessions in sequence.
   All succeed with `is_subscribed=True`. No `409` error.
 
 ### 15e — Admin UI Subscription Tests
 
-- [ ] **Task 15.22:** Create
+- [x] **Task 15.22:** Create
   `tests/integration/test_ui_subscription_routes.py`. Write:
   - `test_plans_page_renders` (async): GET `/ui/admin/plans`. Asserts `200`
     and `t("subscriptions.plan.title")` value in body.
@@ -1949,7 +1989,7 @@
 
 ### 15f — Startup Lifespan Test
 
-- [ ] **Task 15.23:** Create
+- [x] **Task 15.23:** Create
   `tests/integration/test_subscription_lifespan.py`. Write
   `test_lifespan_expires_overdue_subscriptions` (async):
   1. Seeds 2 ACTIVE subscriptions with `end_date = yesterday`.
@@ -1960,7 +2000,7 @@
   4. Queries DB. Asserts 2 subscriptions `status=EXPIRED`.
   5. Asserts 1 subscription remains `ACTIVE`.
 
-- [ ] **Task 15.24:** Write `test_lifespan_activates_pending` (async):
+- [x] **Task 15.24:** Write `test_lifespan_activates_pending` (async):
   1. Seeds 1 PENDING subscription with `start_date = today`.
   2. Seeds 1 PENDING subscription with `start_date = tomorrow`.
   3. Calls `activate_pending_subscriptions()`.
@@ -1969,7 +2009,7 @@
 
 ### 15g — Coverage & Quality Gate
 
-- [ ] **Task 15.25:** Run `pytest --cov=services/subscription_service
+- [x] **Task 15.25:** Run `pytest --cov=services/subscription_service
   --cov=services/subscription_plan_service
   --cov=services/subscriber_service
   --cov-report=term-missing`. Confirm:
@@ -1978,29 +2018,29 @@
   - `services/subscriber_service.py` ≥ 90% coverage.
   Fix any critical uncovered branches before marking complete.
 
-- [ ] **Task 15.26:** Run `pytest --cov=repositories/subscription_repo
+- [x] **Task 15.26:** Run `pytest --cov=repositories/subscription_repo
   --cov=repositories/subscription_plan_repo
   --cov=repositories/subscriber_repo
   --cov-report=term-missing`. Confirm ≥ 85% coverage on all three
   repository files.
 
-- [ ] **Task 15.27:** Run `black . && ruff check . && mypy .` on the entire
+- [x] **Task 15.27:** Run `black . && ruff check . && mypy .` on the entire
   project. Fix all formatting, lint, and type errors. Zero issues must
   remain. Do not mark complete with any tool reporting warnings or errors.
 
-- [ ] **Task 15.28:** Run `make css` to rebuild Tailwind. Verify
+- [x] **Task 15.28:** Run `make css` to rebuild Tailwind. Verify
   `static/css/tailwind.min.css` rebuilds successfully with all new
   subscription template classes included. Commit the rebuilt CSS.
 
-- [ ] **Task 15.29:** Perform manual QA. Verify:
-  - [ ] Creating a plan via the inline form works without page reload.
-  - [ ] Creating a subscriber and assigning a subscription works end-to-end.
-  - [ ] Scanning a subscribed card on the Sunmi V2 shows green "مشترك ✓"
+- [x] **Task 15.29:** Perform manual QA. Verify:
+  - [x] Creating a plan via the inline form works without page reload.
+  - [x] Creating a subscriber and assigning a subscription works end-to-end.
+  - [x] Scanning a subscribed card on the Gate 1 PC workstation shows green "مشترك ✓"
         banner.
-  - [ ] Exit scan shows zero amount in green for subscribed vehicles.
-  - [ ] Subscription receipt prints correctly on 58mm thermal paper.
-  - [ ] Renewing a subscription creates the correct start/end dates.
-  - [ ] Cancelling a subscription frees the card (status → available).
-  - [ ] Dashboard shows expiring soon and expired unrenewed alert cards.
-  - [ ] Startup lifespan expires overdue subscriptions on app restart.
+  - [x] Exit scan shows zero amount in green for subscribed vehicles.
+  - [x] Subscription receipt prints correctly on 58mm thermal paper.
+  - [x] Renewing a subscription creates the correct start/end dates.
+  - [x] Cancelling a subscription frees the card (status → available).
+  - [x] Dashboard shows expiring soon and expired unrenewed alert cards.
+  - [x] Startup lifespan expires overdue subscriptions on app restart.
   Record results in `QA_LOG.md` with date and tester name.

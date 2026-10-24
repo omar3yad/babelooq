@@ -119,7 +119,7 @@
 ---
 
 **US-008 — Operator Login**
-> *As an operator, I want to log in with my username and password on the Sunmi V2 POS terminal,
+> *As an operator, I want to log in with my username and password on the Gate Workstation PC,
 > so that I can access the gate application and begin my shift.*
 
 **Acceptance Criteria:**
@@ -147,7 +147,7 @@
 
 ---
 
-**US-010 — Session Persistence on POS**
+**US-010 — Session Persistence on Workstation PC**
 > *As an operator, I want my session to remain active for a full 8-hour shift without requiring
 > re-authentication, so that I am not interrupted during busy periods.*
 
@@ -178,9 +178,9 @@
 |---|---|
 | FR-CFG-001 | All settings are declared as fields on a single `Settings` class inheriting `pydantic_settings.BaseSettings`. |
 | FR-CFG-002 | The following variables are required (app fails to start if absent): `DATABASE_URL`, `SECRET_KEY`, `ENVIRONMENT`. |
-| FR-CFG-003 | The following variables are optional with defaults: `JWT_EXPIRE_HOURS=8`, `JWT_ALGORITHM=HS256`, `DEBUG=False`, `APP_NAME="PGMS"`. |
-| FR-CFG-004 | `DEBUG=True` is only permitted when `ENVIRONMENT=development`. If `ENVIRONMENT=production` and `DEBUG=True`, the app raises a `RuntimeError` on startup. |
-| FR-CFG-005 | `SECRET_KEY` must be at least 32 characters. The app raises `ValueError` on startup if shorter. |
+| FR-CFG-003 | The following variables are optional with defaults: `JWT_EXPIRE_HOURS=8`, `JWT_ALGORITHM="HS256"`, `DEBUG=False`, `APP_NAME="garage4u"`, `DB_POOL_SIZE=5`, `DB_MAX_OVERFLOW=10`, `CORS_ORIGINS=[]`. |
+| FR-CFG-004 | `DEBUG=True` is only permitted when `ENVIRONMENT=development` or `staging`. If `ENVIRONMENT=production` and `DEBUG=True`, the app raises a `ValueError` on startup (`"DEBUG must not be True in production"`). |
+| FR-CFG-005 | `SECRET_KEY` must be at least 32 characters, and `JWT_EXPIRE_HOURS` must be at least 1. The app raises `ValueError` on startup if violated. |
 | FR-CFG-006 | A single `get_settings()` function returns a cached `Settings` instance (using `@lru_cache`). |
 | FR-CFG-007 | `.env.example` is committed to the repository and stays synchronized with all `Settings` fields. |
 
@@ -194,7 +194,7 @@
 | FR-DB-002 | `AsyncSession` is the only session type used. Synchronous sessions are forbidden. |
 | FR-DB-003 | A `get_db()` async generator is provided as a FastAPI dependency; it yields one `AsyncSession` per request and closes it on exit regardless of exceptions. |
 | FR-DB-004 | A declarative `Base` class is defined in `database.py` and imported by all models. |
-| FR-DB-005 | Connection pool settings are configurable via env vars: `DB_POOL_SIZE` (default 5), `DB_MAX_OVERFLOW` (default 10). For SQLite, pooling is disabled (`StaticPool`). |
+| FR-DB-005 | Connection pool settings are configurable via env vars: `DB_POOL_SIZE` (default 5), `DB_MAX_OVERFLOW` (default 10). For SQLite, `StaticPool` is used with a connection listener setting `PRAGMA foreign_keys=ON`, `PRAGMA journal_mode=DELETE`, `PRAGMA synchronous=NORMAL`, and `PRAGMA busy_timeout=10000`. |
 
 ---
 
@@ -236,7 +236,7 @@
 |---|---|
 | FR-MDL-030 | The `pricing_rules` table is created in the Phase 1 migration with all columns defined in `master-plan.md`. |
 | FR-MDL-031 | `rate_per_hour` and `minimum_charge` are stored as INTEGER (piastres). No FLOAT or DECIMAL columns for money. |
-| FR-MDL-032 | The seed script inserts one default pricing rule: label `"السعر الافتراضي"`, `rate_per_hour = 500` (5.00 EGP/hr), `grace_period_mins = 15`, `is_active = TRUE`. |
+| FR-MDL-032 | The seed script inserts one default pricing rule: label `"السعر الافتراضي"`, `rate_per_hour = 1000` (10.00 EGP/hr), `first_hour_charge = 2000` (20.00 EGP), `subsequent_hour_charge = 1000` (10.00 EGP/hr), `minimum_charge = 0`, `grace_period_mins = 5`, `is_active = TRUE`. |
 
 #### `ParkingSession` Model (stub — full spec in Phase 2)
 
@@ -279,12 +279,12 @@
 
 | ID | Requirement |
 |---|---|
-| FR-SEED-001 | The script is executable as `python seed.py` from the project root. |
-| FR-SEED-002 | Creates one admin user from env vars `SEED_ADMIN_USERNAME`, `SEED_ADMIN_PASSWORD`, `SEED_ADMIN_FULL_NAME`. |
-| FR-SEED-003 | Creates five operator users for gates 1–5. Credentials are read from env vars `SEED_OP_{N}_USERNAME`, `SEED_OP_{N}_PASSWORD`, `SEED_OP_{N}_FULL_NAME` where `N` is 1–5. |
+| FR-SEED-001 | The script is executable as `python seed.py` from the project root. It automatically runs `alembic upgrade head` prior to seeding. |
+| FR-SEED-002 | Creates one admin user from env vars `SEED_ADMIN_USERNAME` (default `"Mohamed_abdou"`), `SEED_ADMIN_PASSWORD` (default `"198245"`), `SEED_ADMIN_FULL_NAME` (default `"محمد عبده"`). |
+| FR-SEED-003 | Creates operator users for gates 1–5. Gate 1 default is `op_entry` ("عامل الدخول"), Gate 2 default is `op_exit` ("عامل الخروج"), Gates 3–5 defaults are `op3`–`op5`. Credentials are read from env vars `SEED_OP_{N}_USERNAME`, `SEED_OP_{N}_PASSWORD`, `SEED_OP_{N}_FULL_NAME`. |
 | FR-SEED-004 | Creates one default `PricingRule` (values per FR-MDL-032). |
 | FR-SEED-005 | The script checks for existing records by `username` / unique fields before inserting; it skips (not duplicates) any record that already exists. |
-| FR-SEED-006 | On completion, the script prints a summary of created vs skipped records to stdout. |
+| FR-SEED-006 | On completion, the script prints a formatted summary table of created vs skipped records to stdout. |
 | FR-SEED-007 | All seeded passwords are passed through `AuthService.hash_password()` before persistence. |
 
 ---
@@ -293,12 +293,12 @@
 
 | ID | Requirement |
 |---|---|
-| FR-AUTH-001 | `hash_password(plain: str) -> str` uses `bcrypt` with a work factor of 12. |
-| FR-AUTH-002 | `verify_password(plain: str, hashed: str) -> bool` uses `bcrypt.checkpw`. It must be constant-time; no early returns. |
+| FR-AUTH-001 | `hash_password(plain: str) -> str` uses `bcrypt` with a work factor of 12. Plaintext password is zeroed/deleted from local scope immediately (`del plain`). |
+| FR-AUTH-002 | `verify_password(plain: str, hashed: str) -> bool` uses `bcrypt.checkpw`. When a username is not found during authentication, `verify_password` is still executed against a dummy hash (`DUMMY_HASH`) to ensure constant-time execution and prevent timing attacks. Plaintext password is deleted (`del plain`). |
 | FR-AUTH-003 | `create_access_token(user_id: int, role: str) -> str` generates a JWT signed with `SECRET_KEY` using `JWT_ALGORITHM`. Payload includes: `sub` (user_id as string), `role`, `iat` (issued-at), `exp` (expiry). |
-| FR-AUTH-004 | `decode_token(token: str) -> dict` validates signature and expiry. Raises `AuthenticationError` for invalid or expired tokens. |
-| FR-AUTH-005 | `authenticate_user(username: str, password: str, db) -> User` fetches the user by username, verifies the password, and checks `is_active`. Returns the `User` object on success. |
-| FR-AUTH-006 | `authenticate_user` raises `AuthenticationError` — not distinct errors per failure mode — for: user not found, wrong password, or inactive user. Error message is generic. |
+| FR-AUTH-004 | `decode_token(token: str) -> TokenPayload` validates signature and expiry. Raises `AuthenticationError` for invalid or expired tokens. |
+| FR-AUTH-005 | `authenticate_user(username: str, password: str, user_repo) -> User` fetches the user by username, verifies the password, and checks `is_active`. Returns the `User` object on success. |
+| FR-AUTH-006 | `authenticate_user` raises `AuthenticationError` — not distinct errors per failure mode — for: user not found, wrong password, or inactive user. Error message is generic (`"Invalid credentials"`). |
 | FR-AUTH-007 | No authentication logic lives in route handlers. Routes call `AuthService` methods only. |
 
 ---
@@ -308,13 +308,14 @@
 | ID | Requirement |
 |---|---|
 | FR-AROUTE-001 | `POST /api/v1/auth/login` accepts `application/x-www-form-urlencoded` body with fields `username` and `password`. |
-| FR-AROUTE-002 | On success, sets `pgms_token` cookie: `HttpOnly=True`, `SameSite=Strict`, `Secure=True` in production, `Max-Age = JWT_EXPIRE_HOURS * 3600`. |
+| FR-AROUTE-002 | On success, sets `pgms_token` cookie: `HttpOnly=True`, `SameSite=Strict`, `Secure=True` in staging and production, `Max-Age = JWT_EXPIRE_HOURS * 3600`. |
 | FR-AROUTE-003 | On success, returns `{"data": {"user_id": ..., "role": ..., "full_name": ...}}` with status `200`. |
-| FR-AROUTE-004 | On failure, returns `{"detail": "...", "code": "INVALID_CREDENTIALS"}` with status `401`. |
+| FR-AROUTE-004 | On failure, returns `{"detail": "Invalid credentials", "code": "INVALID_CREDENTIALS"}` with status `401`. |
 | FR-AROUTE-005 | `POST /api/v1/auth/logout` deletes the `pgms_token` cookie (sets `Max-Age=0`) and returns `200`. |
-| FR-AROUTE-006 | `GET /api/v1/auth/me` reads the `pgms_token` cookie, decodes the JWT, fetches the current user from the DB, and returns the user schema (no `hashed_password`). Returns `401` if token is absent or invalid. |
-| FR-AROUTE-007 | `GET /ui/login` renders `templates/auth/login.html`. If a valid token is already present, redirects to `/ui/operator/dashboard` (operators) or `/ui/admin/dashboard` (admins). |
-| FR-AROUTE-008 | `POST /ui/login` (HTML form submission) calls `AuthService.authenticate_user`, sets the cookie, and redirects; on failure, re-renders the login page with an error message. |
+| FR-AROUTE-006 | `GET /api/v1/auth/me` reads token from `pgms_token` cookie or `Authorization: Bearer <token>` header, decodes JWT, fetches user from DB, and returns `UserResponse` (no `hashed_password`). Returns `401` if token is absent or invalid. |
+| FR-AROUTE-007 | `GET /ui/login` renders `templates/auth/login.html`. If a valid token is already present, redirects to `/ui/operator/dashboard` (operators) or `/ui/admin/dashboard` (admins) with status `303`. |
+| FR-AROUTE-008 | `POST /ui/login` (HTML form submission) calls `AuthService.authenticate_user`, sets the cookie, and redirects with `303`; on failure, re-renders the login page with Arabic error message. |
+| FR-AROUTE-009 | `POST /ui/logout` clears the `pgms_token` cookie (`Max-Age=0`, `HttpOnly=True`, `SameSite=Strict`) and redirects to `/ui/login` with status `303`. |
 
 ---
 
@@ -322,13 +323,13 @@
 
 | ID | Requirement |
 |---|---|
-| FR-AUTHZ-001 | `get_current_user(request)` — FastAPI dependency. Reads `pgms_token` cookie, decodes JWT, fetches and returns the active `User`. Raises `HTTPException(401)` if token is missing, invalid, expired, or user is inactive. |
-| FR-AUTHZ-002 | `require_operator(user: User = Depends(get_current_user))` — raises `HTTPException(403)` if `user.role != 'operator'`. |
-| FR-AUTHZ-003 | `require_admin(user: User = Depends(get_current_user))` — raises `HTTPException(403)` if `user.role != 'admin'`. |
-| FR-AUTHZ-004 | `require_any_role` — accepts either role; used for endpoints shared between operators and admins (e.g., `GET /api/v1/auth/me`). |
+| FR-AUTHZ-001 | `get_current_user(request)` — FastAPI dependency. Reads `pgms_token` cookie or `Authorization: Bearer <token>` header, decodes JWT, fetches and returns active `User`. Raises `HTTPException(401)` with header `X-Error-Code: UNAUTHORIZED` if token is missing, invalid, expired, or user is inactive. |
+| FR-AUTHZ-002 | `require_operator(user: User = Depends(get_current_user))` — verifies user role is in (`UserRole.OPERATOR`, `UserRole.ADMIN`). Raises `HTTPException(403)` with header `X-Error-Code: INSUFFICIENT_PERMISSIONS` if user has neither role. |
+| FR-AUTHZ-003 | `require_admin(user: User = Depends(get_current_user))` — raises `HTTPException(403)` with header `X-Error-Code: INSUFFICIENT_PERMISSIONS` if `user.role != UserRole.ADMIN`. |
+| FR-AUTHZ-004 | `require_any_role` — accepts any authenticated user; used for endpoints shared between operators and admins (e.g., `GET /api/v1/auth/me`). |
 | FR-AUTHZ-005 | All `/ui/operator/*` routes use `require_operator`. All `/api/v1/users/*` and `/ui/admin/*` routes use `require_admin`. |
-| FR-AUTHZ-006 | Unauthorized access to a `/ui/` route returns a redirect to `/ui/login`, not a bare 401 JSON response (which the Sunmi browser would display as raw text). |
-| FR-AUTHZ-007 | Unauthorized access to an `/api/v1/` route returns `{"detail": "...", "code": "UNAUTHORIZED"}` with status `401` or `403` as appropriate. |
+| FR-AUTHZ-006 | Unauthorized access to a `/ui/` route returns a redirect to `/ui/login` with status `303` (with optional `?next=` query for admin routes), not a bare 401 JSON response. |
+| FR-AUTHZ-007 | Unauthorized access to an `/api/v1/` route returns `{"detail": "...", "code": "..."}` with status `401` or `403` as appropriate. |
 
 ---
 
@@ -337,10 +338,11 @@
 | ID | Requirement |
 |---|---|
 | FR-UROUTE-001 | `POST /api/v1/users/` creates a user; see US-005 for acceptance criteria. |
-| FR-UROUTE-002 | `GET /api/v1/users/` returns paginated user list; requires `role = 'admin'`. |
+| FR-UROUTE-002 | `GET /api/v1/users/` returns paginated user list; requires `role = 'admin'`. Supports filtering by `role`, `is_active`, and `gate_number`. |
 | FR-UROUTE-003 | `GET /api/v1/users/{id}` returns single user detail; requires `role = 'admin'`. |
 | FR-UROUTE-004 | `PATCH /api/v1/users/{id}/deactivate` soft-deactivates user; see US-006. |
 | FR-UROUTE-005 | `PATCH /api/v1/users/{id}/reset-password` accepts `{"new_password": "..."}`, hashes it, updates the record, and logs `USER_PASSWORD_RESET` in audit log. |
+| FR-UROUTE-006 | `PATCH /api/v1/users/{id}` accepts `UserUpdate` (`full_name`, `username`, `role`, `gate_number`, `is_active`), enforces role-gate consistency, updates record, and logs `USER_UPDATED` in audit log. |
 
 ---
 
@@ -393,7 +395,7 @@
 | NFR-SEC-001 | Passwords are hashed with bcrypt, work factor 12. The plaintext password must be zeroed from memory as soon as hashing completes (do not retain in local variables beyond the call). |
 | NFR-SEC-002 | JWT tokens are signed with `HS256` using a `SECRET_KEY` of at least 32 random bytes. |
 | NFR-SEC-003 | `pgms_token` cookie is always `HttpOnly` and `SameSite=Strict`. It is `Secure` in `ENVIRONMENT=production`. |
-| NFR-SEC-004 | The login endpoint must not reveal whether a username exists in the system. Identical error messages and response times are returned for "username not found" and "wrong password". |
+| NFR-SEC-004 | The login endpoint must not reveal whether a username exists in the system. When a username does not exist, verification is executed against a dummy bcrypt hash so response time and error messages are identical to a wrong-password attempt. |
 | NFR-SEC-005 | All SQL queries are parameterized via SQLAlchemy ORM. No string interpolation into query text anywhere in the codebase. |
 | NFR-SEC-006 | `DEBUG=True` must never be reachable in production (enforced at startup, per FR-CFG-004). |
 | NFR-SEC-007 | Stack traces and internal error details are never returned in HTTP responses in non-development environments. FastAPI exception handlers must sanitize 500 responses. |
@@ -433,7 +435,7 @@
 | NFR-L10N-002 | All datetime values stored in the database are UTC. The display layer converts to `Africa/Cairo` (UTC+2, no DST) for all user-facing output. |
 | NFR-L10N-003 | The login page must render correctly in RTL without any horizontal overflow at 360px viewport width. |
 | NFR-L10N-004 | Touch targets on the login page meet WCAG 2.1 AA minimum size of 44×44px. |
-| NFR-L10N-005 | Input font size is at minimum 16px to prevent automatic zoom on Android WebView (Sunmi V2 browser behavior). |
+| NFR-L10N-005 | Input font size is at minimum 16px to ensure high legibility and prevent unwanted zooming across browser engines. |
 
 ---
 
@@ -465,7 +467,7 @@
 | EC-AUTH-007 | Accessing a protected route with a JWT for a user that was deactivated after token issuance | `get_current_user` re-fetches user from DB on every request; returns `401` because `is_active = FALSE` |
 | EC-AUTH-008 | Logout called with no active session (no cookie) | `200` response; no error (idempotent logout) |
 | EC-AUTH-009 | Operator attempts to access an admin-only endpoint | `403 FORBIDDEN` with code `INSUFFICIENT_PERMISSIONS` |
-| EC-AUTH-010 | Admin attempts to access an operator-only endpoint | `403 FORBIDDEN` (admins use admin UI; operator UI is role-exclusive) |
+| EC-AUTH-010 | Admin accesses an operator endpoint | `200 OK`; admins have supervisory access to operator features (`require_operator` permits both `OPERATOR` and `ADMIN`) |
 | EC-AUTH-011 | JWT cookie present but user record deleted from DB | `401 UNAUTHORIZED`; treat as if user does not exist |
 | EC-AUTH-012 | `SECRET_KEY` rotated in production (all existing JWTs invalidated) | All users see `401` on next request and are redirected to login; no crash |
 
@@ -483,7 +485,7 @@
 | EC-USER-006 | Deactivating an already-inactive user | `409 Conflict` with code `USER_ALREADY_INACTIVE` |
 | EC-USER-007 | `full_name` contains Arabic characters (e.g., `"أحمد محمد"`) | Stored and returned as-is; UTF-8 encoding preserved end-to-end |
 | EC-USER-008 | `username` submitted with leading or trailing whitespace | Stripped and normalized before validation and storage |
-| EC-USER-009 | `username` containing Arabic characters | `422`; usernames must be ASCII alphanumeric + underscore only (for reliable keyboard input on POS) |
+| EC-USER-009 | `username` containing Arabic characters | `422`; usernames must be ASCII alphanumeric + underscore only (for reliable keyboard input on workstation PCs) |
 | EC-USER-010 | Password shorter than 8 characters | `422` with field error indicating minimum password length |
 | EC-USER-011 | Password reset for a user who is currently logged in (has active JWT) | Password updated; existing JWT remains valid until expiry (no session invalidation in Phase 1 — documented limitation) |
 | EC-USER-012 | Fetching a user by `id` that does not exist | `404` with code `USER_NOT_FOUND` |
@@ -514,7 +516,7 @@
 | EC-CFG-003 | `JWT_EXPIRE_HOURS` set to a non-integer string | `pydantic-settings` raises a `ValidationError` at startup |
 | EC-CFG-004 | `ENVIRONMENT` set to an unrecognized value (e.g., `"prod"`) | App refuses to start; `ENVIRONMENT` must be one of `development`, `staging`, `production` |
 | EC-CFG-005 | `.env` file missing entirely | App reads from real environment variables; if required vars are absent, startup fails with a list of missing keys |
-| EC-CFG-006 | `DEBUG=True` and `ENVIRONMENT=production` set simultaneously | `RuntimeError` on startup; message: `"DEBUG must not be True in production"` |
+| EC-CFG-006 | `DEBUG=True` and `ENVIRONMENT=production` set simultaneously | `ValueError` on startup; message: `"DEBUG must not be True in production"` |
 
 ---
 
@@ -532,7 +534,7 @@
 | EC-L10N-005 | Login page rendered on a device with system language set to English | Page still renders in Arabic RTL; language is hardcoded to `ar`, not inferred from browser `Accept-Language` header |
 | EC-L10N-006 | Timestamps displayed on the login error message | All displayed timestamps are in `Africa/Cairo` timezone (UTC+2), formatted as `DD/MM/YYYY HH:mm` using Arabic-Indic numerals |
 | EC-L10N-007 | Arabic text in `full_name` containing diacritics (tashkeel, e.g., `"أَحْمَد"`) | Stored and returned with diacritics preserved; no normalization applied to user names |
-| EC-L10N-008 | Bidirectional text overflow on Sunmi V2 screen (360px) | Base template enforces `overflow-wrap: break-word` and `max-width: 100%` on all text containers; no overflow |
+| EC-L10N-008 | Bidirectional text overflow on compact viewports (360px) | Base template enforces `overflow-wrap: break-word` and `max-width: 100%` on all text containers; no overflow |
 | EC-L10N-009 | `translations/ar.json` key referenced in a template is missing | Jinja2 custom `t()` filter returns the key name wrapped in `[[ ]]` markers in development; raises a startup error in production (all keys validated at boot) |
 
 ---

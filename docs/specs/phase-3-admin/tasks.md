@@ -321,9 +321,27 @@
   Import `AuditLogResponse` from `schemas.audit_log`, `PaymentMethod` from
   `models`.
 
-- [x] **Task 3.6:** In `schemas/admin_reports.py`, add `__all__` listing all
-  eight schemas. Update `schemas/__init__.py` to import and re-export all
-  names from `schemas/admin_reports.py`. Rebuild `schemas/__init__.py` `__all__`.
+- [x] **Task 3.6:** In `schemas/admin_reports.py`, add `ServiceTypeRevenueResponse`:
+```python
+  class ServiceTypeRevenueResponse(BaseModel):
+      model_config = ConfigDict(from_attributes=False)
+
+      service_type: str
+      label: str
+      session_count: int
+      total_piastres: int
+      percentage: float = 0.0
+```
+
+- [x] **Task 3.7:** In `schemas/parking_session.py`, add `SessionAdminOverrideCloseRequest`:
+```python
+  class SessionAdminOverrideCloseRequest(BaseModel):
+      model_config = ConfigDict(from_attributes=True)
+      amount_charged_egp: float = Field(0.0, ge=0)
+      override_note: str | None = None
+```
+
+- [x] **Task 3.8:** In `schemas/admin_reports.py` and `schemas/parking_session.py`, verify `__all__` lists all schemas. Update `schemas/__init__.py` to import and re-export all names from `schemas/admin_reports.py` and `schemas/parking_session.py`. Rebuild `schemas/__init__.py` `__all__`.
 
 ---
 
@@ -476,6 +494,19 @@ FROM shifts s
   Joins `parking_sessions` with `users` on `operator_id = users.id`. Groups by
   `operator_id`, `users.full_name`. Returns list of dicts: `operator_id`,
   `operator_name`, `session_count`, `total_piastres`.
+
+- [x] **Task 4.10b:** In `repositories/report_repo.py`, add method:
+```python
+  async def get_revenue_by_service_type(
+      self,
+      start_utc: datetime | None,
+      end_utc: datetime | None,
+      gate_number: int | None,
+  ) -> list[dict]
+```
+  Executes aggregation query grouping completed and lost-card sessions by service type
+  (regular tickets, lost card penalties, and subscriptions). Returns list of dicts with keys:
+  `service_type`, `session_count`, `total_piastres`.
 
 - [x] **Task 4.11:** In `repositories/report_repo.py`, add method:
 ```python
@@ -727,6 +758,16 @@ FROM shifts s
   Resolves UTC boundaries. Calls `report_repo.get_revenue_by_operator(...)`.
   Returns `list[OperatorRevenueResponse]`.
 
+- [x] **Task 5.8b:** In `services/report_service.py`, add method:
+```python
+  async def get_revenue_by_service_type(
+      self, filters: ReportFilters
+  ) -> list[ServiceTypeRevenueResponse]
+```
+  Resolves UTC boundaries from `filters.start_date` and `filters.end_date`. Calls
+  `report_repo.get_revenue_by_service_type(...)`. Computes percentage breakdown
+  and returns `list[ServiceTypeRevenueResponse]`.
+
 - [x] **Task 5.9:** In `services/report_service.py`, add method:
 ```python
   async def get_daily_revenue(
@@ -788,6 +829,29 @@ FROM shifts s
 
   The audit log write is called after commit (per spec FR-AUDIT-005). If the
   audit write fails, log at `ERROR` level but do not re-raise.
+
+### 5c2 — Admin Session Service Extension
+
+- [x] **Task 5.11b:** Open `services/session_service.py`. Add method to `SessionService`:
+```python
+  async def admin_override_close_session(
+      self,
+      session_id: int,
+      admin_id: int,
+      amount_charged_egp: float = 0.0,
+      override_note: str | None = None,
+  ) -> ParkingSession
+```
+  Implementation:
+  1. Fetch session via `session_repo.get_by_id(session_id)`. Raises `SessionNotFoundError` if absent.
+  2. If `session.status != SessionStatus.ACTIVE`: raises `SessionNotActiveError`.
+  3. Closes session: sets `exit_time = datetime.utcnow()`, `status = SessionStatus.COMPLETED`,
+     `is_paid = True`, `amount_charged = int(round(amount_charged_egp * 100))`,
+     `payment_method = PaymentMethod.CASH`, `admin_override_by = admin_id`,
+     `admin_override_note = override_note`.
+  4. Releases associated card status to `AVAILABLE`.
+  5. Commits changes and writes audit log with action `"SESSION_ADMIN_OVERRIDE_CLOSE"`.
+  6. Returns the updated session.
 
 ### 5d — Admin Pricing Service Extension
 
@@ -1032,6 +1096,13 @@ FROM shifts s
     `entity_id=session_id`, ordered by `created_at ASC`, via a direct query.
   - Builds and returns `{"data": AdminSessionDetail(...).model_dump()}`.
 
+- [x] **Task 7.4b:** In `routes/admin_api.py`, add `POST /sessions/{session_id}/override-close` endpoint:
+  - Accepts `payload: SessionAdminOverrideCloseRequest`.
+  - Calls `session_service.admin_override_close_session(...)`.
+  - Maps `SessionNotFoundError` → `404` with `X-Error-Code: SESSION_NOT_FOUND`.
+  - Maps `SessionNotActiveError` → `409` with `X-Error-Code: SESSION_NOT_ACTIVE`.
+  - Returns `{"success": True, "message": "تم إغلاق الجلسة وتحرير الكرت بنجاح", "data": {...}}`.
+
 - [x] **Task 7.5:** In `routes/admin_api.py`, add
   `GET /sessions/export/csv` endpoint:
   - Same filter parsing as Task 7.3 (reuse `get_report_filters` dependency).
@@ -1097,6 +1168,10 @@ FROM shifts s
     }
 ```
 
+- [x] **Task 7.10b:** In `routes/admin_api.py`, add subscription reporting endpoints:
+  - `GET /stats/subscriptions`: Uses `SubscriptionService` to fetch subscriber metrics (`total_subscribers`, `active_subscribers`, `expiring_soon`).
+  - `GET /reports/subscriptions`: Uses `SubscriptionRepository` to fetch paginated subscriptions ledger with filtering.
+
 - [x] **Task 7.11:** In `routes/admin_api.py`, add `GET /reports/export/csv`
   endpoint:
   - Same filter + streaming pattern as Task 7.5.
@@ -1157,6 +1232,10 @@ FROM shifts s
   - Fetches operator name, exit operator name, pricing rule label.
   - Returns `TemplateResponse("admin/session_detail.html", {...})`.
 
+- [x] **Task 8.6b:** In `routes/ui_admin.py`, add camera image serving endpoints:
+  - `GET /sessions/{session_id}/plate-image`: Resolves entry ANPR plate photo via `PlateCaptureService.resolve_image(...)`. Returns `FileResponse` with caching headers, or 404.
+  - `GET /sessions/{session_id}/exit-image`: Resolves exit camera photo via `PlateCaptureService.resolve_image(...)`. Returns `FileResponse` with caching headers, or 404.
+
 - [x] **Task 8.7:** In `routes/ui_admin.py`, add `GET /reports/revenue` endpoint:
   - Parses `ReportFilters`. Defaults `start_date` and `end_date` to today if
     absent.
@@ -1191,6 +1270,10 @@ FROM shifts s
     `get_active_shift` batch query (or one query per operator — note the
     10-operator scale makes N+1 acceptable here).
   - Returns `TemplateResponse("admin/operators.html", {...})`.
+
+- [x] **Task 8.10b:** In `routes/ui_admin.py`, add `GET /cards` endpoint:
+  - Fetches card inventory and counters by status (`total`, `available`, `in_use`, `lost`, `damaged`).
+  - Returns `TemplateResponse("admin/cards.html", {"request": request, "user": current_user, "cards": cards, ...})`.
 
 - [x] **Task 8.11:** Register `ui_admin.router` in `main.py`. Import as
   `ui_admin_router`. Add `app.include_router(ui_admin_router)`. No other
@@ -1326,6 +1409,11 @@ FROM shifts s
     filters appended as query params.
   - Pagination controls.
 
+- [x] **Task 8.16b:** In `templates/admin/sessions.html`, add inline Admin Override modal:
+  - Add quick settlement action button per active session row.
+  - Dialog modal allowing input of settled amount and required override note.
+  - Submits to `POST /api/v1/admin/sessions/{session_id}/override-close` via `fetch` and refreshes table without full reload.
+
 ### 8g — Session Detail Template
 
 - [x] **Task 8.17:** Create `templates/admin/session_detail.html` extending
@@ -1337,6 +1425,11 @@ FROM shifts s
     timestamp (`format_datetime`), actor, action, before/after (truncated to 80
     chars per cell with `title` attribute showing full text).
   - A "رجوع" link to `/ui/admin/sessions`.
+
+- [x] **Task 8.17b:** In `templates/admin/session_detail.html`, add ANPR Camera Plate section & Admin Override Action Box:
+  - Displays entry and exit camera photo snapshots served by `/ui/admin/sessions/{id}/plate-image` and `/exit-image`.
+  - Visual Egyptian license plate badge ("مـصـر / EGYPT" with Arabic letters and numerals).
+  - Admin Override Action Box (displayed if `session.status == 'ACTIVE'`), providing amount input and override reason note, submitting to `/api/v1/admin/sessions/{id}/override-close`.
 
 ### 8h — Revenue Report Template
 
@@ -1385,6 +1478,11 @@ FROM shifts s
     as rates page). Form fields: `full_name`, `username`, `password`, `role`
     (select), `gate_number` (1–5, shown only when role = operator). POSTs to
     `POST /api/v1/users/`.
+
+- [x] **Task 8.20b:** Create `templates/admin/cards.html` extending `base_admin.html`:
+  - Cards inventory management table with status filter badges (`available`, `in_use`, `lost`, `damaged`).
+  - Single card add form and bulk barcode generation modal with range specifications.
+  - Barcode printable sheet layout for thermal/sticker printing.
 
 ### 8k — A4 Print Template
 
@@ -1744,7 +1842,10 @@ FROM shifts s
     and `"لوحة التحكم"` in body.
   - `test_shifts_page_renders` (async): GET `/ui/admin/shifts`. Asserts `200`.
   - `test_sessions_page_renders` (async): GET `/ui/admin/sessions`. Asserts
-    `200` and `"الجلسات"` in body.
+    `200` and `"دخول وخروج"` in body.
+  - `test_cards_page_renders` (async): GET `/ui/admin/cards`. Asserts `200`.
+  - `test_admin_override_close_session` (async): POST
+    `/api/v1/admin/sessions/{id}/override-close`. Asserts `200` and session status updated.
   - `test_revenue_report_renders` (async): GET `/ui/admin/reports/revenue`.
     Asserts `200` and `"تقرير الإيراد"` in body.
   - `test_print_view_shift_missing_shift_id` (async): GET

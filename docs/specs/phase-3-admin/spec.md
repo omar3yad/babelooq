@@ -4,9 +4,9 @@
 > **Scope:** Admin dashboard overview, shift & financial management, pricing &
 > rates management, reporting & filtering, CSV export, A4 print views, and Arabic
 > RTL admin layout.
-> **Prerequisite reading:** `constitution.md`, `plan.md`, `spec_phase1.md`,
-> `spec_phase2.md`
-> **Out of scope:** Operator UI changes, barcode scanning, receipt printing,
+> **Prerequisite reading:** `constitution.md`, `master-plan.md`, `docs/specs/phase-1-core/spec.md`,
+> `docs/specs/phase-2-operator/spec.md`
+> **Out of scope:** Operator UI gate scanning, physical thermal receipt printing (handled in Phase 2),
 > multi-branch support, automated email delivery, role-based sub-admins,
 > real-time WebSocket push, Docker deployment.
 
@@ -159,17 +159,17 @@
 **Acceptance Criteria:**
 - `GET /ui/admin/rates` renders the pricing management page:
   - A table of all pricing rules (newest first): ID, label, rate per hour,
-    grace period, minimum charge, lost card penalty, effective from, active
-    badge.
+    first hour charge, subsequent hour charge, grace period, minimum charge,
+    lost card penalty, effective from, active badge.
   - An "إنشاء تعريفة جديدة" button opens an inline form (no page navigation).
   - Each row has an "تفعيل" button (disabled on the currently active rule).
-- The inline creation form fields: label (text), rate per hour (number, EGP),
-  grace period minutes (number), minimum charge (EGP), lost card penalty (EGP),
-  effective from (datetime-local input).
-- All EGP inputs accept decimal values (e.g., `5.50`) and are multiplied by 100
-  server-side before storage. Client-side JS prevents negative values.
-- On successful creation, the form clears and the new rule appears in the table
-  without a full page reload (HTMX partial or `fetch` + DOM insert).
+- The inline creation form fields: label (text), rate per hour (EGP),
+  first hour charge (EGP), subsequent hour charge (EGP), grace period minutes,
+  minimum charge (EGP), lost card penalty (EGP), effective from (datetime-local).
+- Supports tiered pricing: when `first_hour_charge > 0`, the first billable hour
+  is charged at this amount and subsequent hours at `subsequent_hour_charge`.
+- All EGP inputs accept decimal values and are converted to integer piastres server-side.
+- On successful creation, the form clears and the new rule appears in the table.
 - Activating a rule calls `PATCH /api/v1/rates/{id}/activate` and updates the
   active badge in the table without a full page reload.
 
@@ -194,11 +194,11 @@
      (`format_egp`), average session duration, average revenue per session.
   2. **إيراد حسب البوابة:** one row per gate with session count and total
      revenue.
-  3. **إيراد حسب العامل:** one row per operator with session count and total
+  3. **إيراد حسب نوع الخدمة:** revenue breakdown by service type (Tickets, Subscriptions, Lost Cards).
+  4. **إيراد حسب العامل:** one row per operator with session count and total
      revenue.
-  4. **إيراد يومي:** one row per calendar day in the range with session count
-     and total revenue. Displayed as a table (chart rendering deferred to
-     Phase 4).
+  5. **إيراد يومي:** one row per calendar day in the range with session count
+     and total revenue.
 - All monetary values displayed via `format_egp` filter (Arabic-Indic numerals).
 - An "Export CSV" button exports the full filtered session list.
 - A "طباعة" button navigates to the A4 print view.
@@ -207,39 +207,44 @@
 
 ---
 
-**US-310 — Session List Report**
+**US-310 — Session List Report ("دخول وخروج")**
 > *As an admin, I want to search and filter all parking sessions, so that I can
 > investigate specific transactions.*
 
 **Acceptance Criteria:**
-- `GET /ui/admin/sessions` renders a filterable session list.
+- `GET /ui/admin/sessions` renders a filterable session list titled "دخول وخروج".
 - Filters: `start_date`, `end_date`, `gate_number`, `operator_id`, `status`
   (`ACTIVE` | `COMPLETED` | `LOST_CARD`), `card_code` (text, partial match
   via `LIKE`), `plate_number` (text, normalized search),
   `long_stay` (`true` shows only sessions open > 24h).
 - Table columns: session ID, card code, plate, gate, operator, status badge,
   entry time, exit time, duration, amount charged.
+- Quick Actions: Each ACTIVE session row includes an "تسوية إدارية" button that
+  opens an inline modal to force-close and resolve the session immediately.
 - Pagination: 20 rows per page. Total count shown above the table.
 - Clicking a session row navigates to `GET /ui/admin/sessions/{session_id}`.
-- "Export CSV" button exports all rows matching the current filter (not just
-  the current page).
+- "Export CSV" button exports all rows matching the current filter.
 
 ---
 
-**US-311 — Session Detail (Admin View)**
-> *As an admin, I want to view the complete detail of a single session, so that
-> I can investigate disputes.*
+**US-311 — Session Detail & Admin Override**
+> *As an admin, I want to view the complete detail of a single session, inspect
+> camera plate photos, view audit trails, and override/force-close stuck sessions.*
 
 **Acceptance Criteria:**
-- `GET /ui/admin/sessions/{session_id}` renders full session detail.
-- Shows all session fields: card code, plate, gate, entry operator, exit
-  operator, entry time, exit time, duration, pricing rule used (label +
-  rate), amount charged, payment method, lost card flag, penalty applied,
-  admin override info (if any), receipt printed at.
-- Shows a read-only audit log section: all `audit_logs` rows where
-  `entity_type = 'parking_session'` and `entity_id = session_id`, ordered
-  by `created_at ASC`.
-- No edit actions on this page (read-only in Phase 3).
+- `GET /ui/admin/sessions/{session_id}` renders full session detail:
+  - Complete session metadata: card code, plate, gate, entry/exit operators, entry/exit timestamps,
+    duration, pricing rule, amount charged, payment method, lost card flag, penalty applied.
+  - **ANPR Vehicle Capture Section:** If a plate photo exists (`plate_image_path`), displays the
+    captured vehicle photo, recognition confidence percentage, timestamp badge, and a high-resolution link
+    (`GET /ui/admin/sessions/{id}/plate-image`). Displays visual Egyptian license plate badge
+    ("مـصـر / EGYPT" with Arabic plate text).
+  - **Admin Override Action Box:** If the session is `ACTIVE`, renders an admin settlement form:
+    allows entering an optional amount and required override note (e.g. "كارت مسجل بالخطأ - تسوية إدارية").
+    Submitting calls `POST /api/v1/admin/sessions/{id}/override-close`, which closes the session,
+    frees the card to `available`, snapshots `admin_override_note`, and logs the action in audit logs.
+  - **Audit Log Section:** Displays all `audit_logs` entries for the session (`action`, `actor_id`,
+    `payload_before`, `payload_after`, `created_at`).
 
 ---
 
@@ -298,7 +303,7 @@
 
 ---
 
-### 1.5 Operator Management (Read-Only in Phase 3)
+### 1.5 Operator & Card Management
 
 ---
 
@@ -312,6 +317,20 @@
 - Links to create, deactivate, and reset password (already implemented in Phase
   1 API; this page adds the UI).
 - Read-only in this phase; the existing Phase 1 API endpoints handle mutations.
+
+---
+
+**US-315 — Card & Barcode Management**
+> *As an admin, I want to manage parking cards and barcodes from a dedicated interface,
+> so that I can create, inspect, update status, and print barcode batches.*
+
+**Acceptance Criteria:**
+- `GET /ui/admin/cards` renders the cards management view.
+- Provides real-time cards counter by status (`total`, `available`, `in_use`, `lost`, `damaged`).
+- Provides inline form for adding a single card code (`POST /api/v1/cards/`).
+- Provides bulk card generation modal (`POST /api/v1/cards/bulk`) generating ranges or sets of codes with conflict-skipping reporting.
+- Supports card status updates (`available`, `lost`, `damaged`) via `PATCH /api/v1/cards/{card_code}/status`.
+- Supports barcode printable sheet layout for thermal and sticker printing.
 
 ---
 
@@ -341,6 +360,7 @@
 | FR-RPT-014 | `ReportFilters` is a Pydantic model (not a DB model): `start_date: date | None`, `end_date: date | None`, `gate_number: int | None` (1–5), `operator_id: int | None`, `status: SessionStatus | None`, `card_code: str | None`, `plate_number: str | None`, `long_stay: bool = False`. All fields optional. |
 | FR-RPT-015 | When `start_date` and `end_date` are provided, they are Cairo calendar dates. The service converts them to UTC boundary timestamps: `start_utc = cairo_date_to_utc_start(start_date)`, `end_utc = cairo_date_to_utc_end(end_date)`. These timestamps bracket the `exit_time` column in session queries. |
 | FR-RPT-016 | `avg_duration_minutes` and `avg_revenue_piastres` are computed as integer floor divisions: `total_duration // max(total_sessions, 1)` and `total_revenue // max(total_sessions, 1)`. No floats. |
+| FR-RPT-017 | `get_revenue_by_service_type(filters: ReportFilters, db) -> list[ServiceTypeRevenueResponse]` — returns revenue breakdown by service category: standard tickets, active subscriptions, and lost card penalties. |
 
 ---
 
@@ -374,7 +394,7 @@
 |---|---|
 | FR-RATE-101 | `create_pricing_rule(data: PricingRuleCreate, admin_id: int, db) -> PricingRule` — validates all monetary fields are non-negative integers (piastres). `effective_from` defaults to `utcnow()` if not provided. The new rule is created with `is_active = FALSE`. Returns the created rule. |
 | FR-RATE-102 | `activate_pricing_rule(rule_id: int, admin_id: int, db) -> PricingRule` — sets `is_active = FALSE` on all other rules in a single UPDATE, then sets `is_active = TRUE` on the target rule. Both changes in one transaction. Logs `"RATE_ACTIVATED"`. Raises `PricingRuleNotFoundError` if the rule does not exist. |
-| FR-RATE-103 | The `PricingRuleCreate` Pydantic schema accepts EGP values as `float` input fields (e.g., `rate_per_hour_egp: float`) which are converted to piastres by `round(value * 100)` in the schema validator. The stored column is always `INTEGER` (piastres). The conversion validator uses `round()` not `int()` to handle floating-point representation (e.g., `5.50 * 100 = 550.0`). |
+| FR-RATE-103 | The `PricingRuleCreate` Pydantic schema accepts EGP values as `float` input fields (e.g., `rate_per_hour_egp: float`, `first_hour_charge_egp`, `subsequent_hour_charge_egp`) which are converted to piastres by `round(value * 100)` in the schema validator. The stored column is always `INTEGER` (piastres). |
 | FR-RATE-104 | Pricing rule labels must be unique. Attempting to create a rule with a duplicate label returns `409` with code `RATE_LABEL_ALREADY_EXISTS`. |
 
 ---
@@ -398,16 +418,16 @@
 
 | ID | Requirement |
 |---|---|
-| FR-UI-301 | `templates/admin/base_admin.html` is a new base template that extends nothing. It sets `<html lang="ar" dir="rtl">` and includes a fixed RTL sidebar navigation. |
-| FR-UI-302 | The sidebar navigation links: داشبورد (`/ui/admin/dashboard`), الشيفتات (`/ui/admin/shifts`), الجلسات (`/ui/admin/sessions`), التقارير (`/ui/admin/reports/revenue`), التعريفات (`/ui/admin/rates`), العمال (`/ui/admin/operators`), تسجيل خروج (POST `/ui/logout`). |
+| FR-UI-301 | `templates/admin/base_admin.html` is a base template setting `<html lang="ar" dir="rtl">` and includes a fixed RTL sidebar navigation. |
+| FR-UI-302 | The sidebar navigation links: لوحة التحكم (`/ui/admin/dashboard`), الشيفتات (`/ui/admin/shifts`), دخول وخروج (`/ui/admin/sessions`), التقارير (`/ui/admin/reports/revenue`), التعريفات (`/ui/admin/rates`), المشغلين (`/ui/admin/operators`), إدارة الكروت (`/ui/admin/cards`), تسجيل خروج (POST `/ui/logout`). |
 | FR-UI-303 | The sidebar is collapsible on small screens via a hamburger button. Collapse state is stored in `localStorage` under key `"pgms_sidebar_collapsed"`. |
-| FR-UI-304 | All admin templates extend `templates/admin/base_admin.html` via `{% extends "admin/base_admin.html" %}`. No admin template extends the operator `base.html`. |
-| FR-UI-305 | All admin pages are accessible only to `role = 'admin'`. Unauthorized access redirects to `/ui/login` with a query param `?next=<attempted_path>` so the admin is redirected back after login. |
+| FR-UI-304 | All admin templates extend `templates/admin/base_admin.html` via `{% extends "admin/base_admin.html" %}`. |
+| FR-UI-305 | All admin pages are accessible only to `role = 'admin'`. Unauthorized access redirects to `/ui/login` with a query param `?next=<attempted_path>`. |
 | FR-UI-306 | Filter forms on all admin list pages use `method="GET"` so filters are reflected in the URL and the page is bookmarkable. |
 | FR-UI-307 | All admin data tables include a visible row count: "عرض ١–٢٠ من ١٢٥ نتيجة". |
 | FR-UI-308 | Pagination controls render as: « prev | page numbers | next ». Arabic Indic numerals for page numbers via `to_arabic_indic`. Active page is visually highlighted. |
 | FR-UI-309 | Status badges use Tailwind utility classes: `ACTIVE` → green, `COMPLETED` → blue, `LOST_CARD` → amber, shift open → green, shift closed → grey. |
-| FR-UI-310 | All admin pages load from `/static/css/tailwind.min.css` (locally built). No external CDN calls. No external fonts beyond system fonts. |
+| FR-UI-310 | All admin pages load from `/static/css/tailwind.min.css` (locally built). No external CDN calls. |
 
 ---
 
@@ -419,6 +439,7 @@
 |---|---|---|---|
 | `GET` | `/api/v1/admin/stats/live` | admin | Returns `LiveStatsResponse` JSON for dashboard refresh |
 | `GET` | `/api/v1/admin/stats/gates` | admin | Returns `list[GateStatusResponse]` for gate panel refresh |
+| `GET` | `/api/v1/admin/stats/subscriptions` | admin | Returns subscriber & plan performance metrics JSON |
 
 #### Admin Sessions
 
@@ -426,7 +447,8 @@
 |---|---|---|---|
 | `GET` | `/api/v1/admin/sessions` | admin | Filtered, paginated session list |
 | `GET` | `/api/v1/admin/sessions/{id}` | admin | Full session detail with audit log |
-| `GET` | `/api/v1/admin/sessions/export/csv` | admin | Streaming CSV of filtered sessions |
+| `POST` | `/api/v1/admin/sessions/{id}/override-close` | admin | Force-close active session with admin note & optional charge |
+| `GET` | `/api/v1/admin/sessions/{id}/export/csv` | admin | Streaming CSV of filtered sessions |
 
 #### Admin Shifts
 
@@ -441,8 +463,9 @@
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| `GET` | `/api/v1/admin/reports/revenue` | admin | Revenue summary + breakdowns JSON |
+| `GET` | `/api/v1/admin/reports/revenue` | admin | Revenue summary + breakdowns (gate, operator, service type) JSON |
 | `GET` | `/api/v1/admin/reports/daily` | admin | Daily revenue rows JSON |
+| `GET` | `/api/v1/admin/reports/subscriptions` | admin | Subscriptions revenue breakdown JSON |
 | `GET` | `/api/v1/admin/reports/export/csv` | admin | Streaming CSV of filtered revenue sessions |
 
 #### Admin UI Routes
@@ -452,12 +475,15 @@
 | `GET` | `/ui/admin/dashboard` | admin | Main dashboard HTML |
 | `GET` | `/ui/admin/shifts` | admin | Shift list HTML |
 | `GET` | `/ui/admin/shifts/{id}` | admin | Shift detail HTML |
-| `GET` | `/ui/admin/sessions` | admin | Session list HTML |
+| `GET` | `/ui/admin/sessions` | admin | Session list HTML ("دخول وخروج") |
 | `GET` | `/ui/admin/sessions/{id}` | admin | Session detail HTML |
+| `GET` | `/ui/admin/sessions/{id}/plate-image` | admin | Serve entry ANPR vehicle plate capture image |
+| `GET` | `/ui/admin/sessions/{id}/exit-image` | admin | Serve exit ANPR vehicle plate capture image |
 | `GET` | `/ui/admin/reports/revenue` | admin | Revenue report HTML |
 | `GET` | `/ui/admin/reports/print` | admin | A4 print view HTML |
 | `GET` | `/ui/admin/rates` | admin | Pricing management HTML |
 | `GET` | `/ui/admin/operators` | admin | Operator list HTML |
+| `GET` | `/ui/admin/cards` | admin | Card & barcode management HTML |
 
 ---
 
@@ -564,7 +590,7 @@ Add the following keys:
 | ID | Requirement |
 |---|---|
 | NFR-SEC-301 | Every admin route (both `/ui/admin/*` and `/api/v1/admin/*`) uses `Depends(require_admin)`. A request from a user with `role = 'operator'` returns `403` with code `INSUFFICIENT_PERMISSIONS`. |
-| NFR-SEC-302 | `PATCH /api/v1/admin/shifts/{id}/force-close` logs the admin's `actor_id` and full `before`/`after` state in `audit_logs`. This log must be written before the commit. If the audit log write fails, the force-close is still committed (per `spec_phase1.md` FR-AUDIT-005). |
+| NFR-SEC-302 | `PATCH /api/v1/admin/shifts/{id}/force-close` and `POST /api/v1/admin/sessions/{id}/override-close` log the admin's `actor_id` and full `before`/`after` state in `audit_logs`. This log must be written before the commit. If the audit log write fails, the override is still committed (per `docs/specs/phase-1-core/spec.md` FR-AUDIT-005). |
 | NFR-SEC-303 | All filter query params are validated by Pydantic before reaching any SQL query. `start_date` and `end_date` must be valid `date` objects; invalid formats return `422`. |
 | NFR-SEC-304 | `card_code` and `plate_number` filter values are sanitized before being used in `LIKE` queries: percent signs (`%`) and underscores (`_`) within the user input are escaped so they are treated as literals, not SQL wildcards. |
 | NFR-SEC-305 | CSV export filenames are constructed from the server-side Cairo date only. No user input is included in the filename. |
@@ -639,7 +665,7 @@ Add the following keys:
 
 ---
 
-### 4.3 Shift Management Edge Cases
+### 4.3 Shift & Session Override Edge Cases
 
 | ID | Scenario | Expected Behaviour |
 |---|---|---|
@@ -648,6 +674,8 @@ Add the following keys:
 | EC-SHIFT-303 | `closing_cash_egp` not provided on force-close | `closing_cash_egp` remains `NULL` in DB. Discrepancy is `NULL`. |
 | EC-SHIFT-304 | Shift list filtered by `overdue=true` returns a shift that was closed while the page was loading | The closed shift appears in results if it was open at query time. No error. Next page load will exclude it. |
 | EC-SHIFT-305 | Admin attempts force-close on a shift not belonging to any gate (corrupted data) | Force-close proceeds. No gate validation on admin force-close. |
+| EC-SESS-301 | Admin override-closes an ACTIVE session | Session is marked `COMPLETED`, card status reset to `available`, `admin_override_note` saved, and action logged in audit log. |
+| EC-SESS-302 | Admin override-closes a session already completed | `409` with code `SESSION_NOT_ACTIVE`. |
 
 ---
 
@@ -699,12 +727,14 @@ All error responses: `{"detail": "<message>", "code": "<CODE>"}`.
 | `INVALID_GATE_NUMBER` | 422 | `gate_number` outside 1–5 |
 | `OPERATOR_NOT_FOUND` | 404 | `operator_id` filter refers to non-existent user |
 
-### 5.2 Shift Admin Errors
+### 5.2 Shift & Session Admin Errors
 
 | Code | HTTP | Trigger |
 |---|---|---|
 | `SHIFT_NOT_FOUND` | 404 | `shift_id` does not exist |
 | `SHIFT_ALREADY_CLOSED` | 409 | Force-close on an already-closed shift |
+| `SESSION_NOT_FOUND` | 404 | `session_id` does not exist on override close |
+| `SESSION_NOT_ACTIVE` | 409 | Attempting override close on a non-ACTIVE session |
 | `INSUFFICIENT_PERMISSIONS` | 403 | Non-admin accesses admin endpoint |
 
 ### 5.3 Pricing Errors
@@ -757,39 +787,45 @@ The following are explicitly deferred and must not be implemented during Phase 3
 ---
 
 ## 7. File Structure Additions for Phase 3
+
+```
 pgms/
 ├── services/
-│ └── report_service.py # ReportService: all aggregation methods
+│   └── report_service.py              # ReportService: all aggregation methods
 ├── repositories/
-│ └── report_repo.py # Raw SQL aggregation queries
+│   ├── report_repo.py                 # Raw SQL aggregation queries
+│   └── admin_shift_repo.py            # Admin filtered shift queries
 ├── routes/
-│ ├── admin_api.py # /api/v1/admin/* JSON endpoints
-│ └── ui_admin.py # /ui/admin/* HTML routes
+│   ├── admin_api.py                   # /api/v1/admin/* JSON endpoints
+│   └── ui_admin.py                    # /ui/admin/* HTML routes
 ├── schemas/
-│ └── admin_reports.py # LiveStatsResponse, RevenueSummaryResponse, etc.
+│   └── admin_reports.py               # LiveStatsResponse, RevenueSummaryResponse, etc.
 ├── utils/
-│ ├── time.py # cairo_today_start(), cairo_date_to_utc_*()
-│ └── csv_export.py # Async CSV generator functions
+│   ├── time.py                        # cairo_today_start(), cairo_date_to_utc_*()
+│   └── csv_export.py                  # Async CSV generator functions
 ├── templates/
-│ └── admin/
-│ ├── base_admin.html # Admin base with RTL sidebar
-│ ├── dashboard.html
-│ ├── shifts.html
-│ ├── shift_detail.html
-│ ├── sessions.html
-│ ├── session_detail.html
-│ ├── rates.html
-│ ├── operators.html
-│ └── reports/
-│ ├── revenue.html
-│ └── print.html # Standalone A4 print template
+│   └── admin/
+│       ├── base_admin.html            # Admin base with RTL sidebar
+│       ├── dashboard.html
+│       ├── shifts.html
+│       ├── shift_detail.html
+│       ├── sessions.html
+│       ├── session_detail.html
+│       ├── rates.html
+│       ├── operators.html
+│       ├── cards.html
+│       └── reports/
+│           ├── revenue.html
+│           ├── print.html             # Standalone A4 print template
+│           ├── _print_revenue.html
+│           ├── _print_sessions.html
+│           └── _print_shift.html
 └── static/
-└── admin_print.css # A4 print stylesheet
-
+    └── admin_print.css                # A4 print stylesheet
+```
 
 ---
 
 *This specification is complete when all Acceptance Criteria, Functional
 Requirements, Non-Functional Requirements, and Edge Cases listed above have
-corresponding passing tests, and the manual QA checklist (to be defined in
-`tasks_phase3.md`) has been signed off.*
+corresponding passing tests, and the manual QA checklist in `tasks.md` has been signed off.*

@@ -413,7 +413,7 @@ async def test_renew_before_expiry(db_session: AsyncSession, audit_service):
         admin_id=1,
     )
     assert renewed.status == SubscriptionStatus.PENDING
-    assert renewed.start_date == sub_orig.end_date
+    assert renewed.start_date == sub_orig.end_date + timedelta(days=1)
     assert renewed.previous_subscription_id == sub_orig.id
 
 

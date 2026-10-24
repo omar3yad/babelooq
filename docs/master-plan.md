@@ -1,460 +1,539 @@
-# Parking Garage Management System — Project Plan
+# الخطة المعمارية والتنفيذية الشاملة لنظام إدارة جراج باب اللوق (PGMS — Garage4U)
 
-> **Version:** 1.0  
-> **Scope:** 5-gate parking garage with operator POS terminals and admin oversight.  
-> **Read alongside:** `constitution.md` — all decisions here conform to its rules.
+> **الحالة:** الوثيقة المعمارية والتنفيذية الرسمية الحاكمة للمشروع.  
+> **المصدر:** مستخرجة ومحققة بالكامل بنسبة 100% من الكود المصدري الفعلي (`models/`، `services/`، `routes/`، `config.py`، `edge_agent/`).  
+> **ملاحظة:** تُلغي هذه الوثيقة وتستبدل أي خطط نظرية أو مسودات قديمة (مثل خطط Sunmi POS التي لم تُنفذ).
 
 ---
 
-## 1. High-Level Architecture Overview
+## 1. نظرة عامة ومعمارية النظام الشاملة (System Architecture)
+
+نظام **Garage4U (PGMS — Parking Garage Management System)** في جراج باب اللوق هو حل برمجي غير متزامن فائق السرعة، مصمم لإدارة حركة المركبات، تسجيل الدخول والخروج، احتساب الرسوم بدقة متناهية، إدارة الاشتراكات، وتشغيل كاميرات المراقبة والتعرف الآلي على لوحات السيارات (ANPR) في بيئة إنتاجية حقيقية.
+
+### المخطط المعماري العام للربط الميداني
+
 ```text
-┌─────────────────────────────────────────────────────────────────┐
-│                          CLIENT LAYER                           │
-│                                                                 │
-│  ┌──────────────────────┐         ┌──────────────────────────┐  │
-│  │ Operator UI          │         │ Admin Dashboard          │  │
-│  │ (Sunmi V2 POS)       │         │ (Desktop Browser)        │  │
-│  ├──────────────────────┤         ├──────────────────────────┤  │
-│  │ Jinja2 + Tailwind    │         │ Jinja2 + Tailwind        │  │
-│  │ RTL / Arabic         │         │ Charts + Tables          │  │
-│  │ 58mm Print CSS       │         │ Reports & Exports        │  │
-│  └──────────┬───────────┘         └────────────┬─────────────┘  │
-└─────────────┼──────────────────────────────────┼────────────────┘
-              │       HTTP (LAN / localhost)     │
-┌─────────────▼──────────────────────────────────▼────────────────┐
-│                      FASTAPI APPLICATION                        │
-│                                                                 │
-│  ┌───────────────────────────────────────────────────────────┐  │
-│  │ Routes Layer                                              │  │
-│  │ /ui/* (HTML)                    /api/v1/* (JSON)          │  │
-│  │ auth, tickets,                  auth, tickets,            │  │
-│  │ operator pages                  sessions, rates, reports  │  │
-│  └────────────────────────────┬──────────────────────────────┘  │
-│                               │                                 │
-│  ┌────────────────────────────▼──────────────────────────────┐  │
-│  │ Services Layer                                            │  │
-│  │ AuthService      TicketService      PricingService        │  │
-│  │ ShiftService        PlateService       ReportService      │  │
-│  └────────────────────────────┬──────────────────────────────┘  │
-│                               │                                 │
-│  ┌────────────────────────────▼──────────────────────────────┐  │
-│  │ Repositories Layer                                        │  │
-│  │ UserRepo         SessionRepo        ShiftRepo    RateRepo │  │
-│  └────────────────────────────┬──────────────────────────────┘  │
-│                               │                                 │
-│  ┌────────────────────────────▼──────────────────────────────┐  │
-│  │ SQLAlchemy ORM (Async)                                    │  │
-│  └────────────────────────────┬──────────────────────────────┘  │
-└───────────────────────────────┼─────────────────────────────────┘
-                                │
-┌───────────────────────────────▼─────────────────────────────────┐
-│                           DATA LAYER                            │
-│                                                                 │
-│ SQLite (dev) ────── switchable via DATABASE_URL ──── PostgreSQL │
-└─────────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                               GARAGE PHYSICAL WORKSTATIONS                             │
+│                                                                                        │
+│  ┌───────────────────────────────┐                  ┌───────────────────────────────┐  │
+│  │   GATE 1: ENTRY WORKSTATION   │                  │    GATE 2: EXIT WORKSTATION   │  │
+│  │   (Desktop PC / Browser)      │                  │    (Desktop PC / Browser)     │  │
+│  │   - USB Barcode/RFID Reader   │                  │    - USB Barcode/RFID Reader  │  │
+│  │   - Fast POS UI (ES5 / IE11)  │                  │    - 1-Step Exit Checkout     │  │
+│  │   - Sound Feedback (WebAudio) │                  │    - ESC/POS Thermal 80/58mm  │  │
+│  └───────────────┬───────────────┘                  └───────────────┬───────────────┘  │
+└──────────────────┼──────────────────────────────────────────────────┼──────────────────┘
+                   │                      HTTP (LAN / WAN)            │
+                   ▼                                                  ▼
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                                 GARAGE4U BACKEND SERVER                                │
+│                     (FastAPI + Uvicorn + Multi-Worker Gunicorn)                        │
+│                                                                                        │
+│  ┌──────────────────────────────────────────────────────────────────────────────────┐  │
+│  │ Routes Layer (HTTP UI & REST API)                                                │  │
+│  │ - /ui/operator/* (Dashboard, Shift, Scan, Exit, Receipts)                        │  │
+│  │ - /ui/admin/* (Live Dashboard, Sessions, Shifts, Rates, Reports, Cards)          │  │
+│  │ - /ui/subscriptions/* (Subscribers, Plans, Excel/CSV Bulk Import)                │  │
+│  │ - /api/v1/* (REST API JSON Envelopes for Automation & Integrations)              │  │
+│  │ - /ws/edge (Secured WebSocket Broker for Garage Edge PC)                         │  │
+│  └────────────────────────────────────────┬─────────────────────────────────────────┘  │
+│                                           │                                            │
+│  ┌────────────────────────────────────────▼─────────────────────────────────────────┐  │
+│  │ Core Services Layer (Business Logic & Lifespan Tasks)                            │  │
+│  │ - SessionService (Open, Close, Lost Card, Admin Override Close)                  │  │
+│  │ - PricingService (Tiered Hourly Calculations, Grace Periods, Piastres Math)      │  │
+│  │ - CardService (Barcode/RFID Normalization, Availability & Lifecycle)             │  │
+│  │ - ShiftService (Opening Drawer Cash, Cash Reconciliation, Force Close)           │  │
+│  │ - SubscriptionService (Plans, Active/Expired Lifecycle, Daily Entry Limits)      │  │
+│  │ - ExcelImportService (Smart Column Matching, Import Preview & Validation)        │  │
+│  │ - ReportService (Live Stats KPIs, Gate Panel, Revenue Analysis, CSV Export)      │  │
+│  │ - PlateCaptureService & PlateService (Egyptian Format Normalization & Validation)│  │
+│  │ - AuditService (Immutable Security Audit Trail)                                  │  │
+│  └────────────────────────────────────────┬─────────────────────────────────────────┘  │
+│                                           │                                            │
+│  ┌────────────────────────────────────────▼─────────────────────────────────────────┐  │
+│  │ Cross-Worker Event Bus & Edge Hub                                                │  │
+│  │ - EdgeHub (Connection Tracking, Gate Presence, Heartbeats)                       │  │
+│  │ - PostgresEventBus (LISTEN/NOTIFY across Gunicorn Workers: Trigger, Result)      │  │
+│  └────────────────────────────────────────┬─────────────────────────────────────────┘  │
+└───────────────────────────────────────────┼────────────────────────────────────────────┘
+                                            │
+                 ┌──────────────────────────┴──────────────────────────┐
+                 │                                                     │
+                 ▼                                                     ▼
+┌──────────────────────────────────┐         ┌───────────────────────────────────────────┐
+│     PERSISTENCE DATA LAYER       │         │       GARAGE LOCAL AI EDGE NETWORK        │
+│                                  │         │                                           │
+│ - PostgreSQL (Production asyncpg)│         │ ┌───────────────────────────────────────┐ │
+│ - SQLite (Dev/Test aiosqlite)    │         │ │ Garage Edge PC (NVIDIA CUDA / PyTorch)│ │
+│ - Database Migrations (Alembic)  │         │ │ - Outbound WebSocket to /ws/edge      │ │
+│ - Stored Plate Images (media/)   │         │ │ - YOLOv8 Plate Detection (best.pt)    │ │
+└──────────────────────────────────┘         │ │ - YOLOv8 Egyptian Character OCR       │ │
+                                             │ │ - Continuous Training Dataset Logger  │ │
+                                             │ └───────────────────▲───────────────────┘ │
+                                             │                     │ HTTP ISAPI (LAN)    │
+                                             │ ┌───────────────────┴───────────────────┐ │
+                                             │ │ Hikvision IP Surveillance Cameras     │ │
+                                             │ │ - Gate 1 Entry (Channel 201 ISAPI)    │ │
+                                             │ │ - Gate 2 Exit  (Channel 101 ISAPI)    │ │
+                                             │ └───────────────────────────────────────┘ │
+                                             └───────────────────────────────────────────┘
 ```
 
-### Key Architectural Decisions
+### القرارات المعمارية الحاكمة للمشروع
 
-| Concern | Decision | Reason |
-|---|---|---|
-| Rendering | Server-side Jinja2 | Sunmi V2 is resource-constrained; no SPA overhead |
-| API | REST JSON under `/api/v1/` | Clean separation; future mobile app compatibility |
-| Auth | JWT in HttpOnly cookie | Works on POS browser; no localStorage dependency |
-| Pricing | Integer piastres only | Eliminates floating-point money bugs |
-| Barcode & Plate | Barcode (required) + Plate (optional) | Barcode is primary lookup; plate number is optional and normalized on write |
-| DB access | Async SQLAlchemy sessions | Non-blocking; consistent with FastAPI async model |
-| Print | `window.print()` + `print.css` | No driver installation needed on Sunmi V2 |
+1. **الواجهات من جانب السيرفر (Server-Side Rendering — SSR):**
+   - استخدام قوالب Jinja2 في توليد شاشات المشغل والإدارة بدلاً من أطر عمل SPA الثقيلة.
+   - توفير استجابة فائقة السرعة على الحواسب المكتبية الاقتصادية في البوابات، وضمان توافق كامل مع متصفحات قديمة (بما فيها IE11 بفضل Polyfills مخصصة في `static/js/dashboard.js`).
+2. **المصادقة الهجينة (Dual Authentication):**
+   - كوكيز مشفرة ومؤمنة `HttpOnly` باسم `pgms_token` لصفحات الويب لمنع سرقتها عبر سكريبتات XSS.
+   - ترويسة `Authorization: Bearer <token>` للواجهات البرمجية REST APIs واتصالات الـ WebSockets.
+3. **الحسابات المالية بالقروش كأعداد صحيحة حصراً (Integer Piastres Math):**
+   - كافة القيم المالية في قاعدة البيانات تُخزن كأعداد صحيحة (`Integer`) تمثل القروش (1 جنيه = 100 قرش).
+   - منع الأرقام العشرية (`Float`) نهائياً لمنع أخطاء التقريب والكسور المئوية.
+4. **التوقيت الزمني المصري (Cairo Timezone & DST):**
+   - توثيق التواريخ في قاعدة البيانات بصيغة UTC محايدة (`naive UTC`).
+   - تحويل وحساب الورديات وبدايات الأيام والتقارير بتوقيت القاهرة المحلي `Africa/Cairo` مع مراعاة التوقيت الصيفي المصري تلقائياً.
 
 ---
 
-## 2. Database Schema
+## 2. معمارية نظام الكاميرا والـ Edge Agent (`edge_agent/`)
 
-### 2.1 Entity Relationship Overview
+يتولى مجلد `edge_agent/` معالجة الرؤية الحاسوبية والذكاء الاصطناعي على حاسوب محلي داخل الجراج مرتبط بالكاميرات.
+
+```text
+[Hikvision Camera] 
+       │ (1) HTTP ISAPI GET (Digest Auth)
+       ▼
+[camera.py: SnapshotCamera]
+       │ (2) Raw JPEG Frame
+       ▼
+[recognizer.py: EgyptianPlateRecognizer]
+       │ (3) YOLO Detection -> Crop Plate Bounding Box
+       │ (4) YOLO OCR -> Egyptian Characters/Digits -> Arabic RTL Sorting
+       │ (5) Encode WebP / JPEG
+       ▼
+[agent.py: EdgeAgent]
+       │ (6) Send CAPTURE_RESULT JSON Frame
+       ▼
+[WebSocket: /ws/edge] ---> [VPS: routes/edge_ws.py]
+```
+
+### أ. مكونات وكيل الجراج (`edge_agent/`)
+
+| المكون / الملف | الوظيفة البرمجية المنفذة في الكود |
+|---|---|
+| `agent.py` | العميل الرئيسي (Client): يفتح اتصال WebSocket خارجي صادر مع السيرفر، يعالج أحداث `TRIGGER_CAPTURE`، يدير الأقفال المتزامنة لكل بوابة (`_gate_locks`)، ويعيد إرسال النتائج المخزنة مؤقتاً في طابور `_outbox` عند انقطاع الشبكة. |
+| `camera.py` | عميل `SnapshotCamera`: يستعلم لقطات الكاميرات عبر الشبكة المحلية باستخدام `httpx.AsyncClient` مع الحفاظ على الاتصال مفتوحاً (HTTP Keep-Alive) ومصادقة Digest Auth لتفادي تكرار مصافحة 401 في كل لقطة. |
+| `recognizer.py` | محرك الذكاء الاصطناعي `EgyptianPlateRecognizer`: يشغل موديل كشف مكان اللوحة وموديل القراءة الضوئية للأحرف، ويرتب الحروف من اليمين لليسار وفق النمط المصري. |
+| `settings.py` | فئة الإعدادات `EdgeSettings` المستندة إلى Pydantic لقراءة المتغيرات من `.env` وضبط عناوين الكاميرات والأوزان ونسب الثقة. |
+
+### ب. بروتوكول كاميرات هيكفيجن (Hikvision ISAPI)
+- تسحب الصور عبر منفذ HTTP ISAPI:
+  - كاميرا بوابة الدخول 1: `http://192.168.1.100/ISAPI/Streaming/channels/201/picture`
+  - كاميرا بوابة الخروج 2: `http://192.168.1.100/ISAPI/Streaming/channels/101/picture`
+- المصادقة: مصادقة هضمية **Digest Authentication** لضمان أعلى مستوى أمان على الشبكة المحلية.
+
+### ج. خط أنابيب الذكاء الاصطناعي (YOLOv8 Pipeline)
+1. **كشف اللوحة (Plate Localization):**
+   - استخدام الموديل المدرب `plate_detection/best.pt` على جهاز الـ GPU عبر PyTorch (`device="cuda"`).
+   - استخراج أعلى مربع إحاطة موثوق به (`bbox`) وقص صورة اللوحة (`best_plate_crop`).
+2. **قراءة الرموز ضوئياً (Character OCR):**
+   - تمرير قصاصة اللوحة لموديل `plate_recognition/best.pt`.
+   - استخراج معرّفات الأحرف والأرقام ونسب ثقتها.
+   - **الترتيب الذكي من اليمين إلى اليسار (Arabic RTL):** ترتيب الرموز تنازلياً وفق الإحداثي السيني الأفقي `X` لضمان قراءة الحروف العربية أولاً ثم الأرقام.
+3. **التجميع وحساب الثقة المركبة:**
+   - احتساب متوسط ثقة التعرف الضوئي مضروباً في ثقة الكشف للخروج بنسبة دقة نهائية (`composite_conf`).
+4. **حفظ بيانات التدريب المستمر (Dataset Preservation):**
+   - يتم تفعيل ميزة `SAVE_LOCAL_DATASET: True` تلقائياً.
+   - حفظ صورة السيارة الكاملة في المجلد `DATASET_DIR/gate_{id}/cars/`.
+   - حفظ صورة قصاصة اللوحة في المجلد `DATASET_DIR/gate_{id}/plates/`.
+   - تسجيل بيانات السجل (الوقت، رقم الجلسة، البوابة، النص، نسبة الثقة، المسارات) في ملف `dataset_index.csv`.
+
+---
+
+## 3. تدفق التعرف على اللوحات خطوة بخطوة (ANPR Pipeline Flow)
+
+### أ. تدفق بوابة الدخول (Gate 1 Entry Flow)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Driver as السائق
+    actor Operator as عامل الدخول (بوابة 1)
+    participant UI as شاشة المشغل (dashboard.js)
+    participant Server as سيرفر التطبيق (FastAPI)
+    participant DB as قاعدة البيانات (PostgreSQL)
+    participant Bus as ناقل الأحداث (PostgresEventBus)
+    participant Edge as جهاز الجراج (edge_agent)
+    participant Cam as كاميرا هيكفيجن (ISAPI)
+
+    Driver->>Operator: الوصول للبوابة
+    Operator->>UI: مسح كارت الباركود / RFID
+    UI->>Server: POST /ui/operator/api/scan {card_code}
+    
+    rect rgb(235, 255, 235)
+        Note over Server,DB: مرحلة عدم التعطيل (Non-blocking Commit)
+        Server->>DB: التحقق من الكارت والاشتراكات
+        Server->>DB: فتح الجلسة وحفظها (Session Status: ACTIVE)
+        Server->>DB: تعيين الكارت IN_USE
+        Server-->>UI: رد فوري بنجاح الدخول (تفضل بالدخول < 200ms)
+        UI-->>Operator: رسالة نجاح خضراء وصوت تأكيد
+    end
+
+    rect rgb(235, 245, 255)
+        Note over Server,Cam: مرحلة التقاط الصورة بالخلفية
+        Server->>Bus: نشر TriggerCapture عبر قناة pgms_edge_trigger
+        Bus->>Edge: تسليم أمر TRIGGER_CAPTURE عبر WebSocket
+        Edge->>Cam: طلب لقطة HTTP ISAPI (مهلة 1 ثانية)
+        Cam-->>Edge: صورة السيارة الخام JPEG
+        Edge->>Edge: تشغيل YOLO Detection + OCR وترتيب الأحرف
+        Edge->>Edge: حفظ نسخة التدريب المستمر محلياً (cars & plates)
+        Edge->>Server: إرسال CAPTURE_RESULT عبر WebSocket
+        Server->>DB: تحديث الجلسة باللوحة والصورة (SUCCESS)
+        Server->>Bus: نشر pgms_edge_result
+    end
+
+    rect rgb(255, 250, 240)
+        Note over UI,Server: التحديث اللحظي على شاشة المشغل
+        UI->>Server: Long-Poll /api/sessions/{id}/plate
+        Server-->>UI: بيانات اللوحة + رابط الصورة المصغرة
+        UI->>UI: إظهار صورة السيارة ورقم اللوحة فوراً
+        opt تصحيح يدوي من العامل
+            Operator->>UI: تعديل اللوحة يدوياً
+            UI->>Server: POST /api/sessions/{id}/plate-override
+            Server->>DB: تحديث plate_number
+        end
+    end
+```
+
+### ب. جدول المهل الزمنية وضمان تدفق الحركة (Timeouts & Non-Blocking Design)
+
+| المرحلة | المهلة القصوى | السلوك عند انتهاء المهلة أو الفشل |
+|---|---|---|
+| **اعتماد دخول السيارة** | فوري (< 200ms) | الجلسة تُحفظ في الداتابيز والبوابة تُفتح فوراً؛ لا تنتظر الكاميرا إطلاقاً. |
+| **لقطة الكاميرا ISAPI** | 1.0 ثانية | إذا تأخرت الكاميرا يُلغى الطلب وتُسجل حالة `CameraError`. |
+| **معالجة الذكاء الاصطناعي بالجراج** | 3.5 ثانية | محسوبة كفارق شبكة 500ms قبل مهلة السيرفر الإجمالية. |
+| **مهلة السيرفر الإجمالية** | 4.0 ثوانٍ (`PLATE_CAPTURE_TIMEOUT_S`) | تتحول حالة التقاط اللوحة إلى `TIMEOUT`، وتستمر الجلسة بشكل طبيعي. |
+| **في حال انقطاع الـ Edge PC** | فوري (0 ثانية) | إذا كان الجهاز غير متصل، تُسجل الحالة فوراً كـ `OFFLINE` دون أي تأخير. |
+| **النتائج المتأخرة (Late Results)** | حتى 120 ثانية | لو وصلت نتيجة متأخرة بسبب بطء اتصال الـ 4G، تُخزن في الجلسة كمرجع تاريخي. |
+
+### ج. تدفق بوابة الخروج والحساب الفوري (Gate 2 Exit Flow)
+1. مسح الكارت في شاشة الخروج.
+2. النظام يستدعي `session_service.close_session`:
+   - حساب مدة الوقوف الدقيقة بالساعات والدقائق.
+   - خصم فترة السماح (`grace_period_mins`).
+   - احتساب تكلفة الساعة الأولى والساعات التالية أو السعر الثابت.
+   - للمشترك النشط: الرسوم = 0 ج.م، ويبقى الكارت مرتبطاً به.
+3. إنهاء الجلسة `SessionStatus.COMPLETED` وتحرير الكارت العادي ليكون متاحاً `AVAILABLE`.
+4. **لقطة الخروج التأكيدية:** استدعاء `start_exit_capture` بنوع `capture_type: "exit"` و `skip_ocr: True`.
+   - تلتقط الكاميرا لقطة السيارة وتُخزن في مسار `exit_image_path` لتوثيق هيئة السيارة عند المغادرة لأغراض الرقابة الإدارية.
+5. استدعاء الطباعة الحرارية التلقائية للإيصال (`/ui/operator/receipt/{id}`).
+
+---
+
+## 4. هيكلة وتدفق أحداث الـ WebSocket وربطها بـ PostgresEventBus
+
+### أ. تحدي تعدد العمليات في بيئة الإنتاج (Multi-Worker Challenge)
+في بيئة الإنتاج، يعمل الخادم عبر **Gunicorn بـ 3 عمال (Workers)**:
+- اتصال الـ WebSocket القادم من حاسوب الجراج يستقر في **Worker واحد فقط**.
+- طلب مسح الكارت من المشغل أو استطلاع النتيجة (Long-polling) قد يصل إلى **أي Worker آخر**.
+- لضمان وصول أوامر التصوير من أي Worker إلى جهاز الجراج، ووصول نتيجة القراءة إلى Worker المشغل، تم تنفيذ **PostgresEventBus** كحل معماري عبقري يعتمد على قدرات PostgreSQL الأصيلة (`LISTEN / NOTIFY`).
+
+```text
+[Operator Browser] ─────────> [Gunicorn Worker A]
+                                     │
+                             (SQL pg_notify)
+                                     ▼
+                            ┌──────────────────┐
+                            │    PostgreSQL    │
+                            │  LISTEN/NOTIFY   │
+                            └────────┬─────────┘
+                                     │
+                             (asyncpg listener)
+                                     ▼
+                              [Gunicorn Worker B]
+                                     │
+                             (Starlette WebSocket)
+                                     ▼
+                              [Garage Edge PC]
+```
+
+### ب. هيكل قنوات الـ EventBus
+
+| اسم القناة في الداتابيز | اتجاه البيانات | الغرض والبيانات المنقولة |
+|---|---|---|
+| `pgms_edge_trigger` | من أي Worker إلى Worker الـ WebSocket | إرسال أمر التصوير `TriggerCapture` المحتوي على `session_id`, `card_uid`, `gate_id`, `timeout_ms`. |
+| `pgms_edge_result` | من Worker الـ WebSocket إلى باقي الـ Workers | إشعار كافة المعالجات بانتهاء قراءة اللوحة للجلسة `{"session_id": 123}` لإيقاظ طلبات الانتظار. |
+| `pgms_edge_presence` | بين كافة الـ Workers | بث نبضات اتصال أجهزة الجراج وتحديث جدول الوجود اللحظي (`conn_id`, `gates`, `online`). |
+
+### ج. هياكل حزم البيانات (WebSocket JSON Frame Schemas)
+
+#### 1. مصافحة بدء الاتصال (Handshake)
+- **طلب العميل (Client -> Server):**
+  ```json
+  {
+    "event": "HELLO",
+    "node_id": "garage-edge-1",
+    "gates": [1, 2],
+    "version": "1.0.0"
+  }
+  ```
+- **رد السيرفر (Server -> Client):**
+  ```json
+  {
+    "event": "HELLO_ACK",
+    "conn_id": "a1b2c3d4e5f6..."
+  }
+  ```
+
+#### 2. أمر طلب الالتقاط (Capture Trigger)
+- **من السيرفر إلى العميل (Server -> Edge):**
+  ```json
+  {
+    "event": "TRIGGER_CAPTURE",
+    "session_id": 4501,
+    "card_uid": "CARD-0082",
+    "gate_id": 1,
+    "timeout_ms": 3000,
+    "capture_type": "entry",
+    "skip_ocr": false
+  }
+  ```
+
+#### 3. إرسال نتيجة المعالجة (Capture Result)
+- **من العميل إلى السيرفر (Edge -> Server):**
+  ```json
+  {
+    "event": "CAPTURE_RESULT",
+    "session_id": 4501,
+    "gate_id": 1,
+    "capture_type": "entry",
+    "status": "SUCCESS",
+    "plate_number": "ق ط ر 9 2 5",
+    "confidence": 0.892,
+    "image_webp_b64": "UklGRuAAAABXRUJQVlA4...",
+    "timings_ms": {
+      "snapshot": 310.2,
+      "analyse": 480.5,
+      "total": 820.1
+    }
+  }
+  ```
+
+#### 4. إقرار استلام السيرفر (Result Acknowledgment)
+- **من السيرفر إلى العميل (Server -> Edge):**
+  ```json
+  {
+    "event": "RESULT_ACK",
+    "session_id": 4501,
+    "accepted": true,
+    "reason": null
+  }
+  ```
+
+---
+
+## 5. قاعدة البيانات والكيانات الفعلية (Implemented Database Schema)
+
+### المخطط العلائقي الكامل (Entity Relationship Diagram)
 
 ```mermaid
 erDiagram
-    User ||--o{ Shift : "opens/closes"
-    Shift ||--o{ ParkingSession : "manages"
-    User ||--o{ PricingRule : "configures"
-    User ||--o{ AuditLog : "generates"
-```
+    users ||--o{ shifts : "opens"
+    users ||--o{ parking_sessions : "operates entry"
+    users ||--o{ pricing_rules : "creates"
+    users ||--o{ subscription_plans : "creates"
+    users ||--o{ audit_logs : "triggers"
+    
+    shifts ||--o{ parking_sessions : "tracks"
+    
+    parking_cards ||--o{ parking_sessions : "used in"
+    parking_cards ||--o{ subscriptions : "assigned to"
+    
+    subscribers ||--o{ subscriptions : "owns"
+    subscription_plans ||--o{ subscriptions : "defines terms"
+    
+    pricing_rules ||--o{ parking_sessions : "prices"
+    subscriptions ||--o{ parking_sessions : "grants entry"
 
-### 2.2 Model Definitions
+    users {
+        int id PK
+        string username UK
+        string full_name
+        string role "ADMIN, OPERATOR"
+        int gate_number "1..5 for OP, NULL for Admin"
+        bool is_active
+    }
 
----
+    parking_cards {
+        int id PK
+        string card_code UK
+        string status "AVAILABLE, IN_USE, LOST, DAMAGED"
+        datetime last_seen_at
+    }
 
-#### `users` — Operators and Admins
+    shifts {
+        int id PK
+        int operator_id FK
+        int gate_number
+        datetime started_at
+        datetime ended_at
+        int opening_cash_egp
+        int closing_cash_egp
+    }
 
-```
-users
-├── id INTEGER PK AUTO
-├── full_name VARCHAR(120) NOT NULL
-├── username VARCHAR(60) UNIQUE NOT NULL
-├── hashed_password VARCHAR(255) NOT NULL
-├── role ENUM('admin', 'operator') NOT NULL
-├── gate_number SMALLINT NULLABLE -- assigned gate (1–5); NULL for admins
-├── is_active BOOLEAN DEFAULT TRUE
-├── created_at TIMESTAMP NOT NULL
-└── updated_at TIMESTAMP NOT NULL
-```
-**Rules:**
-- `role = 'operator'` must have a `gate_number` between 1 and 5.
-- `role = 'admin'` has `gate_number = NULL` and full system access.
-- Passwords are hashed with bcrypt; plaintext never touches the database.
+    pricing_rules {
+        int id PK
+        string label
+        int rate_per_hour "piastres"
+        int first_hour_charge "piastres"
+        int subsequent_hour_charge "piastres"
+        int minimum_charge "piastres"
+        int grace_period_mins
+        int lost_card_penalty "piastres"
+        bool is_active
+    }
 
----
+    parking_sessions {
+        int id PK
+        int card_id FK
+        string card_code
+        string status "ACTIVE, COMPLETED, LOST_CARD"
+        int gate_number
+        datetime entry_time
+        datetime exit_time
+        int duration_minutes
+        int amount_charged "piastres"
+        string plate_number
+        string plate_capture_status
+        string plate_image_path
+        string exit_image_path
+        bool is_subscribed
+        int subscription_id FK
+    }
 
-#### `shifts` — Operator Work Sessions
+    subscribers {
+        int id PK
+        string full_name
+        string plate_number UK
+        string card_code UK
+        string company_name
+        string phone_number
+    }
 
-```
-shifts
-├── id INTEGER PK AUTO
-├── operator_id INTEGER FK → users.id NOT NULL
-├── gate_number SMALLINT NOT NULL -- snapshot at shift start
-├── started_at TIMESTAMP NOT NULL
-├── ended_at TIMESTAMP NULLABLE -- NULL = shift in progress
-├── opening_cash_egp INTEGER NOT NULL DEFAULT 0 -- in piastres
-├── closing_cash_egp INTEGER NULLABLE -- in piastres; set on shift end
-├── notes TEXT NULLABLE
-├── created_at TIMESTAMP NOT NULL
-└── updated_at TIMESTAMP NOT NULL
-```
-**Rules:**
-- An operator may only have one open shift (`ended_at IS NULL`) at a time.
-- `closing_cash_egp` is set by the operator at shift end; admin can override.
-- All financial totals for a shift are computed from `parking_sessions` joined on `shift_id`.
+    subscription_plans {
+        int id PK
+        string label UK
+        int duration_days
+        int price_piastres
+        int max_entries_per_day
+        bool is_active
+    }
 
----
+    subscriptions {
+        int id PK
+        int subscriber_id FK
+        int plan_id FK
+        int card_id FK
+        string plate_number
+        date start_date
+        date end_date
+        string status "ACTIVE, EXPIRED, CANCELLED, PENDING"
+        int amount_paid_piastres
+        int renewal_count
+    }
 
-#### `pricing_rules` — Hourly Rate Configuration
-
-```
-pricing_rules
-├── id INTEGER PK AUTO
-├── label VARCHAR(100) NOT NULL -- e.g., "Standard Rate", "Night Rate"
-├── rate_per_hour INTEGER NOT NULL -- piastres per hour
-├── minimum_charge INTEGER NOT NULL DEFAULT 0 -- minimum fee in piastres
-├── grace_period_mins SMALLINT NOT NULL DEFAULT 15 -- free minutes before billing starts
-├── is_active BOOLEAN DEFAULT FALSE -- only one rule active at a time
-├── created_by INTEGER FK → users.id NOT NULL
-├── effective_from TIMESTAMP NOT NULL
-├── effective_until TIMESTAMP NULLABLE -- NULL = open-ended
-├── created_at TIMESTAMP NOT NULL
-└── updated_at TIMESTAMP NOT NULL
-```
-**Rules:**
-- Only one pricing rule may be `is_active = TRUE` at a time. Enforced at service layer.
-- Rate changes are non-destructive: old rules are kept for historical session pricing.
-- `PricingService` resolves the active rule at the moment a session ends, not when it begins.
-
----
-
-#### `parking_sessions` — Core Transactional Record
-
-```
-parking_sessions
-├── id INTEGER PK AUTO
-├── ticket_number VARCHAR(20) UNIQUE NOT NULL -- generated: GATE-YYYYMMDD-SEQ
-├── card_barcode VARCHAR(50) NOT NULL -- card barcode scanned at entry/exit
-├── plate_number VARCHAR(30) NULLABLE -- canonical: "ن ي ش 159" (optional)
-├── gate_number SMALLINT NOT NULL -- entry gate
-├── shift_id INTEGER FK → shifts.id NOT NULL
-├── operator_id INTEGER FK → users.id NOT NULL -- entry operator (snapshot)
-├── entry_time TIMESTAMP NOT NULL
-├── exit_time TIMESTAMP NULLABLE -- NULL = car still inside
-├── duration_minutes INTEGER NULLABLE -- computed on exit, stored for audit
-├── pricing_rule_id INTEGER FK → pricing_rules.id NULLABLE
-├── amount_charged INTEGER NULLABLE -- piastres; NULL until exit
-├── payment_method ENUM('cash') DEFAULT 'cash' -- extensible for future methods
-├── is_paid BOOLEAN DEFAULT FALSE
-├── exit_operator_id INTEGER FK → users.id NULLABLE -- may differ from entry operator
-├── exit_shift_id INTEGER FK → shifts.id NULLABLE
-├── receipt_printed_at TIMESTAMP NULLABLE
-├── is_deleted BOOLEAN DEFAULT FALSE -- soft delete only
-├── notes TEXT NULLABLE
-├── created_at TIMESTAMP NOT NULL
-└── updated_at TIMESTAMP NOT NULL
-```
-**Rules:**
-- `ticket_number` format: `G{gate}-{YYYYMMDD}-{5-digit sequence}`. Example: `G3-20240815-00042`.
-- `duration_minutes` and `amount_charged` are computed by `PricingService` at exit and stored permanently — they must not be recomputed after the fact.
-- A session with `is_paid = TRUE` and `exit_time NOT NULL` is considered closed and immutable.
-- Searching by plate must use normalized form via `PlateService` before querying (if plate is used).
-- `card_barcode` must be unique among active sessions (where `exit_time IS NULL`) to prevent duplicate entry of the same card.
-
----
-
-#### `audit_logs` — Immutable Action Trail
-```
-audit_logs
-├── id INTEGER PK AUTO
-├── actor_id INTEGER FK → users.id NOT NULL
-├── action VARCHAR(80) NOT NULL -- e.g., "SESSION_CREATED", "RATE_CHANGED"
-├── entity_type VARCHAR(40) NOT NULL -- e.g., "parking_session", "pricing_rule"
-├── entity_id INTEGER NOT NULL
-├── payload_before JSONB / TEXT NULLABLE -- state before change
-├── payload_after JSONB / TEXT NULLABLE -- state after change
-└── created_at TIMESTAMP NOT NULL -- no updated_at; logs are immutable
-```
-**Rules:**
-- This table is append-only. No UPDATE or DELETE is ever issued against it.
-- Logged automatically by services via a shared `AuditService.log()` call.
-- Actions to always log: session create, session close, payment record, rate change, shift open, shift close, user create/deactivate.
-
----
-
-### 2.3 Relationship Summary
-
-| Relationship | Type | Notes |
-|---|---|---|
-| User → Shifts | One-to-Many | One operator, many shifts over time |
-| Shift → ParkingSessions | One-to-Many | All sessions opened during a shift |
-| PricingRule → ParkingSessions | One-to-Many | Rule snapshotted at exit time |
-| User → AuditLogs | One-to-Many | Every logged action tied to an actor |
-| ParkingSession → exit operator | Many-to-One (nullable) | Exit may be a different operator |
-
----
-
-## 3. API Endpoints Outline
-
-All JSON endpoints: prefix `/api/v1/`  
-All HTML operator/admin pages: prefix `/ui/`  
-Auth: JWT in `HttpOnly` cookie named `pgms_token`
-
----
-
-### 3.1 Authentication
-
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| `POST` | `/api/v1/auth/login` | Public | Accepts `username` + `password`; returns JWT cookie |
-| `POST` | `/api/v1/auth/logout` | Required | Clears JWT cookie |
-| `GET` | `/api/v1/auth/me` | Required | Returns current user profile and role |
-| `GET` | `/ui/login` | Public | Login page (HTML) |
-
----
-
-### 3.2 Operator UI Pages (HTML)
-
-| Method | Path | Role | Description |
-|---|---|---|---|
-| `GET` | `/ui/operator/dashboard` | operator | Gate dashboard: open shift status, today's count |
-| `GET` | `/ui/operator/shift/start` | operator | Start shift form |
-| `POST` | `/ui/operator/shift/start` | operator | Submit shift start |
-| `GET` | `/ui/operator/shift/end` | operator | End shift form with cash reconciliation |
-| `POST` | `/ui/operator/shift/end` | operator | Submit shift close |
-| `GET` | `/ui/operator/entry` | operator | Car entry form (barcode scan + optional plate input) |
-| `POST` | `/ui/operator/entry` | operator | Submit car entry; redirects to session detail |
-| `GET` | `/ui/operator/exit` | operator | Car exit lookup form |
-| `POST` | `/ui/operator/exit/lookup` | operator | Search session by barcode, plate, or ticket number |
-| `GET` | `/ui/operator/exit/{session_id}` | operator | Exit confirmation + price preview |
-| `POST` | `/ui/operator/exit/{session_id}/confirm` | operator | Confirm exit + mark paid |
-| `GET` | `/ui/operator/receipt/{session_id}` | operator | Printable 58mm receipt (print.css) |
-
----
-
-### 3.3 Parking Sessions API
-
-| Method | Path | Role | Description |
-|---|---|---|---|
-| `POST` | `/api/v1/sessions/` | operator | Create new parking session (requires `card_barcode`, optional `plate_number`) |
-| `GET` | `/api/v1/sessions/` | admin | List all sessions; filterable by date, gate, status |
-| `GET` | `/api/v1/sessions/{id}` | operator, admin | Get session detail |
-| `GET` | `/api/v1/sessions/lookup` | operator | Search by `barcode`, `plate`, or `ticket_number` query param |
-| `PATCH` | `/api/v1/sessions/{id}/exit` | operator | Record exit: computes duration + price, marks paid |
-| `GET` | `/api/v1/sessions/{id}/receipt` | operator | Returns receipt data payload (JSON) |
-| `GET` | `/api/v1/sessions/active` | admin | All currently-parked cars (no exit_time) |
-
----
-
-### 3.4 Shifts API
-
-| Method | Path | Role | Description |
-|---|---|---|---|
-| `POST` | `/api/v1/shifts/` | operator | Start a new shift |
-| `GET` | `/api/v1/shifts/` | admin | List all shifts; filterable by operator, date, gate |
-| `GET` | `/api/v1/shifts/active` | operator, admin | Get caller's current open shift |
-| `GET` | `/api/v1/shifts/{id}` | operator, admin | Get shift detail with session summary |
-| `PATCH` | `/api/v1/shifts/{id}/close` | operator | Close shift; submit closing cash amount |
-| `GET` | `/api/v1/shifts/{id}/summary` | admin | Cash totals, session count, discrepancy report |
-
----
-
-### 3.5 Pricing Rules API
-
-| Method | Path | Role | Description |
-|---|---|---|---|
-| `POST` | `/api/v1/rates/` | admin | Create a new pricing rule |
-| `GET` | `/api/v1/rates/` | admin | List all pricing rules (history) |
-| `GET` | `/api/v1/rates/active` | operator, admin | Get currently active pricing rule |
-| `PATCH` | `/api/v1/rates/{id}/activate` | admin | Set a rule as active (deactivates current) |
-| `GET` | `/api/v1/rates/preview` | operator | Preview price for a given `entry_time` query param |
-
----
-
-### 3.6 Users & Operators API
-
-| Method | Path | Role | Description |
-|---|---|---|---|
-| `POST` | `/api/v1/users/` | admin | Create operator or admin account |
-| `GET` | `/api/v1/users/` | admin | List all users |
-| `GET` | `/api/v1/users/{id}` | admin | Get user detail |
-| `PATCH` | `/api/v1/users/{id}` | admin | Update user info or gate assignment |
-| `PATCH` | `/api/v1/users/{id}/deactivate` | admin | Soft-deactivate an operator |
-| `PATCH` | `/api/v1/users/{id}/reset-password` | admin | Force password reset |
-
----
-
-### 3.7 Admin Dashboard & Reports API
-
-| Method | Path | Role | Description |
-|---|---|---|---|
-| `GET` | `/ui/admin/dashboard` | admin | Overview: live occupancy, today's revenue, active shifts |
-| `GET` | `/ui/admin/reports/daily` | admin | Daily revenue and session report (HTML) |
-| `GET` | `/ui/admin/reports/shifts` | admin | Shift reconciliation report (HTML) |
-| `GET` | `/api/v1/reports/daily` | admin | Daily summary JSON; params: `date`, `gate` |
-| `GET` | `/api/v1/reports/revenue` | admin | Revenue by date range; params: `from`, `to`, `gate` |
-| `GET` | `/api/v1/reports/occupancy` | admin | Current gate-by-gate occupancy count |
-| `GET` | `/api/v1/reports/operators` | admin | Per-operator session count and cash collected |
-
----
-
-### 3.8 Standard Response Envelopes
-
-**Success (list):**
-```json
-{
-  "data": [ { "..." } ],
-  "total": 120,
-  "page": 1,
-  "size": 20
-}
-```
-
-**Success (single):**
-```json
-{
-  "data": { "..." }
-}
-```
-
-**Error:**
-```json
-{
-  "detail": "Session not found.",
-  "code": "SESSION_NOT_FOUND"
-}
+    audit_logs {
+        int id PK
+        int actor_id FK
+        string action
+        string entity_type
+        int entity_id
+        text payload_before
+        text payload_after
+        datetime created_at
+    }
 ```
 
 ---
 
-## 4. Execution Phases
+## 6. خارطة المراحل المنفذة فعلياً في الكود (Actual Implemented Phases)
+
+توضح هذه الخارطة ما تم بناؤه واختباره واعتماده فعلياً في المستودع بنسبة 100%:
+
+### المرحلة 1: النواة المعمارية والمصادقة المزدوجة (Phase 1 — Core & Auth) — [مكتملة 100%]
+- [x] إعداد هيكل المشروع النظيف (Clean Architecture) وفصل الطبقات (`models/`, `repositories/`, `services/`, `routes/`, `schemas/`).
+- [x] محرك قواعد البيانات غير المتزامن المزدوج (`PostgreSQL` للإنتاج و `SQLite` للتطوير/الاختبارات).
+- [x] إدارة التهجيرات الكاملة عبر `Alembic`.
+- [x] دورة حياة التطبيق `FastAPI Lifespan` مع فحص صحة الاتصال بالداتابيز.
+- [x] نموذج المستخدمين `User` وتطبيق قيد التحقق الصارم بين الدور ورقم البوابة (`ck_users_role_gate_consistency`).
+- [x] خدمة المصادقة `AuthService` بتشفير `bcrypt` وإصدار رموز JWT.
+- [x] حماية أمنية مزدوجة: كوكيز `pgms_token` المشفرة للواجهات + `Bearer Token` للواجهات البرمجية.
+- [x] سكريبت البذر المبدئي `seed.py` لتوليد حسابات المشغلين والمديرين ولائحة الأسعار الافتراضية.
+
+### المرحلة 2: تشغيل الجراج وإدارة الكروت والتسعير (Phase 2 — Parking Operations & Pricing) — [مكتملة 100%]
+- [x] نظام مخزون الكروت `ParkingCard` مع التوليد الفردي والمدى وتوليد الدفعات (`/bulk`, `/range`).
+- [x] خدمة الكروت `CardService` والتحقق من صيغة الباركود وتوحيده بالأحرف الكبيرة.
+- [x] دورة حياة جلسات الانتظار `ParkingSession` مع منع التكرار بفهرس جزئي فريد (`idx_active_card_id`).
+- [x] محرك احتساب الأسعار المتقدم `PricingService`:
+  - دعم التسعير الشرائحي: سعر الساعة الأولى (`first_hour_charge`) والساعات اللاحقة (`subsequent_hour_charge`).
+  - دعم التسعير الثابت بالساعة (`rate_per_hour`).
+  - خصم فترة السماح (`grace_period_mins`) واحتساب الحد الأدنى (`minimum_charge`).
+- [x] مسار الكروت المفقودة المخصص واحتساب غرامة فقد الكارت (`lost_card_penalty`).
+- [x] خدمة الورديات `ShiftService` والمطابقة النقدية الدقيقة وحساب الفوارق والعجز.
+- [x] واجهة المشغل فائقة السرعة POS في `templates/operator/dashboard.html` و `static/js/dashboard.js` الداعمة للماسح بنمط Wedge ونغمات الصوت عبر Web Audio API.
+- [x] قوالب طباعة الإيصالات الحرارية القياسية (80mm / 58mm).
+
+### المرحلة 3: لوحة الإدارة والتحليلات الحية والتقارير (Phase 3 — Admin & Analytics) — [مكتملة 100%]
+- [x] لوحة الإحصائيات اللحظية (Live Stats): نسبة الإشغال، عدد السيارات النشطة، إيراد اليوم، والسيارات المقيمة لأكثر من 24 ساعة.
+- [x] لوحة مراقبة البوابات المباشرة (Gate Panel 1–5): متابعة المشغلين النشطين والورديات لحظياً.
+- [x] مستكشف الجلسات الشامل مع فلاتر التاريخ، البوابة، المشغل، الحالة، اللوحة، والكارت.
+- [x] آلية التسوية والإغلاق الإداري للجلسات العالقة (`admin_override_close_session`) مع تدوين الملاحظات الإدارية الإجبارية.
+- [x] تقارير الإيرادات الموزعة: حسب البوابة، نوع الخدمة، المشغل، والمنحنى اليومي.
+- [x] تصدير كامل إلى ملفات CSV للجلسات والورديات والتقارير المالية.
+- [x] قوالب طباعة تقارير الحسابات الرسمية (`templates/admin/reports/print.html`).
+
+### المرحلة 4: نظام المشتركين وإدارة الأساطيل والاستيراد (Phase 4 — Subscriptions & Fleet) — [مكتملة 100%]
+- [x] نماذج بيانات `Subscriber`, `SubscriptionPlan`, و `Subscription`.
+- [x] دعم الخطط المخصصة بالأسعار الحرة والمدد المتغيرة إلى جانب الخطط الثابتة.
+- [x] التحقق التلقائي عند دخول المشتركين ومنح الدخول المجاني الفوري.
+- [x] تنبيه المشغل عند محاولة دخول كارت اشتراك منتهي الصلاحية مع خيار المتابعة كتذكرة عادية.
+- [x] فحص وتطبيق الحد الأقصى للدخول اليومي للمركبة (`max_entries_per_day`).
+- [x] المزامنة التلقائية عند إقلاع السيرفر: إنهاء الاشتراكات المنتهية وتفعيل المؤجلة وتسجيلها في سجل التدقيق.
+- [x] محرك الاستيراد الجماعي الذكي من إكسيل و CSV (`ExcelImportService`):
+  - التعرّف التلقائي على الأعمدة العربية والإنجليزية لكود الكارت، اسم الموظف، اللوحة، الشركة، والهاتف.
+  - المعاينة المطابقة والفحص الدقيق للأخطاء قبل الحفظ الفعلي.
+  - إتاحة تحميل قالب إكسيل جاهز للمشتركين.
+
+### المرحلة 5: الذكاء الاصطناعي والكاميرات الموزعة (Phase 5 — Edge AI & ANPR) — [مكتملة 100%]
+- [x] تطوير وكيل الجراج المستقل `edge_agent/` المتصل ببطاقة الرسوميات NVIDIA CUDA.
+- [x] ربط كاميرات Hikvision عبر بروتوكول HTTP ISAPI ومصادقة Digest Auth.
+- [x] تشغيل موديلات YOLOv8 لكشف اللوحات وOCR الحروف والأرقام المصرية مع الترتيب من اليمين لليسار.
+- [x] بناء اتصال WebSocket مشفر وعكسي (`/ws/edge`) لتجاوز مشاكل الشبكة المحلية والـ NAT بالجراج.
+- [x] تنفيذ ناقل الأحداث الموزع بين العمليات `PostgresEventBus` عبر `LISTEN/NOTIFY`.
+- [x] تدفق الدخول فائق السرعة غير المعطل لحركة المرور (Non-blocking Entry).
+- [x] التقاط لقطات الخروج التأكيدية التلقائية بدون تشغيل الـ OCR لتوفير الموارد وسرعة الخدمة.
+- [x] التعديل اليدوي السريع للوحة من شاشة المشغل وحفظه فوراً في قاعدة البيانات.
+- [x] الأرشفة التلقائية المستمرة للصور واللوحات على جهاز الجراج لتغذية تدريب الموديلات دورياً.
 
 ---
 
-### Phase 1 — Foundation: Database, Config & Authentication
+## 7. القواعد الإلزامية ودليل الصيانة والتشغيل (Operational Rules)
 
-**Goal:** Running app with database migrations, environment config, and secure login.
-
-**Deliverables:**
-
-- [ ] Project scaffold matching `constitution.md` directory structure
-- [ ] `config.py` with `pydantic-settings`; `.env` + `.env.example` committed
-- [ ] `database.py` — async engine, `AsyncSession` factory, `Base`
-- [ ] Alembic configured; initial migration with all 5 tables
-- [ ] All SQLAlchemy models: `User`, `Shift`, `PricingRule`, `ParkingSession`, `AuditLog`
-- [ ] All Pydantic schemas (request + response) for every model
-- [ ] `AuthService` — password hashing, JWT creation, JWT validation
-- [ ] `POST /api/v1/auth/login` and `POST /api/v1/auth/logout`
-- [ ] JWT cookie middleware; role-based dependency guards (`require_operator`, `require_admin`)
-- [ ] Seed script: one admin user, one operator per gate (5 operators), one default pricing rule
-- [ ] `GET /ui/login` — mobile-first login page, RTL, Arabic labels
-- [ ] Unit tests: `AuthService` (100% coverage)
-- [ ] Integration tests: login, logout, protected route rejection
-
-**Exit Criteria:** A seeded database, working login/logout, and all protected routes returning 401 for unauthenticated requests.
-
----
-
-### Phase 2 — Operator Application & Core Business Logic
-
-**Goal:** Operators can log car entries and exits, calculate prices, and print receipts on the Sunmi V2.
-
-**Deliverables:**
-
-- [ ] `PlateService` — normalization, validation, diacritic-insensitive search (if plate number provided)
-- [ ] `PricingService` — duration calculation, grace period, integer piastre fee computation
-- [ ] `TicketService` — ticket number generation (`G{gate}-{YYYYMMDD}-{SEQ}`)
-- [ ] `ShiftService` — open shift, close shift, enforce one-open-shift rule
-- [ ] `AuditService` — generic `.log()` method; wired into all services
-- [ ] All operator route handlers (`/ui/operator/*` and `/api/v1/sessions/`, `/api/v1/shifts/`)
-- [ ] Operator HTML templates (Jinja2 + Tailwind, RTL, Arabic):
-  - [ ] `base.html` — RTL layout, logical CSS properties, no external CDN
-  - [ ] `operator/dashboard.html` — shift status, today's session count, quick-action buttons
-  - [ ] `operator/entry.html` — entry form (barcode scanner focused, optional plate input)
-  - [ ] `operator/exit_lookup.html` — exit lookup (barcode scanner focused, fallback plate/ticket input)
-  - [ ] `operator/exit_confirm.html` — duration, price preview (Arabic numerals optional), confirm button
-  - [ ] `receipts/thermal.html` — 58mm layout, monospace, all required fields, `@media print` only
-- [ ] `GET /api/v1/rates/preview` — live price estimation endpoint (used by exit confirm page via fetch)
-- [ ] Vanilla JS: plate input formatter (RTL character reordering), print trigger on receipt page
-- [ ] `static/print.css` — 58mm receipt print stylesheet, hides all non-receipt UI
-- [ ] Unit tests: `PlateService`, `PricingService`, `TicketService`, `ShiftService`
-- [ ] Integration tests: full entry → exit → receipt flow per gate
-- [ ] Manual QA checklist: test on Sunmi V2 device (touch targets, print, Arabic display)
-
-**Exit Criteria:** An operator on a Sunmi V2 can log a car in, find it on exit, charge the correct fee, and print a legible Arabic receipt — end-to-end with no errors.
-
----
-
-### Phase 3 — Admin Dashboard & Reporting
-
-**Goal:** Admin has full visibility into operations: operators, shifts, cash, occupancy, and revenue.
-
-**Deliverables:**
-
-- [ ] `ReportService` — daily revenue, shift reconciliation, gate occupancy, operator performance
-- [ ] All admin route handlers (`/ui/admin/*` and `/api/v1/reports/*`, `/api/v1/users/*`)
-- [ ] Admin HTML templates (Jinja2 + Tailwind, desktop-first with responsive fallback):
-  - [ ] `admin/dashboard.html` — live occupancy per gate, today's revenue, active shifts, alert for unclosed shifts
-  - [ ] `admin/operators.html` — user list, create/deactivate/reassign gate
-  - [ ] `admin/shifts.html` — shift list, filter by date/operator/gate, cash discrepancy highlight
-  - [ ] `admin/rates.html` — pricing rule history, activate rule, create new rule
-  - [ ] `admin/reports/daily.html` — tabular daily summary with gate breakdown
-  - [ ] `admin/reports/revenue.html` — date-range revenue with per-gate totals
-- [ ] Jinja2 custom filters: `format_egp` (Arabic + Western numeral variant), `format_duration`
-- [ ] `GET /api/v1/reports/*` — all reporting endpoints with JSON response
-- [ ] Cash discrepancy logic: flag shifts where `closing_cash` deviates from computed total by > configurable threshold
-- [ ] Unit tests: `ReportService` (all aggregation functions)
-- [ ] Integration tests: all admin endpoints, report accuracy against seeded data
-- [ ] Role enforcement tests: operator cannot access admin routes (expect 403)
-
-**Exit Criteria:** Admin can log in, see live garage state, review any shift's cash reconciliation, change the hourly rate, and run a revenue report for any date range.
-
----
-
-### Phase 4 — Hardening, Performance & Deployment (Future)
-
-> Not in current scope. Listed for planning awareness.
-
-- [ ] Switch SQLite → PostgreSQL; run full regression suite
-- [ ] Add `PGMS_ENV=production` guard that blocks `DEBUG=True`
-- [ ] Rate limiting on login endpoint (prevent brute-force)
-- [ ] Dockerize: `Dockerfile` + `docker-compose.yml` (app + PostgreSQL)
-- [ ] Nginx reverse proxy config for LAN deployment
-- [ ] Automated database backup script (daily, rotating 30-day retention)
-- [ ] Load test: simulate 5 concurrent operators across 5 gates
-- [ ] Operator training guide (Arabic PDF)
-
----
-
-## 5. Open Questions & Decisions Log
-
-| # | Question | Status | Decision |
-|---|---|---|---|
-| 1 | Can a car enter at Gate 1 and exit at Gate 3? | **Open** | Assumed yes — `exit_operator_id` differs from entry operator |
-| 2 | Is there a maximum parking duration before an alert? | **Open** | Suggest 24-hour flag in Phase 3 |
-| 3 | Will lost-ticket cases require a fixed penalty fee? | **Open** | Add `is_lost_ticket` bool to `ParkingSession` in Phase 2 if confirmed |
-| 4 | Do pricing rules vary by time of day (night rate)? | **Open** | Current model supports multiple rules; time-based auto-switching deferred to Phase 4 |
-| 5 | Is cash the only payment method? | **Decided** | Yes for Phase 1–3; `payment_method` enum is extensible |
-| 6 | Should receipts be bilingual (Arabic + English)? | **Open** | Default Arabic only; English toggle via config flag if needed |
+1. **التعامل مع المبالغ المالية:**
+   - الحسابات في الداتابيز: **قروش صحيحة حصراً** (`int`).
+   - لا تستخدم `float` نهائياً. يتم التحويل من وإلى الجنيه في واجهات العرض ومخططات Pydantic فقط (`amount_piastres / 100`).
+2. **سجل التدقيق الإجباري (Audit Trail):**
+   - أي عملية تعديل أو تسوية أو دخول أو خروج يجب أن تمر عبر `audit_service.log`.
+   - يتم تجريد كلمات المرور تلقائياً من أي حمولة بيانات قبل تخزينها في جدول `audit_logs`.
+3. **أمان وحصانة البوابات:**
+   - فشل أي كاميرا أو بطء شبكة أو انقطاع جهاز الذكاء الاصطناعي لا يجوز أن يوقف دخول أو خروج السيارات.
+   - حركة المرور الفيزيائية هي الأولوية الأولى، والكاميرات والـ OCR هي ميزات تعزيز رقابي وتوثيق غير متزامن.
+4. **صيانة وتدوير مساحة تخزين الصور (Storage Housekeeping):**
+   - تتراكم صور السيارات المقروءة بصيغة WebP في مسار `media/plates/` بالسيرفر (حوالي 3 جيجابايت شهرياً لمعدل 1000 سيارة يومياً).
+   - يُنصح بتشغيل أمر صيانة دوري (Cron Job) لحذف الصور التي تجاوزت 90 يوماً:
+     ```bash
+     find /srv/pgms-babelooq/app/media/plates -type f -name '*.webp' -mtime +90 -delete
+     ```

@@ -4,8 +4,9 @@
 > **Scope:** Subscription plans, subscriber management, subscription lifecycle,
 > automated entry/exit for subscribed vehicles, admin UI, reporting, and
 > expiry alerts.
-> **Prerequisite reading:** `constitution.md`, `plan.md`, `spec_phase1.md`,
-> `spec_phase2.md`, `docs/specs/phase-3-admin/spec.md`
+> **Prerequisite reading:** `docs/constitution.md`, `docs/master-plan.md`,
+> `docs/specs/phase-1-core/spec.md`, `docs/specs/phase-2-operator/spec.md`,
+> `docs/specs/phase-3-admin/spec.md`
 > **Out of scope:** Online payment gateway integration, SMS/email notifications,
 > mobile app for subscribers, multi-branch subscriptions, family/fleet plans,
 > automatic renewal charging, QR code generation for subscribers.
@@ -385,6 +386,47 @@ No existing service is rewritten — only extended.
 
 ---
 
+### 2.6 Admin — Bulk Onboarding & Flexible Billing
+
+---
+
+**US-418 — Excel/CSV Bulk Import for Subscribers & Cards**
+> *As an admin, I want to bulk import subscribers from Excel or CSV files with card codes,
+> company names, and automatic subscription creation, so that I can onboard hundreds of corporate
+> and VIP clients in seconds.*
+
+**Acceptance Criteria:**
+- `GET /ui/admin/subscribers/import` renders the bulk import interface with drag-and-drop file upload.
+- `GET /ui/admin/subscribers/template-excel` downloads a professionally styled Excel template (`subscribers_template.xlsx`) with Arabic headers:
+  - كود الكارت (Card Code)
+  - اسم المشترك (Subscriber Full Name)
+  - رقم اللوحة (Plate Number)
+  - رقم الهاتف (Phone Number)
+  - الشركة / الجهة (Company / Organization)
+  - ملاحظات (Notes)
+- `POST /ui/admin/subscribers/import-preview` parses `.xlsx` or `.csv` (supporting UTF-8, CP1256), validates fields, matches cards (flags missing cards to be created or unavailable cards), detects existing subscribers, and returns an interactive summary with validation flags and warnings.
+- `POST /ui/admin/subscribers/import-confirm` executes the import inside a single atomic database transaction:
+  - Automatically creates new `ParkingCard` records with `status = AVAILABLE` if the card code is new.
+  - Creates or updates `Subscriber` records (`full_name`, `plate_number`, `phone_number`, `company_name`, `card_code`).
+  - Creates active `Subscription` records linking subscriber and card, setting `card.status = IN_USE`.
+  - Default expiration aligns to the end of the calendar month.
+  - Commits atomically or rolls back on critical errors, writing audit logs.
+
+---
+
+**US-419 — Custom Pricing & End-of-Calendar-Month Billing**
+> *As an admin, I want flexibility to set custom subscription prices and durations without predefined plans,
+> and have subscriptions expire at the end of the calendar month by default, conforming to Egyptian commercial garage norms.*
+
+**Acceptance Criteria:**
+- In the subscription creation screen (`/ui/admin/subscribers/{id}/subscribe`), the admin can choose between predefined plans or "اشتراك مخصص (سعر حر)".
+- When choosing a custom plan, the admin specifies custom duration in days and custom price in EGP, which is stored in `amount_paid_piastres` and backed by an auto-created plan `اشتراك مخصص (سعر حر)`.
+- If no explicit `end_date` is entered, `end_date` defaults to the last calendar day of the start date's month: `date(start_date.year, start_date.month, calendar.monthrange(start_date.year, start_date.month)[1])`.
+- On renewal before expiry, if the current subscription expires on the 30th/31st, the renewed subscription continues seamlessly starting on the 1st of the next month (`old_sub.end_date + timedelta(days=1)`) and expires at the end of that subsequent month.
+- Supports card assignment by typing the physical card code (`card_code`) or selecting from available cards.
+
+---
+
 ## 3. Functional Requirements
 
 ### 3.1 Data Models
@@ -420,6 +462,8 @@ subscribers
 ├── full_name VARCHAR(120) NOT NULL
 ├── phone_number VARCHAR(20) NULLABLE
 ├── plate_number VARCHAR(30) UNIQUE NOT NULL -- normalized, indexed
+├── company_name VARCHAR(150) NULLABLE -- company / bank / organization, indexed
+├── card_code VARCHAR(50) UNIQUE NULLABLE -- assigned physical card code, indexed
 ├── notes TEXT NULLABLE
 ├── created_at TIMESTAMP NOT NULL
 └── updated_at TIMESTAMP NOT NULL
@@ -429,6 +473,8 @@ subscribers
 - `plate_number` is normalized via `PlateService.normalize` before storage.
 - `plate_number` is unique — one subscriber record per plate.
 - `plate_number` is immutable after creation.
+- `company_name` facilitates corporate fleet grouping (e.g. "البنك الأهلي", "شركة المصرية").
+- `card_code` maps the subscriber directly to their RFID/barcode card.
 
 ---
 
@@ -437,21 +483,19 @@ subscribers
 subscriptions
 ├── id INTEGER PK AUTO
 ├── subscriber_id INTEGER FK → subscribers.id NOT NULL, indexed
-├── plan_id INTEGER FK → subscription_plans.id NOT NULL
+├── plan_id INTEGER FK → subscription_plans.id NOT NULL -- predefined or custom plan
 ├── card_id INTEGER FK → parking_cards.id NOT NULL, indexed
 ├── plate_number VARCHAR(30) NOT NULL -- snapshot at creation
 ├── start_date DATE NOT NULL -- Cairo calendar date
-├── end_date DATE NOT NULL -- start + duration_days
+├── end_date DATE NOT NULL -- month-end or start + duration_days
 ├── status ENUM('ACTIVE','EXPIRED','CANCELLED','PENDING')
-│ NOT NULL DEFAULT 'ACTIVE', indexed
+│   NOT NULL DEFAULT 'ACTIVE', indexed
 ├── amount_paid_piastres INTEGER NOT NULL -- actual amount paid
-├── plan_price_snapshot INTEGER NOT NULL -- plan price at time
-│ -- of subscription
+├── plan_price_snapshot INTEGER NOT NULL -- plan price at time of subscription
 ├── paid_at TIMESTAMP NULLABLE
 ├── collected_by INTEGER FK → users.id NULLABLE
 ├── renewal_count SMALLINT NOT NULL DEFAULT 0 -- 0 = first subscription
-├── previous_subscription_id INTEGER FK → subscriptions.id NULLABLE
-│ -- for renewal chain
+├── previous_subscription_id INTEGER FK → subscriptions.id NULLABLE -- renewal chain
 ├── cancel_reason TEXT NULLABLE
 ├── ended_at TIMESTAMP NULLABLE -- when cancelled/expired
 ├── notes TEXT NULLABLE
@@ -460,15 +504,14 @@ subscriptions
 
 
 **Rules:**
-- Only one subscription per subscriber may have `status = ACTIVE` or
-  `status = PENDING` at any time. Enforced at service layer.
-- `end_date = start_date + timedelta(days=plan.duration_days)`.
-- `plan_price_snapshot` captures the plan price at creation time so historical
-  records are accurate even if the plan price later changes.
-- `amount_paid_piastres` may differ from `plan_price_snapshot` (discounts).
+- Only one subscription per subscriber may have `status = ACTIVE` or `status = PENDING` at any time (enforced at service layer).
+- Default expiration aligns to the end of the calendar month (`end_date = date(year, month, last_day_num)`), or custom `end_date` if provided.
+- Dynamic custom plans ("اشتراك مخصص (سعر حر)") are automatically created/reused when `plan_id` is omitted.
+- Card resolution accepts either `card_code` (typed/scanned code) or `card_id`.
+- `plan_price_snapshot` captures the plan price at creation time so historical records are accurate even if the plan price later changes.
+- `amount_paid_piastres` may differ from `plan_price_snapshot` (custom pricing, discounts, complimentary).
 - When `status = ACTIVE`, the associated card must have `status = IN_USE`.
-- When `status` transitions to `EXPIRED` or `CANCELLED`, the card must be
-  freed (`status = AVAILABLE`).
+- When `status` transitions to `EXPIRED` or `CANCELLED`, the card must be freed (`status = AVAILABLE`).
 
 ---
 
@@ -535,13 +578,14 @@ parking_sessions (additions only)
 |---|---|
 | FR-SUB-001 | `get_active_for_card(card_id: int, db) -> Subscription | None` — queries subscriptions where `card_id = :id` and `status IN ('ACTIVE', 'PENDING')` and `start_date <= cairo_today` and `end_date >= cairo_today`. Returns the subscription or `None`. This is called on every entry scan. Must complete in under 50ms. |
 | FR-SUB-002 | `check_daily_limit(subscription: Subscription, db) -> bool` — if `subscription.plan.max_entries_per_day IS NULL`, returns `True` (no limit). Otherwise counts sessions for this `subscription_id` where `entry_time >= cairo_today_start_utc`. Returns `True` if count < limit, `False` if limit reached. |
-| FR-SUB-003 | `create_subscription(subscriber_id, plan_id, card_id, start_date, amount_paid_piastres, notes, admin_id, db) -> Subscription` — validates plan is active, card is available, subscriber has no active/pending sub. Computes `end_date`. Creates the record. Sets `card.status = IN_USE`. Commits. Logs `SUBSCRIPTION_CREATED`. |
-| FR-SUB-004 | `renew_subscription(subscription_id, amount_paid_piastres, notes, admin_id, db) -> Subscription` — fetches existing sub. Computes new `start_date` and `end_date`. Creates new subscription record with `renewal_count = old.renewal_count + 1` and `previous_subscription_id = old.id`. If `start_date = today`: sets old sub `EXPIRED`, new sub `ACTIVE`, card remains `IN_USE`. If `start_date` is future: new sub `PENDING`, old sub stays `ACTIVE`. Commits. Logs `SUBSCRIPTION_RENEWED`. |
+| FR-SUB-003 | `create_subscription(data: SubscriptionCreate, admin_id: int) -> Subscription` — accepts `plan_id` (predefined) or None (auto custom plan "اشتراك مخصص (سعر حر)"). Resolves card by `card_code` or `card_id`. Validates subscriber and active status. Computes default calendar month-end `end_date` if not provided. Sets `card.status = IN_USE`. Commits atomically. Logs `SUBSCRIPTION_CREATED`. |
+| FR-SUB-004 | `renew_subscription(subscription_id: int, data: SubscriptionRenew, admin_id: int) -> Subscription` — fetches existing sub. Computes continuation start date (`end_date + timedelta(days=1)` if not yet expired, or `today` if already expired) and calendar month-end `end_date`. Creates new subscription record with `renewal_count = old.renewal_count + 1`. If `new_start <= today`: sets old sub `EXPIRED`, new sub `ACTIVE`, card remains `IN_USE`. If future: new sub `PENDING`, old sub stays `ACTIVE`. Commits. Logs `SUBSCRIPTION_RENEWED`. |
 | FR-SUB-005 | `cancel_subscription(subscription_id, cancel_reason, admin_id, db) -> Subscription` — fetches sub. Raises `SubscriptionNotActiveError` if status is not `ACTIVE`. Sets status `CANCELLED`, `ended_at = utcnow()`, `cancel_reason`. Sets `card.status = AVAILABLE`. Commits. Logs `SUBSCRIPTION_CANCELLED`. |
 | FR-SUB-006 | `expire_overdue_subscriptions(db) -> int` — bulk UPDATE: `UPDATE subscriptions SET status='EXPIRED', ended_at=utcnow() WHERE status='ACTIVE' AND end_date < :cairo_today`. Also bulk updates associated cards to `AVAILABLE`. Returns count of rows updated. Called once on app startup via lifespan event. |
 | FR-SUB-007 | `activate_pending_subscriptions(db) -> int` — bulk UPDATE: `UPDATE subscriptions SET status='ACTIVE' WHERE status='PENDING' AND start_date <= :cairo_today`. Returns count updated. Called in the same lifespan event as FR-SUB-006. |
 | FR-SUB-008 | `get_expiring_soon(days: int, db) -> list[Subscription]` — returns subscriptions where `status='ACTIVE'` and `end_date <= cairo_today + timedelta(days=days)`. Used for dashboard alerts. |
 | FR-SUB-009 | `get_expired_unrenewed(db) -> list[Subscription]` — returns subscriptions where `status='EXPIRED'` and no linked subscription has `status IN ('ACTIVE','PENDING')` via `previous_subscription_id` chain. Used for dashboard alerts. |
+| FR-SUB-010 | `ExcelImportService` — parses `.xlsx` / `.csv`, matches card codes, validates rows, previews counts and errors, and executes atomic bulk onboarding creating cards, subscribers, and active subscriptions. |
 
 ---
 
@@ -572,9 +616,9 @@ parking_sessions (additions only)
 
 | ID | Requirement |
 |---|---|
-| FR-SUBS-001 | `create_subscriber(data: SubscriberCreate, admin_id, db) -> Subscriber` — normalizes `plate_number` via `PlateService.normalize`. Checks uniqueness. Creates record. Logs `SUBSCRIBER_CREATED`. |
-| FR-SUBS-002 | `update_subscriber(subscriber_id, data: SubscriberUpdate, admin_id, db) -> Subscriber` — updates `full_name`, `phone_number`, `notes` only. Logs `SUBSCRIBER_UPDATED`. |
-| FR-SUBS-003 | `get_filtered(search, status, plan_id, expiring_days, page, size, db) -> tuple[list[Subscriber], int]` — applies filters. `search` performs `ILIKE` on `full_name` and `plate_number`. `status` filters by the status of the most recent subscription. `expiring_days` filters by `end_date <= today + N`. Returns paginated results. |
+| FR-SUBS-001 | `create_subscriber(data: SubscriberCreate, admin_id, db) -> Subscriber` — normalizes `plate_number` via `PlateService.normalize`. Supports `company_name` and `card_code`. Checks uniqueness. Creates record. Logs `SUBSCRIBER_CREATED`. |
+| FR-SUBS-002 | `update_subscriber(subscriber_id, data: SubscriberUpdate, admin_id, db) -> Subscriber` — updates `full_name`, `phone_number`, `company_name`, `card_code`, `notes`. Logs `SUBSCRIBER_UPDATED`. |
+| FR-SUBS-003 | `get_filtered(search, status, plan_id, expiring_days, page, size, db) -> tuple[list[Subscriber], int]` — applies filters. `search` performs `ILIKE` on `full_name`, `plate_number`, and `company_name`. `status` filters by the status of the most recent subscription. `expiring_days` filters by `end_date <= today + N`. Returns paginated results. |
 | FR-SUBS-004 | `get_by_plate(plate: str, db) -> Subscriber | None` — normalizes plate, queries by `plate_number`. Returns subscriber or `None`. |
 
 ---
@@ -635,6 +679,10 @@ parking_sessions (additions only)
 | `GET` | `/ui/admin/plans` | admin | Plan management page |
 | `GET` | `/ui/admin/subscribers` | admin | Subscriber list page |
 | `GET` | `/ui/admin/subscribers/new` | admin | Create subscriber form |
+| `GET` | `/ui/admin/subscribers/import` | admin | Bulk Excel/CSV import page |
+| `GET` | `/ui/admin/subscribers/template-excel` | admin | Download styled Excel onboarding template |
+| `POST` | `/ui/admin/subscribers/import-preview` | admin | Validate & preview uploaded Excel/CSV rows |
+| `POST` | `/ui/admin/subscribers/import-confirm` | admin | Batch execute atomic import for cards, subscribers & subscriptions |
 | `GET` | `/ui/admin/subscribers/{id}` | admin | Subscriber detail + history |
 | `GET` | `/ui/admin/subscribers/{id}/subscribe` | admin | New subscription form |
 | `GET` | `/ui/admin/subscribers/{id}/renew` | admin | Renewal form |
@@ -649,15 +697,15 @@ parking_sessions (additions only)
 | `PlanCreate` | `label: str`, `duration_days: int (ge=1)`, `price_egp: float (ge=0)`, `max_entries_per_day: int | None`, `description: str | None` |
 | `PlanUpdate` | `label: str | None`, `price_egp: float | None`, `description: str | None`, `max_entries_per_day: int | None` — no `duration_days` |
 | `PlanResponse` | All plan fields; `price_piastres: int`, `price_display: str` (via `format_egp`) |
-| `SubscriberCreate` | `full_name: str`, `plate_number: str`, `phone_number: str | None`, `notes: str | None` |
-| `SubscriberUpdate` | `full_name: str | None`, `phone_number: str | None`, `notes: str | None` — no `plate_number` |
-| `SubscriberResponse` | All subscriber fields + `active_subscription: SubscriptionResponse | None` |
-| `SubscriptionCreate` | `subscriber_id: int`, `plan_id: int`, `card_id: int`, `start_date: date`, `amount_paid_egp: float (ge=0)`, `notes: str | None` |
-| `SubscriptionRenewRequest` | `amount_paid_egp: float (ge=0)`, `notes: str | None` |
-| `SubscriptionCancelRequest` | `cancel_reason: str | None` |
-| `SubscriptionResponse` | All subscription fields; monetary fields as integers (piastres); `days_remaining: int` computed field |
+| `SubscriberCreate` | `full_name: str`, `plate_number: str`, `phone_number: str | None`, `company_name: str | None`, `card_code: str | None`, `notes: str | None` |
+| `SubscriberUpdate` | `full_name: str | None`, `phone_number: str | None`, `company_name: str | None`, `card_code: str | None`, `notes: str | None` — no `plate_number` |
+| `SubscriberResponse` | All subscriber fields + `company_name: str | None`, `card_code: str | None`, `active_subscription: SubscriptionResponse | None` |
+| `SubscriptionCreate` | `subscriber_id: int`, `plan_id: int | None`, `card_id: int | None`, `card_code: str | None`, `duration_days: int | None`, `start_date: date`, `end_date: date | None`, `amount_paid_egp: float (ge=0)`, `notes: str | None` |
+| `SubscriptionRenew` / `SubscriptionRenewRequest` | `plan_id: int | None`, `start_date: date | None`, `end_date: date | None`, `amount_paid_egp: float (ge=0)`, `notes: str | None` |
+| `SubscriptionCancel` / `SubscriptionCancelRequest` | `cancel_reason: str | None` |
+| `SubscriptionResponse` | All subscription fields; monetary fields as integers (piastres); `days_remaining: int` computed field; `amount_paid_egp`, `plan_price_snapshot_egp` |
 | `SubscriptionRevenueSummary` | `total_subscriptions: int`, `total_revenue_piastres: int`, `avg_revenue_piastres: int`, `by_plan: list[PlanRevenueResponse]` |
-| `SubscriptionDashboardStats` | `expiring_soon_count: int`, `expired_unrenewed_count: int`, `active_subscriptions_count: int` |
+| `SubscriptionDashboardStats` | `expiring_soon_count: int`, `expired_unrenewed_count: int`, `active_subscriptions_count: int`, `total_subscribers: int` |
 
 ---
 
@@ -760,14 +808,14 @@ parking_sessions (additions only)
 
 ---
 
-### 4.4 Usability (Sunmi V2 Operator Screen)
+### 4.4 Usability (Gate Workstations & Operator Screens)
 
 | ID | Requirement |
 |---|---|
-| NFR-UX-401 | The subscribed entry confirmation screen must be visually distinct from the regular entry confirmation screen. Use a green background card (not white) with the "مشترك ✓" banner in large text. |
-| NFR-UX-402 | The zero-amount exit confirmation must make it immediately clear to the operator that no payment is needed. The amount "٠٫٠٠ ج.م" must be displayed in a large green font at least `2rem` in size. |
-| NFR-UX-403 | When a subscription is expired at entry time (within the grace check), the operator screen must show a clear amber warning banner before proceeding with the paid flow. The operator must not be confused about why pricing is being applied. |
-| NFR-UX-404 | The subscription receipt must be clearly different from a paid receipt at a glance on 58mm thermal paper. Use the header "إيصال اشتراك" and omit all pricing breakdown lines. |
+| NFR-UX-401 | On Gate 1 (Entry PC Station), the subscribed entry confirmation screen must be visually distinct from the regular entry confirmation screen. It displays a green background card with the "مشترك ✓" banner in large font, showing subscriber name and expiration date. |
+| NFR-UX-402 | On Gate 2 (Exit PC Station), the zero-amount exit confirmation must make it immediately clear to the operator that no payment is needed. The amount "٠٫٠٠ ج.م" is displayed in a large green font at least `2rem` in size with a single "تأكيد الخروج (اشتراك)" button. |
+| NFR-UX-403 | When a subscription is expired at entry time, the operator screen displays a clear amber warning banner before proceeding with the normal paid hourly flow. |
+| NFR-UX-404 | The subscription receipt printed on the Gate 2 thermal printer must be clearly different from a paid receipt at a glance on 58mm thermal paper: header "إيصال اشتراك", subscriber and plate details, subscription expiry date, zero fee, and omitting pricing breakdowns. |
 
 ---
 
@@ -868,38 +916,54 @@ All error responses: `{"detail": "<Arabic message>", "code": "<CODE>"}`.
 
 pgms/
 ├── models/
-│ ├── subscription_plan.py # SubscriptionPlan model
-│ ├── subscriber.py # Subscriber model
-│ └── subscription.py # Subscription model + SubscriptionStatus enum
+│   ├── subscription_plan.py        # SubscriptionPlan model
+│   ├── subscriber.py               # Subscriber model (with company_name & card_code)
+│   └── subscription.py             # Subscription model + SubscriptionStatus enum
 ├── schemas/
-│ └── subscriptions.py # All Phase 4 Pydantic schemas
+│   └── subscriptions.py            # All Phase 4 Pydantic schemas
 ├── repositories/
-│ ├── subscription_plan_repo.py
-│ ├── subscriber_repo.py
-│ └── subscription_repo.py
+│   ├── subscription_plan_repo.py
+│   ├── subscriber_repo.py
+│   └── subscription_repo.py
 ├── services/
-│ ├── subscription_plan_service.py
-│ ├── subscriber_service.py
-│ └── subscription_service.py
+│   ├── subscription_plan_service.py
+│   ├── subscriber_service.py
+│   ├── subscription_service.py
+│   └── excel_import_service.py     # Bulk onboarding parser & atomic executor
 ├── routes/
-│ ├── subscriptions_api.py # /api/v1/subscriptions/* JSON endpoints
-│ └── ui_subscriptions.py # /ui/admin/subscribers/* and /ui/admin/plans/*
+│   ├── subscriptions_api.py        # /api/v1/subscriptions/* JSON endpoints
+│   └── ui_subscriptions.py         # Admin UI subscriber/plan/subscription pages & Excel import
 ├── templates/
-│ ├── admin/
-│ │ ├── plans.html
-│ │ ├── subscribers.html
-│ │ ├── subscriber_new.html
-│ │ ├── subscriber_detail.html
-│ │ ├── subscriber_subscribe.html
-│ │ ├── subscriber_renew.html
-│ │ └── subscriptions.html
-│ ├── operator/
-│ │ ├── entry_confirm.html # MODIFIED: adds subscription banner
-│ │ └── exit_confirm.html # MODIFIED: adds zero-amount subscription view
-│ └── receipts/
-│ └── thermal_subscription.html # NEW: subscription receipt
+│   ├── admin/
+│   │   ├── plans.html
+│   │   ├── subscribers.html
+│   │   ├── subscriber_new.html
+│   │   ├── subscribers_import.html # Drag-and-drop Excel & CSV import
+│   │   ├── subscriber_detail.html
+│   │   ├── subscriber_subscribe.html
+│   │   ├── subscriber_renew.html
+│   │   └── subscriptions.html
+│   ├── operator/
+│   │   ├── entry_confirm.html      # MODIFIED: adds subscription banner
+│   │   └── exit_confirm.html       # MODIFIED: adds zero-amount subscription view
+│   └── receipts/
+│       └── thermal_subscription.html # Subscription thermal receipt
+├── tests/
+│   ├── unit/
+│   │   ├── test_subscription_schemas.py
+│   │   ├── test_subscription_repos.py
+│   │   ├── test_subscription_plan_service.py
+│   │   ├── test_subscription_service.py
+│   │   ├── test_subscription_services.py
+│   │   ├── test_session_subscription.py
+│   │   ├── test_subscription_api.py
+│   │   └── test_excel_import.py
+│   └── integration/
+│       ├── test_subscription_routes.py
+│       ├── test_ui_operator_subscriptions.py
+│       └── test_ui_subscriptions.py
 └── alembic/versions/
-└── phase4_subscriptions.py # New migration
+    └── 1004_phase4_subscriptions.py # Migration script
 
 
 ---

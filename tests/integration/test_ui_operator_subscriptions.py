@@ -123,6 +123,19 @@ async def test_operator_subscribed_card_entry_flow(
     # Extract session_id
     session_id = int(confirm_url.split("/")[-1])
 
+    # Switch operator to exit gate 2 with an active shift
+    op.gate_number = 2
+    shift_exit = Shift(
+        operator_id=op.id,
+        gate_number=2,
+        started_at=datetime.utcnow(),
+        opening_cash_egp=10000,
+    )
+    db_session.add(shift_exit)
+    await db_session.commit()
+    token = auth_service.create_access_token(op.id, op.role.value)
+    async_client.cookies.set("pgms_token", token)
+
     # 3. Post exit lookup for the subscribed card
     res_lookup = await async_client.post(
         "/ui/operator/exit/lookup",
@@ -150,6 +163,11 @@ async def test_operator_subscribed_card_entry_flow(
     assert "٠٫٠٠ ج.م" in res_receipt.text
 
     # 6. Second entry today exceeds max_entries_per_day=1 -> fails with error banner
+    op.gate_number = 1
+    await db_session.commit()
+    token = auth_service.create_access_token(op.id, op.role.value)
+    async_client.cookies.set("pgms_token", token)
+
     res_second_entry = await async_client.post(
         "/ui/operator/entry",
         data={"card_code": "CARD-SUB-01"},

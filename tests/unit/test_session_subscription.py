@@ -176,13 +176,14 @@ async def test_open_session_daily_limit_blocks(db_session: AsyncSession, setup_s
         admin_id=op.id,
     )
 
+    op_id = op.id
     # First session opens and closes
-    open1 = await session_service.open_session("CARD-SESS-3", operator_id=op.id)
-    await session_service.close_session(open1.id, exit_operator_id=op.id)
+    open1 = await session_service.open_session("CARD-SESS-3", operator_id=op_id)
+    await session_service.close_session(open1.id, exit_operator_id=op_id)
 
     # Second entry on the same day should raise SubscriptionDailyLimitReachedError
     with pytest.raises(SubscriptionDailyLimitReachedError):
-        await session_service.open_session("CARD-SESS-3", operator_id=op.id)
+        await session_service.open_session("CARD-SESS-3", operator_id=op_id)
 
 
 @pytest.mark.asyncio
