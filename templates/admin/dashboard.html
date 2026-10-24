@@ -101,7 +101,7 @@
           <tr onclick="window.location.href='/ui/admin/shifts/{{ s.id }}'" class="cursor-pointer hover:bg-gray-700/40 transition">
             <td class="p-3">
               <div class="flex items-center gap-2">
-                <div class="w-7 h-7 rounded-full bg-gray-700 flex items-center justify-center text-xs font-bold text-indigo-300">
+                <div class="w-7 h-7 rounded-full bg-gray-700 flex items-center justify-center text-xs font-bold text-indigo-300 px-2.5 py-0.5 ">
                   {{ (operator_names.get(s.operator_id) or "ع")[0] }}
                 </div>
                 <span class="font-semibold text-white">{{ operator_names.get(s.operator_id) or "عامل غير معروف" }}</span>

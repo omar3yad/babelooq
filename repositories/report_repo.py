@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from typing import Any
 import asyncio
 
-from sqlalchemy import select, func, text, and_
+from sqlalchemy import select, func, text, and_, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.parking_session import ParkingSession, SessionStatus
@@ -137,7 +137,7 @@ class ReportRepository:
             clauses.append("gate_number = :gate_number")
             params["gate_number"] = gate_number
         if operator_id is not None:
-            clauses.append("operator_id = :operator_id")
+            clauses.append("COALESCE(exit_operator_id, operator_id) = :operator_id")
             params["operator_id"] = operator_id
 
         where_sql = " AND ".join(clauses)
@@ -173,7 +173,7 @@ class ReportRepository:
             clauses.append("exit_time < :end_utc")
             params["end_utc"] = end_utc
         if operator_id is not None:
-            clauses.append("operator_id = :operator_id")
+            clauses.append("COALESCE(exit_operator_id, operator_id) = :operator_id")
             params["operator_id"] = operator_id
 
         where_sql = " AND ".join(clauses)
@@ -222,7 +222,7 @@ class ReportRepository:
             ticket_clauses.append("exit_time < :end_utc")
             ticket_params["end_utc"] = end_utc
         if operator_id is not None:
-            ticket_clauses.append("operator_id = :operator_id")
+            ticket_clauses.append("COALESCE(exit_operator_id, operator_id) = :operator_id")
             ticket_params["operator_id"] = operator_id
 
         ticket_sql = text(
@@ -243,7 +243,7 @@ class ReportRepository:
             lost_clauses.append("exit_time < :end_utc")
             lost_params["end_utc"] = end_utc
         if operator_id is not None:
-            lost_clauses.append("operator_id = :operator_id")
+            lost_clauses.append("COALESCE(exit_operator_id, operator_id) = :operator_id")
             lost_params["operator_id"] = operator_id
 
         lost_sql = text(
@@ -332,14 +332,14 @@ class ReportRepository:
         where_sql = " AND ".join(clauses)
         sql = text(f"""
             SELECT
-                ps.operator_id,
+                COALESCE(ps.exit_operator_id, ps.operator_id) AS operator_id,
                 u.full_name AS operator_name,
                 COUNT(*) AS session_count,
                 COALESCE(SUM(ps.amount_charged), 0) AS total_piastres
             FROM parking_sessions ps
-            JOIN users u ON ps.operator_id = u.id
+            JOIN users u ON COALESCE(ps.exit_operator_id, ps.operator_id) = u.id
             WHERE {where_sql}
-            GROUP BY ps.operator_id, u.full_name
+            GROUP BY COALESCE(ps.exit_operator_id, ps.operator_id), u.full_name
             ORDER BY total_piastres DESC
         """)
         rows = (await self.db.execute(sql, params)).mappings().all()
@@ -382,7 +382,7 @@ class ReportRepository:
             clauses.append("gate_number = :gate_number")
             params["gate_number"] = gate_number
         if operator_id is not None:
-            clauses.append("operator_id = :operator_id")
+            clauses.append("COALESCE(exit_operator_id, operator_id) = :operator_id")
             params["operator_id"] = operator_id
 
         where_sql = " AND ".join(clauses)
@@ -419,7 +419,12 @@ class ReportRepository:
         if filters.gate_number is not None:
             conditions.append(ParkingSession.gate_number == filters.gate_number)
         if filters.operator_id is not None:
-            conditions.append(ParkingSession.operator_id == filters.operator_id)
+            conditions.append(
+                or_(
+                    ParkingSession.operator_id == filters.operator_id,
+                    ParkingSession.exit_operator_id == filters.operator_id,
+                )
+            )
         if filters.status is not None:
             conditions.append(ParkingSession.status == filters.status)
         if filters.card_code:
