@@ -11,7 +11,7 @@
       <p class="text-sm text-gray-400 mt-1">سجل وبحث كافة حركات الدخول والخروج في المرآب</p>
     </div>
     <div>
-      <a href="/api/v1/admin/sessions/export/csv?{% if filters.start_date %}start_date={{ filters.start_date }}&{% endif %}{% if filters.end_date %}end_date={{ filters.end_date }}&{% endif %}{% if filters.gate_number %}gate_number={{ filters.gate_number }}&{% endif %}{% if filters.operator_id %}operator_id={{ filters.operator_id }}&{% endif %}{% if filters.status %}status={{ filters.status }}&{% endif %}{% if filters.card_code %}card_code={{ filters.card_code }}&{% endif %}{% if filters.plate_number %}plate_number={{ filters.plate_number }}&{% endif %}{% if filters.long_stay %}long_stay=true&{% endif %}" class="bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 px-4 py-2 rounded-lg text-sm transition flex items-center gap-2">
+      <a href="/api/v1/admin/sessions/export/csv?{% if filters.start_date %}start_date={{ filters.start_date }}&{% endif %}{% if filters.end_date %}end_date={{ filters.end_date }}&{% endif %}{% if filters.gate_number %}gate_number={{ filters.gate_number }}&{% endif %}{% if filters.operator_id %}operator_id={{ filters.operator_id }}&{% endif %}{% if filters.status %}status={{ filters.status.value if filters.status.value is defined else filters.status }}&{% endif %}{% if filters.card_code %}card_code={{ filters.card_code }}&{% endif %}{% if filters.plate_number %}plate_number={{ filters.plate_number }}&{% endif %}{% if filters.long_stay %}long_stay=true&{% endif %}" class="bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 px-4 py-2 rounded-lg text-sm transition flex items-center gap-2">
         <span>📥</span>
         <span>{{ t("admin.export.csv_button") }}</span>
       </a>
@@ -20,17 +20,18 @@
 
   <!-- Filter Bar -->
   <form method="GET" action="/ui/admin/sessions" class="bg-gray-800/80 border border-gray-700/60 rounded-xl p-4 shadow">
+    <input type="hidden" name="size" value="{{ size }}">
     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
       <!-- Start Date -->
       <div>
         <label class="block text-xs font-medium text-gray-300 mb-1">{{ t("admin.filter.start_date") }}</label>
-        <input type="date" name="start_date" value="{{ filters.start_date or '' }}" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500">
+        <input type="date" name="start_date" value="{{ filters.start_date or today }}" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500">
       </div>
 
       <!-- End Date -->
       <div>
         <label class="block text-xs font-medium text-gray-300 mb-1">{{ t("admin.filter.end_date") }}</label>
-        <input type="date" name="end_date" value="{{ filters.end_date or '' }}" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500">
+        <input type="date" name="end_date" value="{{ filters.end_date or today }}" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500">
       </div>
 
       <!-- Gate Number -->
@@ -60,9 +61,9 @@
         <label class="block text-xs font-medium text-gray-300 mb-1">الحالة</label>
         <select name="status" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500">
           <option value="">الكل</option>
-          <option value="ACTIVE" {% if filters.status == 'ACTIVE' %}selected{% endif %}>داخل</option>
-          <option value="COMPLETED" {% if filters.status == 'COMPLETED' %}selected{% endif %}>خرج</option>
-          <option value="LOST_CARD" {% if filters.status == 'LOST_CARD' %}selected{% endif %}>كرت مفقود</option>
+          <option value="ACTIVE" {% if (filters.status.value if filters.status.value is defined else filters.status) == 'ACTIVE' %}selected{% endif %}>داخل</option>
+          <option value="COMPLETED" {% if (filters.status.value if filters.status.value is defined else filters.status) == 'COMPLETED' %}selected{% endif %}>خرج</option>
+          <option value="LOST_CARD" {% if (filters.status.value if filters.status.value is defined else filters.status) == 'LOST_CARD' %}selected{% endif %}>كرت مفقود</option>
         </select>
       </div>
 
@@ -192,7 +193,7 @@
     <div class="p-4 border-t border-gray-700 flex items-center justify-between text-sm">
       <div>
         {% if page > 1 %}
-        <a href="/ui/admin/sessions?page={{ page - 1 }}&size={{ size }}{% if filters.gate_number %}&gate_number={{ filters.gate_number }}{% endif %}{% if filters.operator_id %}&operator_id={{ filters.operator_id }}{% endif %}{% if filters.status %}&status={{ filters.status }}{% endif %}{% if filters.card_code %}&card_code={{ filters.card_code }}{% endif %}{% if filters.plate_number %}&plate_number={{ filters.plate_number }}{% endif %}{% if filters.start_date %}&start_date={{ filters.start_date }}{% endif %}{% if filters.end_date %}&end_date={{ filters.end_date }}{% endif %}{% if filters.long_stay %}&long_stay=true{% endif %}" class="bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-lg transition">السابق</a>
+        <a href="/ui/admin/sessions?page={{ page - 1 }}&size={{ size }}{% if filters.gate_number %}&gate_number={{ filters.gate_number }}{% endif %}{% if filters.operator_id %}&operator_id={{ filters.operator_id }}{% endif %}{% if filters.status %}&status={{ filters.status.value if filters.status.value is defined else filters.status }}{% endif %}{% if filters.card_code %}&card_code={{ filters.card_code }}{% endif %}{% if filters.plate_number %}&plate_number={{ filters.plate_number }}{% endif %}{% if filters.start_date %}&start_date={{ filters.start_date }}{% endif %}{% if filters.end_date %}&end_date={{ filters.end_date }}{% endif %}{% if filters.long_stay %}&long_stay=true{% endif %}" class="bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-lg transition">السابق</a>
         {% endif %}
       </div>
       <div class="text-gray-400">
@@ -200,7 +201,7 @@
       </div>
       <div>
         {% if page < total_pages %}
-        <a href="/ui/admin/sessions?page={{ page + 1 }}&size={{ size }}{% if filters.gate_number %}&gate_number={{ filters.gate_number }}{% endif %}{% if filters.operator_id %}&operator_id={{ filters.operator_id }}{% endif %}{% if filters.status %}&status={{ filters.status }}{% endif %}{% if filters.card_code %}&card_code={{ filters.card_code }}{% endif %}{% if filters.plate_number %}&plate_number={{ filters.plate_number }}{% endif %}{% if filters.start_date %}&start_date={{ filters.start_date }}{% endif %}{% if filters.end_date %}&end_date={{ filters.end_date }}{% endif %}{% if filters.long_stay %}&long_stay=true{% endif %}" class="bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-lg transition">التالي</a>
+        <a href="/ui/admin/sessions?page={{ page + 1 }}&size={{ size }}{% if filters.gate_number %}&gate_number={{ filters.gate_number }}{% endif %}{% if filters.operator_id %}&operator_id={{ filters.operator_id }}{% endif %}{% if filters.status %}&status={{ filters.status.value if filters.status.value is defined else filters.status }}{% endif %}{% if filters.card_code %}&card_code={{ filters.card_code }}{% endif %}{% if filters.plate_number %}&plate_number={{ filters.plate_number }}{% endif %}{% if filters.start_date %}&start_date={{ filters.start_date }}{% endif %}{% if filters.end_date %}&end_date={{ filters.end_date }}{% endif %}{% if filters.long_stay %}&long_stay=true{% endif %}" class="bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-lg transition">التالي</a>
         {% endif %}
       </div>
     </div>

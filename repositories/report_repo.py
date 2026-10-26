@@ -408,13 +408,16 @@ class ReportRepository:
 
     def _build_session_filter_conditions(self, filters: ReportFilters) -> list[Any]:
         conditions = []
+        session_time = func.coalesce(
+            ParkingSession.exit_time, ParkingSession.entry_time
+        )
         if filters.start_date:
             conditions.append(
-                ParkingSession.exit_time >= cairo_date_to_utc_start(filters.start_date)
+                session_time >= cairo_date_to_utc_start(filters.start_date)
             )
         if filters.end_date:
             conditions.append(
-                ParkingSession.exit_time < cairo_date_to_utc_end(filters.end_date)
+                session_time < cairo_date_to_utc_end(filters.end_date)
             )
         if filters.gate_number is not None:
             conditions.append(ParkingSession.gate_number == filters.gate_number)
