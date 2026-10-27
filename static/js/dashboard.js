@@ -254,6 +254,15 @@
           data = null;
         }
 
+        if (xhr.status === 401 || (data && data.code === "SESSION_EXPIRED")) {
+          playSound("error");
+          showError("انتهت صلاحية الجلسة. جاري تحويلك لصفحة تسجيل الدخول...");
+          setTimeout(function () {
+            window.location.href = "/ui/login?next=" + encodeURIComponent(window.location.pathname);
+          }, 1200);
+          return;
+        }
+
         if (xhr.status >= 200 && xhr.status < 300 && data && data.success) {
           if (data.type === "entry") {
             playSound("success");
@@ -660,7 +669,12 @@
     xhr.setRequestHeader("Accept", "application/json");
 
     xhr.onreadystatechange = function () {
-      if (xhr.readyState === 4 && xhr.status >= 200 && xhr.status < 300) {
+      if (xhr.readyState === 4) {
+        if (xhr.status === 401) {
+          window.location.href = "/ui/login?next=" + encodeURIComponent(window.location.pathname);
+          return;
+        }
+        if (xhr.status >= 200 && xhr.status < 300) {
         var data = null;
         try {
           data = JSON.parse(xhr.responseText);
@@ -721,7 +735,8 @@
         }
         tbody.innerHTML = html;
       }
-    };
+    }
+  };
 
     xhr.send(null);
   }

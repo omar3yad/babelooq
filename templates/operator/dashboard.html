@@ -532,7 +532,7 @@
                         <span class="text-xs sm:text-sm font-black text-slate-100">الماسح الضوئي (POS Scanner) متصل وجاهز</span>
                     </div>
 
-                    <form id="direct-scan-form" onsubmit="handleDirectScan(event)" class="relative mt-2">
+                    <form id="direct-scan-form" onsubmit="handleDirectScan(event); return false;" class="relative mt-2">
                         <div class="relative flex items-center">
                             <input
                                 id="card-code-input"
@@ -735,7 +735,7 @@
                             </div>
                         </div>
 
-                        <form id="direct-scan-form" onsubmit="handleDirectScan(event)" class="relative mt-2">
+                        <form id="direct-scan-form" onsubmit="handleDirectScan(event); return false;" class="relative mt-2">
                             <div class="relative flex items-center" style="position: relative; width: 100%;">
                                 <input
                                     id="card-code-input"
@@ -868,7 +868,7 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/dashboard.js?v=20261020_v5"></script>
+<script src="/static/js/dashboard.js?v=20261027_v6"></script>
 <script>
     if (typeof startClock === 'function') {
         startClock();
