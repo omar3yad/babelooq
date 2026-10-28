@@ -111,9 +111,9 @@
   <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
     <div class="bg-gray-800/80 border border-gray-700/60 rounded-xl p-5 shadow">
       <p class="text-xs text-gray-400 font-medium">إجمالي الإيرادات</p>
-      <div class="flex items-baseline gap-1.5 mt-2">
-        <span class="text-2xl font-bold text-emerald-400">{{ summary.total_revenue_piastres | format_egp }}</span>
-        <span class="text-xs font-normal text-gray-400">ج.م</span>
+      <div class="flex items-center gap-1.5 mt-2">
+        <span class="text-2xl font-bold text-emerald-400 leading-none">{{ summary.total_revenue_piastres | format_egp }}</span>
+        <span class="text-sm font-semibold text-emerald-400/80 leading-none">ج.م</span>
       </div>
     </div>
     <div class="bg-gray-800/80 border border-gray-700/60 rounded-xl p-5 shadow">

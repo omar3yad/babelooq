@@ -175,8 +175,11 @@
   <!-- Audit Log Section -->
   <div class="bg-gray-800/80 border border-gray-700/60 rounded-xl shadow overflow-hidden">
     <div class="p-4 border-b border-gray-700 flex items-center justify-between">
-      <h2 class="font-bold text-white text-base">سجل التدقيق (Audit Logs)</h2>
-      <span class="text-xs text-gray-400">{{ audit_logs | length | to_arabic_indic }} عمليات مسجلة</span>
+      <div class="flex items-center gap-2">
+        <span class="text-lg">📜</span>
+        <h2 class="font-bold text-white text-base">سجل التدقيق (Audit Logs)</h2>
+      </div>
+      <span class="text-xs text-gray-400 bg-gray-900/60 px-2.5 py-1 rounded-full border border-gray-700/50 font-mono">{{ audit_logs | length | to_arabic_indic }} عمليات مسجلة</span>
     </div>
     <div class="overflow-x-auto">
       <table class="w-full text-right text-xs">
@@ -189,17 +192,21 @@
             <th class="p-3">الحالة اللاحقة</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-gray-700/60 font-mono">
+        <tbody class="divide-y divide-gray-700/60 font-sans">
           {% for log in audit_logs %}
-          <tr class="hover:bg-gray-700/30">
-            <td class="p-3 text-gray-300 whitespace-nowrap">{{ log.created_at | format_datetime }}</td>
-            <td class="p-3 text-indigo-300 whitespace-nowrap">مستخدم #{{ log.actor_id | to_arabic_indic }}</td>
-            <td class="p-3 font-semibold text-amber-300 whitespace-nowrap">{{ log.action }}</td>
-            <td class="p-3 text-gray-400 max-w-xs truncate" title="{{ log.payload_before or '' }}">
-              {{ (log.payload_before[:80] + '...') if log.payload_before and log.payload_before|length > 80 else (log.payload_before or '—') }}
+          <tr class="hover:bg-gray-700/30 transition">
+            <td class="p-3 text-gray-300 whitespace-nowrap font-mono">{{ log.created_at | format_datetime }}</td>
+            <td class="p-3 text-indigo-300 whitespace-nowrap font-medium">مستخدم #{{ log.actor_id | to_arabic_indic }}</td>
+            <td class="p-3 whitespace-nowrap">
+              <span class="font-bold text-amber-300 bg-amber-950/40 border border-amber-800/40 px-2 py-0.5 rounded text-[11px]">
+                {{ log.action | format_audit_action }}
+              </span>
             </td>
-            <td class="p-3 text-gray-300 max-w-xs truncate" title="{{ log.payload_after or '' }}">
-              {{ (log.payload_after[:80] + '...') if log.payload_after and log.payload_after|length > 80 else (log.payload_after or '—') }}
+            <td class="p-3 text-gray-400" title="{{ log.payload_before or '' }}">
+              <span class="text-xs">{{ log.payload_before | format_audit_payload }}</span>
+            </td>
+            <td class="p-3 text-emerald-300" title="{{ log.payload_after or '' }}">
+              <span class="text-xs">{{ log.payload_after | format_audit_payload }}</span>
             </td>
           </tr>
           {% else %}
@@ -212,126 +219,179 @@
     </div>
   </div>
 
-  <!-- Car Photo Section (Admin View) -->
-  {% if session.plate_image_path %}
-  <div class="bg-gray-800/80 border border-gray-700/60 rounded-xl p-5 shadow-lg">
-    <div class="flex flex-wrap items-center justify-between border-b border-gray-700/60 pb-3 mb-4 gap-2">
-      <div class="flex items-center gap-2">
-        <span class="text-xl">📷</span>
-        <h2 class="text-base font-bold text-white">صورة السيارة عند الدخول (كاميرا التعرف على اللوحات LPR)</h2>
-      </div>
-      <div class="flex items-center gap-2">
-        {% if session.plate_confidence %}
-        <span class="text-xs bg-emerald-950 text-emerald-300 border border-emerald-700/50 px-2.5 py-1 rounded-full font-bold">
-          دقة التعرف: {{ (session.plate_confidence * 100) | round | int }}%
-        </span>
-        {% endif %}
-        <a href="/ui/admin/sessions/{{ session.id }}/plate-image" target="_blank" class="text-xs text-cyan-300 hover:text-white bg-slate-900 border border-slate-700 hover:border-cyan-500/50 px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 font-bold shadow-sm">
-          <span>🔍</span>
-          <span>عرض الصورة بالحجم الكامل</span>
-        </a>
-      </div>
-    </div>
+  <!-- Car Photo & Vehicle Documentation Section (Admin View) -->
+  {% if session.plate_image_path or session.exit_image_path or session.plate_number %}
+  <div class="bg-gray-800/80 border border-gray-700/60 rounded-2xl p-5 sm:p-6 shadow-xl space-y-6">
     
-    <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
-      <!-- Image frame -->
-      <div class="md:col-span-7 relative bg-slate-950 rounded-2xl border-2 border-slate-700 overflow-hidden shadow-2xl flex items-center justify-center group">
-        <img src="/ui/admin/sessions/{{ session.id }}/plate-image" 
-             alt="صورة السيارة للجلسة {{ session.id }}" 
-             class="w-full h-auto max-h-[360px] object-contain rounded-xl transition duration-300 group-hover:scale-[1.01]"
-             style="width: 80%">
-        <div class="absolute bottom-2.5 right-3 bg-black/85 backdrop-blur-sm text-cyan-300 text-xs px-3 py-1 rounded-lg font-mono border border-slate-800/80 shadow-md">
-          بوابة {{ session.gate_number }} • {{ session.entry_time | format_datetime }}
+    <!-- 1. Authentic Full-Width Egyptian License Plate -->
+    <div class="w-full bg-white text-slate-950 rounded-2xl border-[3px] sm:border-[4px] border-slate-950 shadow-2xl overflow-hidden relative">
+      <!-- Egyptian Plate Header Bar (Blue Strip) -->
+      <div class="text-white py-2 px-4 sm:px-8 flex justify-between items-center border-b-[3px] border-slate-950 shadow-inner relative"
+           style="background-color: #1e70b8; background-image: linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%);">
+        
+        <!-- Right side: Bolt & Egypt Arabic -->
+        <div class="flex items-center gap-3">
+          <!-- Stamped Bolt Graphic -->
+          <div class="w-3.5 h-3.5 rounded-full bg-gradient-to-tr from-slate-400 via-slate-100 to-slate-500 border border-slate-700 shadow flex items-center justify-center">
+            <div class="w-1.5 h-0.5 bg-slate-600 rotate-45"></div>
+          </div>
+          <span class="font-black text-sm sm:text-base tracking-wider">مـصـر</span>
+        </div>
+        
+        <!-- Center: LPR Confidence Badge -->
+        <div class="flex items-center">
+          {% if session.plate_confidence %}
+          <span class="bg-blue-950/70 text-blue-100 text-[11px] sm:text-xs font-bold px-3 py-0.5 rounded-full border border-blue-300/30 shadow-sm">
+            دقة التعرف LPR: {{ (session.plate_confidence * 100) | round | int }}%
+          </span>
+          {% else %}
+          <span class="text-xs text-blue-100/90 font-medium">لوحة المركبة</span>
+          {% endif %}
+        </div>
+
+        <!-- Left side: EGYPT & Bolt -->
+        <div class="flex items-center gap-3">
+          <span class="font-mono font-black text-sm sm:text-base tracking-widest">EGYPT</span>
+          <!-- Stamped Bolt Graphic -->
+          <div class="w-3.5 h-3.5 rounded-full bg-gradient-to-tr from-slate-400 via-slate-100 to-slate-500 border border-slate-700 shadow flex items-center justify-center">
+            <div class="w-1.5 h-0.5 bg-slate-600 -rotate-45"></div>
+          </div>
         </div>
       </div>
-
-      <!-- Plate details side panel -->
-      <div class="md:col-span-5 flex flex-col gap-3">
-        <!-- Egyptian Plate Presentation Box -->
+      
+      <!-- Plate Number Main Center Display -->
+      <div class="py-5 sm:py-8 px-6 flex items-center justify-center bg-gradient-to-b from-white via-slate-50 to-slate-100 min-h-[92px] shadow-[inset_0_2px_4px_rgba(0,0,0,0.06)]" style="color: black;">
         {% if session.plate_number %}
-        <div class="w-full bg-white text-black rounded-xl border-2 border-slate-950 shadow-xl overflow-hidden">
-          <div class="bg-blue-600 text-white text-[11px] font-black tracking-widest py-0.5 px-3 flex justify-between items-center border-b border-black" style="background-color: #2563eb;">
-            <span>مـصـر</span>
-            <span class="tracking-widest font-mono">EGYPT</span>
+        <span class="text-4xl sm:text-6xl md:text-7xl font-black font-mono tracking-widest text-slate-950 select-all drop-shadow-[0_1px_1px_rgba(0,0,0,0.3)]" dir="rtl">
+          {{ session.plate_number }}
+        </span>
+        {% else %}
+        <span class="text-xl sm:text-2xl font-black text-slate-700 py-1" style="color: #1e293b;">
+          لم يتم التعرف على رقم اللوحة
+        </span>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- 2. Two Halves: Right (Entry Photo) and Left (Exit Photo) -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+      
+      <!-- Right Half: Entry Car Photo (كاميرا التعرف على اللوحات LPR) -->
+      <div class="bg-gray-900/90 border border-gray-700/80 rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-xl space-y-4">
+        <!-- Header -->
+        <div class="flex flex-wrap items-center justify-between border-b border-gray-800 pb-3 gap-2">
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="text-xl">📷</span>
+            <h3 class="text-sm sm:text-base font-bold text-white">صورة السيارة عند الدخول (كاميرا LPR)</h3>
+            <!-- <span class="text-xs bg-slate-800 text-cyan-300 border border-slate-700 px-2.5 py-0.5 rounded-full font-bold">بوابة {{ session.gate_number | to_arabic_indic }}</span> -->
           </div>
-          <div class="py-2.5 px-3 flex items-center justify-center bg-white min-h-[44px]">
-            <span class="text-2xl sm:text-3xl font-black font-mono tracking-widest text-slate-950" dir="rtl">
-              {{ session.plate_number }}
+          {% if session.plate_image_path %}
+          <a href="/ui/admin/sessions/{{ session.id }}/plate-image" target="_blank" class="text-xs text-cyan-300 hover:text-white bg-slate-950 border border-slate-700 hover:border-cyan-500/50 px-2.5 py-1.5 rounded-lg transition flex items-center gap-1.5 font-bold shadow-sm">
+            <span>🔍</span>
+            <span>عرض الصورة بالحجم الكامل</span>
+          </a>
+          {% endif %}
+        </div>
+
+        <!-- Entry Image Frame -->
+        {% if session.plate_image_path %}
+        <div class="relative bg-slate-950 rounded-xl border border-slate-700/80 overflow-hidden shadow-2xl flex items-center justify-center group min-h-[260px]">
+          <img src="/ui/admin/sessions/{{ session.id }}/plate-image" 
+               alt="صورة السيارة عند الدخول للجلسة {{ session.id }}" 
+               class="w-full h-auto max-h-[360px] object-contain rounded-lg transition duration-300 group-hover:scale-[1.01]"
+               loading="lazy">
+        </div>
+        {% else %}
+        <div class="flex flex-col items-center justify-center py-16 px-4 bg-slate-950/60 rounded-xl border-2 border-dashed border-gray-800 text-center min-h-[260px]">
+          <span class="text-4xl mb-2 opacity-40">📷</span>
+          <span class="text-sm font-semibold text-gray-400">لا توجد صورة دخول مسجلة لهذه الجلسة</span>
+        </div>
+        {% endif %}
+
+        <!-- Entry Metadata Grid -->
+        <div class="grid grid-cols-2 gap-2.5 text-xs pt-1">
+          <div class="bg-slate-950/70 rounded-xl p-3 border border-gray-800/90">
+            <span class="text-gray-400 block text-[11px] mb-1">وقت الدخول</span>
+            <span class="font-mono text-gray-200 font-semibold">{{ session.entry_time | format_datetime }}</span>
+          </div>
+          <div class="bg-slate-950/70 rounded-xl p-3 border border-gray-800/90">
+            <span class="text-gray-400 block text-[11px] mb-1">عامل الدخول</span>
+            <span class="text-white font-bold truncate block">{{ operator.full_name if operator else "—" }}</span>
+          </div>
+          <div class="bg-slate-950/70 rounded-xl p-3 border border-gray-800/90">
+            <span class="text-gray-400 block text-[11px] mb-1">كود الكرت</span>
+            <span class="font-mono text-indigo-300 font-bold">#{{ session.card_code }}</span>
+          </div>
+          <div class="bg-slate-950/70 rounded-xl p-3 border border-gray-800/90">
+            <span class="text-gray-400 block text-[11px] mb-1">حالة التقاط اللوحة</span>
+            <span class="font-bold {% if session.plate_capture_status == 'SUCCESS' %}text-emerald-400{% else %}text-amber-400{% endif %}">
+              {{ session.plate_capture_status or "—" }}
             </span>
           </div>
         </div>
+      </div>
+
+      <!-- Left Half: Exit Car Photo (بوابة الخروج) -->
+      <div class="bg-gray-900/90 border border-gray-700/80 rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-xl space-y-4">
+        <!-- Header -->
+        <div class="flex flex-wrap items-center justify-between border-b border-gray-800 pb-3 gap-2">
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="text-xl">📸</span>
+            <h3 class="text-sm sm:text-base font-bold text-white">صورة السيارة عند الخروج (بوابة الخروج)</h3>
+            <span class="text-xs bg-slate-800 text-emerald-300 border border-slate-700 px-2.5 py-0.5 rounded-full font-bold">بوابة الخروج</span>
+          </div>
+          {% if session.exit_image_path %}
+          <a href="/ui/admin/sessions/{{ session.id }}/exit-image" target="_blank" class="text-xs text-cyan-300 hover:text-white bg-slate-950 border border-slate-700 hover:border-cyan-500/50 px-2.5 py-1.5 rounded-lg transition flex items-center gap-1.5 font-bold shadow-sm">
+            <span>🔍</span>
+            <span>عرض الصورة بالحجم الكامل</span>
+          </a>
+          {% endif %}
+        </div>
+
+        <!-- Exit Image Frame -->
+        {% if session.exit_image_path %}
+        <div class="relative bg-slate-950 rounded-xl border border-slate-700/80 overflow-hidden shadow-2xl flex items-center justify-center group min-h-[260px]">
+          <img src="/ui/admin/sessions/{{ session.id }}/exit-image" 
+               alt="صورة السيارة عند الخروج للجلسة {{ session.id }}" 
+               class="w-full h-auto max-h-[360px] object-contain rounded-lg transition duration-300 group-hover:scale-[1.01]"
+               loading="lazy">
+        </div>
+        {% else %}
+        <div class="flex flex-col items-center justify-center py-14 px-4 bg-slate-950/60 rounded-xl border-2 border-dashed border-gray-800 text-center min-h-[260px]">
+          {% if session.status.value == 'ACTIVE' or session.status == 'ACTIVE' %}
+            <div class="w-12 h-12 rounded-full bg-cyan-950/80 border border-cyan-500/40 flex items-center justify-center mb-2.5 shadow-inner">
+              <span class="text-2xl animate-pulse">🚗</span>
+            </div>
+            <h4 class="text-sm font-bold text-cyan-300 mb-1">السيارة لا تزال متواجدة داخل الجراج</h4>
+            <p class="text-xs text-gray-400">سيتم التقاط صورة الخروج وحفظها آلياً عند المرور من بوابة الخروج</p>
+          {% else %}
+            <span class="text-4xl mb-2 opacity-40">📸</span>
+            <h4 class="text-sm font-bold text-gray-300 mb-1">لا توجد صورة خروج مسجلة</h4>
+            <p class="text-xs text-gray-500">لم يتم التقاط صورة عند الخروج لهذه الجلسة</p>
+          {% endif %}
+        </div>
         {% endif %}
 
-        <div class="bg-gray-900/90 border border-gray-700/80 rounded-xl p-4 space-y-2.5 text-xs sm:text-sm">
-          <div class="flex justify-between items-center border-b border-gray-800 pb-2">
-            <span class="text-gray-400 font-semibold">رقم اللوحة:</span>
-            <span class="font-bold text-base text-emerald-400 font-mono">{{ session.plate_number or "لم يتم التعرف" }}</span>
+        <!-- Exit Metadata Grid -->
+        <div class="grid grid-cols-2 gap-2.5 text-xs pt-1">
+          <div class="bg-slate-950/70 rounded-xl p-3 border border-gray-800/90">
+            <span class="text-gray-400 block text-[11px] mb-1">وقت الخروج</span>
+            <span class="font-mono text-gray-200 font-semibold">{{ session.exit_time | format_datetime if session.exit_time else "—" }}</span>
           </div>
-          <div class="flex justify-between items-center border-b border-gray-800 pb-2">
-            <span class="text-gray-400 font-semibold">حالة الالتقاط:</span>
-            <span class="font-bold text-white">{{ session.plate_capture_status or "—" }}</span>
+          <div class="bg-slate-950/70 rounded-xl p-3 border border-gray-800/90">
+            <span class="text-gray-400 block text-[11px] mb-1">عامل الخروج</span>
+            <span class="text-white font-bold truncate block">{{ exit_operator.full_name if exit_operator else "—" }}</span>
           </div>
-          {% if session.plate_captured_at %}
-          <div class="flex justify-between items-center border-b border-gray-800 pb-2">
-            <span class="text-gray-400 font-semibold">وقت الالتقاط:</span>
-            <span class="text-gray-300 font-mono">{{ session.plate_captured_at | format_datetime }}</span>
+          <div class="bg-slate-950/70 rounded-xl p-3 border border-gray-800/90">
+            <span class="text-gray-400 block text-[11px] mb-1">حالة الخروج</span>
+            <span class="font-bold {% if session.exit_image_path %}text-emerald-400{% else %}text-gray-300{% endif %}">
+              {{ "تم حفظ لقطة الخروج" if session.exit_image_path else ("في انتظار الخروج" if (session.status.value == 'ACTIVE' or session.status == 'ACTIVE') else "لم تسجل لقطة") }}
+            </span>
           </div>
-          {% endif %}
-          <div class="flex justify-between items-center pt-0.5">
-            <span class="text-gray-400 font-semibold">كود الكارت:</span>
-            <span class="font-mono font-bold text-indigo-300">{{ session.card_code }}</span>
+          <div class="bg-slate-950/70 rounded-xl p-3 border border-gray-800/90">
+            <span class="text-gray-400 block text-[11px] mb-1">مدة الوقوف</span>
+            <span class="font-bold text-indigo-300">{{ session.duration_minutes | format_duration if session.duration_minutes is not none else "—" }}</span>
           </div>
-        </div>
-      </div>
-    </div>
-  </div>
-  {% endif %}
-
-  <!-- Car Exit Photo Section (Admin View) -->
-  {% if session.exit_image_path %}
-  <div class="bg-gray-800/80 border border-gray-700/60 rounded-xl p-5 shadow-lg mt-5">
-    <div class="flex flex-wrap items-center justify-between border-b border-gray-700/60 pb-3 mb-4 gap-2">
-      <div class="flex items-center gap-2">
-        <span class="text-xl">📸</span>
-        <h2 class="text-base font-bold text-white">صورة السيارة عند الخروج (بوابة الخروج)</h2>
-      </div>
-      <div class="flex items-center gap-2">
-        <a href="/ui/admin/sessions/{{ session.id }}/exit-image" target="_blank" class="text-xs text-cyan-300 hover:text-white bg-slate-900 border border-slate-700 hover:border-cyan-500/50 px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 font-bold shadow-sm">
-          <span>🔍</span>
-          <span>عرض الصورة بالحجم الكامل</span>
-        </a>
-      </div>
-    </div>
-    
-    <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
-      <!-- Image frame -->
-      <div class="md:col-span-7 relative bg-slate-950 rounded-2xl border-2 border-slate-700 overflow-hidden shadow-2xl flex items-center justify-center group">
-        <img src="/ui/admin/sessions/{{ session.id }}/exit-image" 
-             alt="صورة خروج السيارة للجلسة {{ session.id }}" 
-             class="w-full h-auto max-h-[360px] object-contain rounded-xl transition duration-300 group-hover:scale-[1.01]"
-             style="width: 80%">
-        <div class="absolute bottom-2.5 right-3 bg-black/85 backdrop-blur-sm text-cyan-300 text-xs px-3 py-1 rounded-lg font-mono border border-slate-800/80 shadow-md">
-          بوابة الخروج • {{ session.exit_time | format_datetime if session.exit_time else "—" }}
-        </div>
-      </div>
-
-      <!-- Exit Details side panel -->
-      <div class="md:col-span-5 flex flex-col gap-3">
-        <div class="bg-gray-900/90 border border-gray-700/80 rounded-xl p-4 space-y-2.5 text-xs sm:text-sm">
-          <div class="flex justify-between items-center border-b border-gray-800 pb-2">
-            <span class="text-gray-400 font-semibold">حالة الالتقاط:</span>
-            <span class="font-bold text-emerald-400">تم حفظ لقطة الخروج</span>
-          </div>
-          <div class="flex justify-between items-center border-b border-gray-800 pb-2">
-            <span class="text-gray-400 font-semibold">وقت الخروج:</span>
-            <span class="text-gray-300 font-mono">{{ session.exit_time | format_datetime if session.exit_time else "—" }}</span>
-          </div>
-          <div class="flex justify-between items-center pt-0.5">
-            <span class="text-gray-400 font-semibold">كود الكارت:</span>
-            <span class="font-mono font-bold text-indigo-300">{{ session.card_code }}</span>
-          </div>
-        </div>
-      </div>
     </div>
   </div>
   {% endif %}
