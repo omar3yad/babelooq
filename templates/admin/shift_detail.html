@@ -7,8 +7,10 @@
   <!-- Top Navigation & Actions -->
   <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
     <div class="flex items-center gap-3">
-      <a href="/ui/admin/shifts" class="text-sm text-indigo-400 hover:text-indigo-300 transition flex items-center gap-1">
-        <span>←</span>
+      <a href="/ui/admin/shifts" class="text-sm text-indigo-400 hover:text-indigo-300 transition flex items-center gap-1.5 group">
+        <svg class="w-4 h-4 transition-transform group-hover:translate-x-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"></path>
+        </svg>
         <span>العودة إلى الشيفتات</span>
       </a>
       <h1 class="text-xl font-bold text-white">تفاصيل الشيفت #{{ shift.id | to_arabic_indic }}</h1>
@@ -16,16 +18,22 @@
 
     <div class="flex items-center gap-3 flex-wrap">
       <a href="/api/v1/admin/shifts/{{ shift.id }}/export/csv" class="bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 px-3 py-1.5 rounded-lg text-sm transition flex items-center gap-2">
-        <span>📥</span>
+        <svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"></path>
+        </svg>
         <span>{{ t("admin.export.csv_button") }}</span>
       </a>
       <a href="/ui/admin/reports/print?report_type=shift&shift_id={{ shift.id }}" target="_blank" class="bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 px-3 py-1.5 rounded-lg text-sm transition flex items-center gap-2">
-        <span>🖨️</span>
+        <svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24-1.076-.672-2.126-1.272-3.078M18 10a6 6 0 00-12 0v3.75A2.25 2.25 0 008.25 16h7.5A2.25 2.25 0 0018 13.75V10zM6 18h12a2 2 0 002-2v-4a2 2 0 00-2-2H6a2 2 0 00-2 2v4a2 2 0 002 2zM6 6h12v4H6V6z"></path>
+        </svg>
         <span>{{ t("admin.print.button") }}</span>
       </a>
       {% if shift.ended_at is none %}
       <button id="open-force-close-btn" class="bg-red-600 hover:bg-red-500 text-white font-medium px-4 py-1.5 rounded-lg text-sm transition shadow flex items-center gap-2">
-        <span>⚠️</span>
+        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"></path>
+        </svg>
         <span>{{ t("admin.shifts.force_close") }}</span>
       </button>
       {% endif %}
@@ -198,7 +206,9 @@
   <div class="space-y-4">
     <div class="flex items-center justify-between border-b border-gray-800 pb-3">
       <h3 class="text-lg font-bold text-red-400 flex items-center gap-2">
-        <span>⚠️</span>
+        <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"></path>
+        </svg>
         <span>{{ t("admin.shifts.force_close") }}</span>
       </h3>
       <button id="close-modal-btn" type="button" class="text-gray-400 hover:text-white text-xl leading-none">&times;</button>
