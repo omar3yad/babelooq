@@ -108,12 +108,25 @@ def cairo_datetime_filter(dt: datetime | None, fmt: str | None = None) -> str:
 
 
 def piastres_to_egp_filter(piastres: int | None) -> str:
-    """Convert integer piastres to EGP currency format string (e.g. 10000 -> 100)."""
+    """Convert integer piastres to EGP currency format string with thousands separator (e.g. 1432500 -> 14,325)."""
     if piastres is None:
         return "0"
     if piastres % 100 == 0:
-        return str(piastres // 100)
-    return f"{Decimal(piastres) / Decimal(100):.2f}"
+        return f"{piastres // 100:,}"
+    return f"{Decimal(piastres) / Decimal(100):,.2f}"
+
+
+def format_thousands_filter(val: int | float | None) -> str:
+    """Format any number with thousands separator (e.g. 14325 -> 14,325)."""
+    if val is None:
+        return "0"
+    try:
+        val_int = int(val)
+        if isinstance(val, float) and val != val_int:
+            return f"{val:,.2f}"
+        return f"{val_int:,}"
+    except (ValueError, TypeError):
+        return str(val)
 
 
 def duration_ar_filter(duration_minutes: int | float | None) -> str:
@@ -208,6 +221,7 @@ def register_jinja_filters(templates: Jinja2Templates) -> None:
     templates.env.filters["format_time"] = cairo_time_filter
     templates.env.filters["piastres_to_egp"] = piastres_to_egp_filter
     templates.env.filters["format_egp"] = piastres_to_egp_filter
+    templates.env.filters["format_thousands"] = format_thousands_filter
     templates.env.filters["duration_ar"] = duration_ar_filter
     templates.env.filters["format_duration"] = duration_ar_filter
     templates.env.filters["days_remaining"] = days_remaining_filter
@@ -235,4 +249,3 @@ def create_jinja2_environment(settings=None) -> Jinja2Templates:
     templates = Jinja2Templates(directory=templates_dir)
     register_jinja_filters(templates)
     return templates
-

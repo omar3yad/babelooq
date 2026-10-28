@@ -58,7 +58,7 @@ def format_egp(piastres: int) -> str:
     """Converts integer piastres to EGP display string with Arabic-Indic numerals."""
     egp = piastres // 100
     fils = piastres % 100
-    val_str = f"{egp}" if fils == 0 else f"{egp}.{fils:02d}"
+    val_str = f"{egp}.{fils:02d}"
     trans = str.maketrans("0123456789.", "٠١٢٣٤٥٦٧٨٩٫")
     return val_str.translate(trans) + " ج.م"
 

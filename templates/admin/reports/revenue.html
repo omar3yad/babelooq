@@ -11,10 +11,49 @@
       <p class="text-sm text-gray-400 mt-1">تقارير الإيرادات المجمعة والتفصيلية للمرآب</p>
     </div>
     <div class="flex items-center gap-3">
-      <a href="/api/v1/admin/reports/export/csv?{% if filters.start_date %}start_date={{ filters.start_date }}&{% endif %}{% if filters.end_date %}end_date={{ filters.end_date }}&{% endif %}{% if filters.gate_number %}gate_number={{ filters.gate_number }}&{% endif %}{% if filters.operator_id %}operator_id={{ filters.operator_id }}&{% endif %}" class="bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 px-4 py-2 rounded-lg text-sm transition flex items-center gap-2">
-        <span>📥</span>
-        <span>{{ t("admin.export.csv_button") }}</span>
-      </a>
+      <!-- CSV Export Dropdown -->
+      <div class="relative inline-block text-right" id="csvDropdownContainer">
+        <button type="button" id="csvDropdownBtn" class="bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 px-4 py-2 rounded-lg text-sm transition flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm cursor-pointer">
+          <span>📥</span>
+          <span>{{ t("admin.export.csv_button") }}</span>
+          <svg class="w-4 h-4 text-gray-400 transition-transform duration-200" id="csvDropdownArrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+
+        <!-- Dropdown Menu -->
+        <div id="csvDropdownMenu" class="hidden absolute right-0 mt-2 rounded-xl shadow-2xl bg-gray-900 border border-gray-700 divide-y divide-gray-800 z-50" style="min-width: 175px;">
+          <div class="p-1 space-y-0.5 text-right">
+            <!-- شهر -->
+            <a href="/api/v1/admin/reports/export/csv?type=monthly{% if request.query_params.get('start_date') %}&start_date={{ request.query_params.get('start_date') }}{% endif %}{% if request.query_params.get('end_date') %}&end_date={{ request.query_params.get('end_date') }}{% endif %}{% if filters.gate_number %}&gate_number={{ filters.gate_number }}{% endif %}{% if filters.operator_id %}&operator_id={{ filters.operator_id }}{% endif %}" class="flex items-center gap-2.5 px-3 py-2 text-sm text-gray-200 hover:text-white hover:bg-gray-800 rounded-lg transition whitespace-nowrap">
+              <span class="text-base">📅</span>
+              <span class="font-medium">تقرير شهر</span>
+            </a>
+
+            <!-- يوم -->
+            <a href="/api/v1/admin/reports/export/csv?type=daily{% if request.query_params.get('start_date') %}&start_date={{ request.query_params.get('start_date') }}{% endif %}{% if request.query_params.get('end_date') %}&end_date={{ request.query_params.get('end_date') }}{% endif %}{% if filters.gate_number %}&gate_number={{ filters.gate_number }}{% endif %}{% if filters.operator_id %}&operator_id={{ filters.operator_id }}{% endif %}" class="flex items-center gap-2.5 px-3 py-2 text-sm text-gray-200 hover:text-white hover:bg-gray-800 rounded-lg transition whitespace-nowrap">
+              <span class="text-base">📆</span>
+              <span class="font-medium">تقرير يوم</span>
+            </a>
+
+            <!-- عمال -->
+            <a href="/api/v1/admin/reports/export/csv?type=operator{% if request.query_params.get('start_date') %}&start_date={{ request.query_params.get('start_date') }}{% endif %}{% if request.query_params.get('end_date') %}&end_date={{ request.query_params.get('end_date') }}{% endif %}{% if filters.gate_number %}&gate_number={{ filters.gate_number }}{% endif %}{% if filters.operator_id %}&operator_id={{ filters.operator_id }}{% endif %}" class="flex items-center gap-2.5 px-3 py-2 text-sm text-gray-200 hover:text-white hover:bg-gray-800 rounded-lg transition whitespace-nowrap">
+              <span class="text-base">👷</span>
+              <span class="font-medium">تقرير عمال</span>
+            </a>
+          </div>
+
+          <!-- تفصيلي -->
+          <div class="p-1">
+            <a href="/api/v1/admin/reports/export/csv?type=detailed{% if request.query_params.get('start_date') %}&start_date={{ request.query_params.get('start_date') }}{% endif %}{% if request.query_params.get('end_date') %}&end_date={{ request.query_params.get('end_date') }}{% endif %}{% if filters.gate_number %}&gate_number={{ filters.gate_number }}{% endif %}{% if filters.operator_id %}&operator_id={{ filters.operator_id }}{% endif %}" class="flex items-center gap-2 px-3 py-1.5 text-xs text-gray-400 hover:text-gray-200 hover:bg-gray-800 rounded-lg transition whitespace-nowrap">
+              <span class="text-sm">📋</span>
+              <span>تقرير تفصيلي</span>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Print Button -->
       <a href="/ui/admin/reports/print?report_type=revenue&{% if filters.start_date %}start_date={{ filters.start_date }}&{% endif %}{% if filters.end_date %}end_date={{ filters.end_date }}&{% endif %}{% if filters.gate_number %}gate_number={{ filters.gate_number }}&{% endif %}{% if filters.operator_id %}operator_id={{ filters.operator_id }}&{% endif %}" target="_blank" class="bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 px-4 py-2 rounded-lg text-sm transition flex items-center gap-2">
         <span>🖨️</span>
         <span>{{ t("admin.print.button") }}</span>
@@ -72,7 +111,10 @@
   <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
     <div class="bg-gray-800/80 border border-gray-700/60 rounded-xl p-5 shadow">
       <p class="text-xs text-gray-400 font-medium">إجمالي الإيرادات</p>
-      <p class="text-2xl font-bold text-emerald-400 mt-2">{{ summary.total_revenue_piastres | format_egp }}</p>
+      <div class="flex items-baseline gap-1.5 mt-2">
+        <span class="text-2xl font-bold text-emerald-400">{{ summary.total_revenue_piastres | format_egp }}</span>
+        <span class="text-xs font-normal text-gray-400">ج.م</span>
+      </div>
     </div>
     <div class="bg-gray-800/80 border border-gray-700/60 rounded-xl p-5 shadow">
       <p class="text-xs text-gray-400 font-medium">إجمالي الجلسات</p>
@@ -84,7 +126,10 @@
     </div>
     <div class="bg-gray-800/80 border border-gray-700/60 rounded-xl p-5 shadow">
       <p class="text-xs text-gray-400 font-medium">متوسط قيمة التذكرة</p>
-      <p class="text-2xl font-bold text-cyan-400 mt-2">{{ summary.avg_revenue_piastres | format_egp }}</p>
+      <div class="flex items-baseline gap-1.5 mt-2">
+        <span class="text-2xl font-bold text-cyan-400">{{ summary.avg_revenue_piastres | format_egp }}</span>
+        <span class="text-xs font-normal text-gray-400">ج.م</span>
+      </div>
     </div>
   </div>
 
@@ -121,7 +166,7 @@
                 </div>
               </td>
               <td class="p-3 text-indigo-300">{{ st.session_count | to_arabic_indic }}</td>
-              <td class="p-3 font-bold text-emerald-400">{{ st.total_piastres | format_egp }}</td>
+              <td class="p-3 font-bold text-emerald-400"><span>{{ st.total_piastres | format_egp }}</span> <span class="text-xs font-normal text-gray-400 mr-1">ج.م</span></td>
               <td class="p-3">
                 <div class="flex items-center gap-2">
                   <div class="w-16 bg-gray-700 rounded-full h-2 overflow-hidden">
@@ -160,7 +205,7 @@
             <tr class="hover:bg-gray-700/30">
               <td class="p-3 font-semibold text-white">{{ op.operator_name }}</td>
               <td class="p-3 text-indigo-300">{{ op.session_count | to_arabic_indic }}</td>
-              <td class="p-3 font-bold text-emerald-400">{{ op.total_piastres | format_egp }}</td>
+              <td class="p-3 font-bold text-emerald-400"><span>{{ op.total_piastres | format_egp }}</span> <span class="text-xs font-normal text-gray-400 mr-1">ج.م</span></td>
             </tr>
             {% else %}
             <tr>
@@ -192,7 +237,7 @@
           <tr class="hover:bg-gray-700/30 {{ 'text-gray-500' if d.session_count == 0 else '' }}">
             <td class="p-3 font-mono font-medium {{ 'text-gray-500' if d.session_count == 0 else 'text-white' }}">{{ d.date_str }}</td>
             <td class="p-3 {{ 'text-gray-500' if d.session_count == 0 else 'text-indigo-300' }}">{{ d.session_count | to_arabic_indic }}</td>
-            <td class="p-3 font-bold {{ 'text-gray-500' if d.session_count == 0 else 'text-emerald-400' }}">{{ d.total_piastres | format_egp }}</td>
+            <td class="p-3 font-bold {{ 'text-gray-500' if d.session_count == 0 else 'text-emerald-400' }}"><span>{{ d.total_piastres | format_egp }}</span> <span class="text-xs font-normal text-gray-400 mr-1">ج.م</span></td>
           </tr>
           {% else %}
           <tr>
@@ -204,4 +249,48 @@
     </div>
   </div>
 </div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const btn = document.getElementById('csvDropdownBtn');
+    const menu = document.getElementById('csvDropdownMenu');
+    const arrow = document.getElementById('csvDropdownArrow');
+    const container = document.getElementById('csvDropdownContainer');
+
+    if (!btn || !menu) return;
+
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      const isHidden = menu.classList.contains('hidden');
+      if (isHidden) {
+        menu.classList.remove('hidden');
+        if (arrow) arrow.classList.add('rotate-180');
+      } else {
+        menu.classList.add('hidden');
+        if (arrow) arrow.classList.remove('rotate-180');
+      }
+    });
+
+    document.addEventListener('click', function(e) {
+      if (container && !container.contains(e.target)) {
+        menu.classList.add('hidden');
+        if (arrow) arrow.classList.remove('rotate-180');
+      }
+    });
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        menu.classList.add('hidden');
+        if (arrow) arrow.classList.remove('rotate-180');
+      }
+    });
+
+    menu.querySelectorAll('a').forEach(function(link) {
+      link.addEventListener('click', function() {
+        menu.classList.add('hidden');
+        if (arrow) arrow.classList.remove('rotate-180');
+      });
+    });
+  });
+</script>
 {% endblock %}

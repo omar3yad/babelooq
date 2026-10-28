@@ -211,21 +211,21 @@
             <td class="p-3 font-medium text-white cell-label">{{ r.label }}</td>
             <td class="p-3 font-semibold text-emerald-400 cell-first-hour">
               {% if r.first_hour_charge > 0 %}
-                {{ r.first_hour_charge | format_egp }} ج.م
+                <span>{{ r.first_hour_charge | format_egp }}</span> <span class="text-xs font-normal text-gray-400 mr-1">ج.م</span>
               {% else %}
-                <span class="text-gray-400">{{ r.rate_per_hour | format_egp }} ج.م</span>
+                <span class="text-gray-400"><span>{{ r.rate_per_hour | format_egp }}</span> <span class="text-xs font-normal text-gray-500 mr-1">ج.م</span></span>
               {% endif %}
             </td>
             <td class="p-3 font-semibold text-cyan-400 cell-subsequent-hour">
               {% if r.first_hour_charge > 0 %}
-                {{ r.subsequent_hour_charge | format_egp }} ج.م
+                <span>{{ r.subsequent_hour_charge | format_egp }}</span> <span class="text-xs font-normal text-gray-400 mr-1">ج.م</span>
               {% else %}
-                <span class="text-gray-400">{{ r.rate_per_hour | format_egp }} ج.م</span>
+                <span class="text-gray-400"><span>{{ r.rate_per_hour | format_egp }}</span> <span class="text-xs font-normal text-gray-500 mr-1">ج.م</span></span>
               {% endif %}
             </td>
             <td class="p-3 text-gray-300 cell-grace">{{ r.grace_period_mins | to_arabic_indic }} دقيقة</td>
-            <td class="p-3 text-gray-300 cell-min-charge">{{ r.minimum_charge | format_egp }} ج.م</td>
-            <td class="p-3 text-red-400 cell-lost-penalty">{{ r.lost_card_penalty | format_egp }} ج.م</td>
+            <td class="p-3 text-gray-300 cell-min-charge"><span>{{ r.minimum_charge | format_egp }}</span> <span class="text-xs font-normal text-gray-400 mr-1">ج.م</span></td>
+            <td class="p-3 text-red-400 cell-lost-penalty"><span>{{ r.lost_card_penalty | format_egp }}</span> <span class="text-xs font-normal text-gray-400 mr-1">ج.م</span></td>
             <td class="p-3 text-gray-400 text-xs">{{ r.effective_from | format_datetime }}</td>
             <td class="p-3">
               <span class="rule-status-badge inline-flex items-center px-2 py-0.5 rounded text-xs font-medium {{ 'bg-emerald-900/60 text-emerald-300 border border-emerald-700/50' if r.is_active else 'bg-gray-700 text-gray-400' }}">

@@ -69,33 +69,6 @@
 
   <!-- Financial Summary Card -->
   <div class="bg-gray-800/80 border border-gray-700/60 rounded-xl p-5 shadow">
-    {% if shift.gate_number == 1 %}
-    <div class="flex items-center justify-between mb-4">
-      <h2 class="text-base font-bold text-white">الملخص الإحصائي لوردية الدخول</h2>
-      <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-500/40">
-        <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-        بوابة دخول (بدون تحصيل كاش)
-      </span>
-    </div>
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
-      <div class="bg-gray-900/50 p-3 rounded-lg border border-gray-700/40">
-        <p class="text-xs text-gray-400">إجمالي السيارات المدخلة</p>
-        <p class="text-lg font-bold text-white mt-1">{{ summary.total_sessions | to_arabic_indic }}</p>
-      </div>
-      <div class="bg-gray-900/50 p-3 rounded-lg border border-gray-700/40">
-        <p class="text-xs text-gray-400">سيارات بالداخل (نشطة)</p>
-        <p class="text-lg font-bold text-cyan-400 mt-1">{{ summary.active_sessions | to_arabic_indic }}</p>
-      </div>
-      <div class="bg-gray-900/50 p-3 rounded-lg border border-gray-700/40">
-        <p class="text-xs text-gray-400">سيارات خرجت لاحقاً</p>
-        <p class="text-lg font-bold text-emerald-400 mt-1">{{ summary.completed_sessions | to_arabic_indic }}</p>
-      </div>
-      <div class="bg-gray-900/50 p-3 rounded-lg border border-gray-700/40">
-        <p class="text-xs text-gray-400">حالة الكاش والعهدة</p>
-        <p class="text-xs font-bold text-gray-400 mt-2">لا تنطبق (بوابة دخول فقط)</p>
-      </div>
-    </div>
-    {% else %}
     <h2 class="text-base font-bold text-white mb-4">الملخص المالي والإحصائي</h2>
     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-4 text-center">
       <div class="bg-gray-900/50 p-3 rounded-lg border border-gray-700/40">
@@ -116,20 +89,36 @@
       </div>
       <div class="bg-gray-900/50 p-3 rounded-lg border border-gray-700/40">
         <p class="text-xs text-gray-400">الإيراد المحسوب</p>
-        <p class="text-lg font-bold text-emerald-400 mt-1">{{ summary.computed_total_piastres | format_egp }}</p>
+        <div class="flex items-baseline gap-1 mt-1">
+          <span class="text-lg font-bold text-emerald-400">{{ summary.computed_total_piastres | format_egp }}</span>
+          <span class="text-xs font-normal text-gray-400">ج.م</span>
+        </div>
       </div>
       <div class="bg-gray-900/50 p-3 rounded-lg border border-gray-700/40">
         <p class="text-xs text-gray-400">النقدية عند الإغلاق</p>
-        <p class="text-lg font-bold text-white mt-1">{{ summary.closing_cash_piastres | format_egp if summary.closing_cash_piastres is not none else "—" }}</p>
+        <div class="flex items-baseline gap-1 mt-1">
+          {% if summary.closing_cash_piastres is not none %}
+            <span class="text-lg font-bold text-white">{{ summary.closing_cash_piastres | format_egp }}</span>
+            <span class="text-xs font-normal text-gray-400">ج.م</span>
+          {% else %}
+            <span class="text-lg font-bold text-white">—</span>
+          {% endif %}
+        </div>
       </div>
       <div class="bg-gray-900/50 p-3 rounded-lg border border-gray-700/40">
         <p class="text-xs text-gray-400">الفارق</p>
-        <p class="text-lg font-bold mt-1 {{ summary.discrepancy_piastres | discrepancy_class(summary.computed_total_piastres) }}">
-          {{ summary.discrepancy_piastres | format_egp if summary.discrepancy_piastres is not none else "—" }}
-        </p>
+        <div class="flex items-baseline gap-1 mt-1">
+          {% if summary.discrepancy_piastres is not none %}
+            <span class="text-lg font-bold {{ summary.discrepancy_piastres | discrepancy_class(summary.computed_total_piastres) }}">
+              {{ summary.discrepancy_piastres | format_egp }}
+            </span>
+            <span class="text-xs font-normal text-gray-400">ج.م</span>
+          {% else %}
+            <span class="text-lg font-bold text-gray-400">—</span>
+          {% endif %}
+        </div>
       </div>
     </div>
-    {% endif %}
   </div>
 
   <!-- Sessions List Table -->
@@ -164,7 +153,13 @@
             <td class="p-3 text-gray-400 text-xs">{{ s.entry_time | format_datetime }}</td>
             <td class="p-3 text-gray-400 text-xs">{{ s.exit_time | format_datetime if s.exit_time else "—" }}</td>
             <td class="p-3 text-gray-300">{{ s.duration_minutes | format_duration if s.duration_minutes is not none else "—" }}</td>
-            <td class="p-3 font-semibold text-emerald-400">{{ s.amount_charged | format_egp if s.amount_charged is not none else "—" }}</td>
+            <td class="p-3 font-semibold text-emerald-400">
+              {% if s.amount_charged is not none %}
+                <span>{{ s.amount_charged | format_egp }}</span> <span class="text-xs font-normal text-gray-400 mr-1">ج.م</span>
+              {% else %}
+                —
+              {% endif %}
+            </td>
           </tr>
           {% else %}
           <tr>

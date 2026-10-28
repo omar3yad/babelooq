@@ -55,9 +55,12 @@
     <!-- Card 3: Revenue Today -->
     <div class="bg-gray-800/80 border border-gray-700/60 rounded-xl p-5 shadow">
       <p class="text-xs text-gray-400 font-medium">{{ t("admin.dashboard.revenue_today") }}</p>
-      <p id="stat-revenue-today" class="text-2xl font-bold text-emerald-400 mt-2">
-        {{ (stats.revenue_today_piastres // 100) if stats.revenue_today_piastres is not none else 0 }}
-      </p>
+      <div class="flex items-baseline gap-1.5 mt-2">
+        <span id="stat-revenue-today" class="text-2xl font-bold text-emerald-400">
+          {{ stats.revenue_today_piastres | format_egp }}
+        </span>
+        <span class="text-xs font-normal text-gray-400">ج.م</span>
+      </div>
     </div>
 
     <!-- Card 4: Open Shifts -->
@@ -101,7 +104,7 @@
           <tr onclick="window.location.href='/ui/admin/shifts/{{ s.id }}'" class="cursor-pointer hover:bg-gray-700/40 transition">
             <td class="p-3">
               <div class="flex items-center gap-2">
-                <div class="w-7 h-7 rounded-full bg-gray-700 flex items-center justify-center text-xs font-bold text-indigo-300 px-2.5 py-0.5 ">
+                <div class="w-7 h-7 rounded-full bg-gray-700 flex items-center justify-center text-xs font-bold text-indigo-300">
                   {{ (operator_names.get(s.operator_id) or "ع")[0] }}
                 </div>
                 <span class="font-semibold text-white">{{ operator_names.get(s.operator_id) or "عامل غير معروف" }}</span>
@@ -117,9 +120,9 @@
             </td>
             <td class="p-3 font-bold text-emerald-400">
               {% if s.closing_cash_egp is not none %}
-                {{ s.closing_cash_egp | format_egp }}
+                <span>{{ s.closing_cash_egp | format_egp }}</span> <span class="text-xs font-normal text-gray-400 mr-1">ج.م</span>
               {% else %}
-                {{ (session_totals.get(s.id, 0)) | format_egp }}
+                <span>{{ (session_totals.get(s.id, 0)) | format_egp }}</span> <span class="text-xs font-normal text-gray-400 mr-1">ج.م</span>
               {% endif %}
             </td>
             <td class="p-3">
@@ -167,7 +170,7 @@
         <p class="text-xl font-bold text-green-400 mt-1">{{ sub_stats.active_subscriptions | to_arabic_indic }}</p>
       </div>
       <div class="bg-gray-800/60 border border-gray-700/50 rounded-xl p-4">
-        <p class="text-xs text-gray-400 font-medium">اشتراكات تنتهي قريباً</p>
+        <p class="text-xs text-gray-400 font-medium">تنتهي قريباً</p>
         <p class="text-xl font-bold text-amber-400 mt-1">{{ sub_stats.expiring_soon_count | to_arabic_indic }}</p>
       </div>
       <div class="bg-gray-800/60 border border-gray-700/50 rounded-xl p-4">
@@ -181,7 +184,7 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/admin_dashboard.js?v=20261027_v2"></script>
+<script src="/static/js/admin_dashboard.js?v=20261028_v1"></script>
 <script>
   startAutoRefresh('/api/v1/admin/stats/live', '/api/v1/admin/stats/gates', 30000);
 </script>

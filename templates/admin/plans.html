@@ -91,7 +91,7 @@
                         <td class="p-4 font-mono text-gray-500">{{ plan.id | to_arabic_indic }}</td>
                         <td class="p-4 font-bold text-white">{{ plan.label }}</td>
                         <td class="p-4">{{ plan.duration_days | to_arabic_indic }} يوم</td>
-                        <td class="p-4 font-bold text-green-400 font-mono">{{ plan.price_piastres | format_egp }}</td>
+                        <td class="p-4 font-bold text-green-400 font-mono"><span>{{ plan.price_piastres | format_egp }}</span> <span class="text-xs text-gray-400 font-normal mr-1">ج.م</span></td>
                         <td class="p-4">
                             {% if plan.max_entries_per_day %}
                             {{ plan.max_entries_per_day | to_arabic_indic }} مرات/يوم

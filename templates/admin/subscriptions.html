@@ -76,7 +76,7 @@
                         <td class="p-4 font-medium">{{ item.plan.label if item.plan else "—" }}</td>
                         <td class="p-4 font-mono text-xs">{{ item.subscription.start_date | cairo_date }}</td>
                         <td class="p-4 font-mono text-xs">{{ item.subscription.end_date | cairo_date }}</td>
-                        <td class="p-4 font-mono font-bold text-green-400">{{ item.subscription.amount_paid_piastres | format_egp }}</td>
+                        <td class="p-4 font-mono font-bold text-green-400"><span>{{ item.subscription.amount_paid_piastres | format_egp }}</span> <span class="text-xs text-gray-400 font-normal mr-1">ج.م</span></td>
                         <td class="p-4">
                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold {{ item.subscription.status.value | subscription_status_class }}">
                                 {{ item.subscription.status.value }}
