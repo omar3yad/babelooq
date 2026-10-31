@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>بوابة الدخول الرئيسية (#1) - garage4u POS</title>
+
+  <!-- Google Fonts: Cairo & Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;600;700;800;900&family=Outfit:wght@600;700;800;900&display=swap"
+    rel="stylesheet">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/static/css/tailwind.min.css">
+  <link rel="stylesheet" href="preview-common.css?v=20261031_v5">
+
+  <style>
+    @media (max-width: 768px) {
+      #preview-floating-bar {
+        display: none !important;
+      }
+    }
+    :root {
+      --font-ar: 'Cairo', 'Segoe UI', Tahoma, Arial, sans-serif;
+      --font-num: 'Outfit', 'Cairo', monospace, sans-serif;
+    }
+
+    body {
+      font-family: 'Cairo', 'Segoe UI', Tahoma, Arial, sans-serif;
+      background-color: #060911;
+      color: #f8fafc;
+      overflow-x: hidden;
+      min-height: 100vh;
+    }
+
+    @media (min-width: 769px) {
+      body {
+        padding-top: 55px; /* space for desktop preview bar */
+      }
+    }
+
+    .font-digital {
+      font-family: 'Outfit', 'Cairo', monospace, sans-serif;
+    }
+
+    .glass-card {
+      background: rgba(13, 20, 36, 0.95);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.6);
+      border-radius: 14px;
+    }
+
+    .entry-dashboard-grid {
+      display: flex;
+      flex-direction: row;
+      gap: 14px;
+      align-items: stretch;
+      width: 100%;
+    }
+
+    .entry-controls-panel {
+      flex: 1 1 36%;
+      width: 36%;
+      min-width: 310px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .entry-camera-panel {
+      flex: 1.8 1 64%;
+      width: 64%;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    @media (max-width: 960px) {
+      .entry-dashboard-grid {
+        flex-direction: column;
+      }
+      .entry-controls-panel, .entry-camera-panel {
+        width: 100%;
+        min-width: 0;
+      }
+    }
+  </style>
+</head>
+
+<body class="bg-[#060911] text-slate-100 flex flex-col justify-between selection:bg-cyan-500 selection:text-white">
+
+  <!-- Real System Operator Top Navigation Bar -->
+  <nav class="bg-[#0b0f19]/95 backdrop-blur-md border-b border-slate-800/80 px-3 sm:px-6 py-2.5 flex justify-between items-center shadow-lg z-40 sticky top-0">
+    <!-- Right side: Brand Logo + Operator Info -->
+    <div class="flex items-center gap-2 sm:gap-3">
+      <img src="/static/icons/icon-32x32.png" alt="garage4u" width="28" height="28" class="w-7 h-7 rounded-lg shadow-md border border-cyan-500/30 shrink-0">
+      <div class="text-lg sm:text-xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-sky-300 to-indigo-400 font-digital">
+        garage4u
+      </div>
+      <div class="h-4 w-px bg-slate-700 mx-0.5 hidden sm:block"></div>
+      <span class="text-white text-xs sm:text-base font-black tracking-wide hidden sm:inline-block">
+        جراج باب اللوق
+      </span>
+
+      <div class="flex items-center gap-1.5 bg-slate-900/90 border border-slate-800 px-2 sm:px-3 py-1 rounded-xl text-[11px] sm:text-xs">
+        <span class="w-2 h-2 rounded-full bg-cyan-400 inline-block"></span>
+        <span class="text-slate-300 font-bold">أحمد سالم</span>
+        <span class="text-slate-500 font-digital text-[10px] hidden md:inline">(دخول #1)</span>
+      </div>
+    </div>
+
+    <!-- Left side: Gate Pill + Live Clock -->
+    <div class="flex items-center gap-1.5 sm:gap-3">
+      <div class="inline-flex items-center px-2 sm:px-3 py-1 rounded-lg text-[11px] sm:text-xs font-black bg-emerald-950/90 text-emerald-300 border border-emerald-500/50">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block ml-1 animate-pulse"></span>
+        <span class="hidden sm:inline">بوابة الدخول الرئيسية (#1)</span>
+        <span class="sm:hidden">بوابة 1 (دخول)</span>
+      </div>
+
+      <div class="bg-[#030712] border border-cyan-500/40 px-2 sm:px-3 py-1 rounded-lg font-digital text-xs sm:text-sm font-black text-cyan-400" id="op-clock">
+        --:--:--
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main POS Workspace Content -->
+  <main class="w-full flex-grow p-2.5 sm:p-4 flex flex-col justify-between max-w-[1900px] mx-auto">
+    
+    <div class="entry-dashboard-grid w-full mb-3">
+
+      <!-- RIGHT COLUMN: Scanner + Plate Graphic & Controls -->
+      <div class="entry-controls-panel">
+
+        <!-- 1. SCANNER CARD -->
+        <div class="glass-card p-3 sm:p-4 shadow-xl border border-cyan-500/30 w-full relative">
+          <div class="flex items-center justify-between gap-2 mb-2">
+            <div class="flex items-center gap-2">
+              <span class="relative flex h-2.5 w-2.5">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+              </span>
+              <span class="text-xs sm:text-sm font-black text-slate-100">الماسح الضوئي (POS Scanner) متصل</span>
+            </div>
+            <span class="text-[10px] font-bold text-cyan-400 bg-cyan-950/80 px-2 py-0.5 rounded border border-cyan-800/60">RFID / Barcode</span>
+          </div>
+
+          <div class="relative flex items-center">
+            <input id="card-code-input" type="text" value="10048291"
+              placeholder="مرر الكارت أمام السكانر..."
+              class="w-full scanner-dark-input rounded-xl py-2 px-8 text-center text-white placeholder-slate-400 text-xs sm:text-sm font-digital font-bold tracking-wider outline-none">
+            <div class="absolute pointer-events-none text-cyan-400 left-3 top-1/2 -translate-y-1/2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z">
+                </path>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. ACTIVE OPERATION & CONTROLS CARD -->
+        <div class="glass-card p-3 sm:p-3.5 shadow-xl border border-cyan-500/30 w-full flex flex-col gap-2.5">
+          
+          <!-- Live Operation Status Banner -->
+          <div id="entry-success-banner" class="flex items-center justify-between gap-2 text-emerald-400 font-black text-xs sm:text-sm bg-emerald-950/40 border border-emerald-500/30 rounded-xl px-3 py-1.5 shadow-sm">
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 inline-block animate-pulse"></span>
+              <span id="entry-status-text">تم تسجيل الدخول — فتح البوابة آلياً</span>
+            </div>
+            <span class="text-[10px] text-emerald-400 font-mono font-bold bg-emerald-900/60 px-2 py-0.5 rounded">LPR MATCH</span>
+          </div>
+
+          <!-- Authentic Egyptian License Plate Graphic -->
+          <div class="w-full bg-white text-black rounded-xl border-2 border-slate-950 shadow-xl overflow-hidden">
+            <div class="bg-blue-600 text-white text-[11px] font-black tracking-widest py-0.5 px-3 flex justify-between items-center border-b border-black">
+              <span class="text-xs font-bold">مـصـر</span>
+              <div class="flex items-center gap-1.5">
+                <span class="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
+                <span class="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
+              </div>
+              <span class="tracking-widest font-digital font-bold text-[11px]">EGYPT</span>
+            </div>
+            <div class="py-2 px-3 flex items-center justify-center bg-white min-h-[48px]">
+              <span id="entry-plate-text" class="text-2xl sm:text-3xl font-black font-digital tracking-widest text-slate-950" dir="rtl">
+                س ص ع ١ ٩ ٨ ٤
+              </span>
+            </div>
+          </div>
+
+          <!-- Manual Plate Correction Input -->
+          <div class="relative w-full">
+            <label class="block text-[11px] font-bold text-slate-400 mb-0.5">تعديل رقم اللوحة يدوياً (اختياري):</label>
+            <input id="plate-manual-input" type="text" value="س ص ع 1984"
+              oninput="document.getElementById('entry-plate-text').textContent = this.value || '—';"
+              placeholder="اكتب رقم اللوحة هنا..."
+              class="w-full bg-white border-2 border-slate-300 focus:border-cyan-400 rounded-xl py-1.5 px-3 text-xs sm:text-sm text-center text-slate-950 font-digital font-bold outline-none"
+              style="background-color: #ffffff !important; color: #000000 !important; font-weight: 900; text-align: center !important;">
+          </div>
+
+          <!-- Card Info & Pill -->
+          <div class="w-full bg-slate-950/90 border border-slate-800 rounded-xl py-2 px-3 flex items-center justify-between text-xs">
+            <div class="flex items-center gap-2">
+              <span class="text-slate-400 font-bold">رقم الكارت:</span>
+              <span id="entry-card-code" class="text-white font-digital font-black text-sm sm:text-base">10048291</span>
+            </div>
+            <div id="entry-subscriber-pill" class="text-[10px] bg-purple-950/80 text-purple-300 border border-purple-600/50 px-2 py-0.5 rounded-md font-bold">
+              مشترك معتمد (VIP)
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="flex flex-row items-center gap-2 pt-0.5 w-full">
+            <button type="button" onclick="simulateNewCar()"
+              class="w-1/2 bg-cyan-700 hover:bg-cyan-600 text-white font-black py-2.5 px-3 rounded-xl text-xs sm:text-sm transition flex items-center justify-center gap-1.5 cursor-pointer shadow-md">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              <span>محاكاة سيارة جديدة</span>
+            </button>
+            <button type="button" onclick="alert('النظام جاهز لمسح الكارت التالي فور اقتراب السيارة.');"
+              class="w-1/2 bg-emerald-600 hover:bg-emerald-500 text-white font-black py-2.5 px-3 rounded-xl text-xs sm:text-sm shadow-lg shadow-emerald-950/50 transition flex items-center justify-center gap-1.5 cursor-pointer">
+              <span>جاهز للتالي (Enter)</span>
+            </button>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- LEFT COLUMN: LPR CAMERA BOX -->
+      <div class="entry-camera-panel">
+        <div class="glass-card p-3 sm:p-3.5 shadow-2xl flex flex-col relative overflow-hidden border border-cyan-500/30 w-full h-full">
+
+          <!-- Camera Header -->
+          <div class="flex justify-between items-center border-b border-slate-800 pb-2 mb-2.5">
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse inline-block"></span>
+              <h2 class="text-xs sm:text-base font-black text-white tracking-wide">العملية النشطة — كاميرا التعرف على اللوحات LPR</h2>
+            </div>
+            <div class="inline-flex items-center gap-1.5 bg-slate-900/90 px-2 py-0.5 rounded-lg border border-cyan-500/30 text-cyan-300 text-xs font-mono font-bold">
+              <span>Camera R1</span>
+            </div>
+          </div>
+
+          <!-- Camera Viewport with real image -->
+          <div class="relative bg-slate-950 rounded-2xl border-2 border-cyan-500/40 overflow-hidden shadow-2xl flex items-center justify-center w-full flex-grow min-h-[260px] max-h-[460px]">
+            
+            <!-- Tech HUD Corner Accents -->
+            <div class="absolute top-2.5 right-2.5 w-4 h-4 border-t-2 border-r-2 border-cyan-400 pointer-events-none z-20"></div>
+            <div class="absolute top-2.5 left-2.5 w-4 h-4 border-t-2 border-l-2 border-cyan-400 pointer-events-none z-20"></div>
+            <div class="absolute bottom-2.5 right-2.5 w-4 h-4 border-b-2 border-r-2 border-cyan-400 pointer-events-none z-20"></div>
+            <div class="absolute bottom-2.5 left-2.5 w-4 h-4 border-b-2 border-l-2 border-cyan-400 pointer-events-none z-20"></div>
+
+            <!-- Top Left Camera Badge -->
+            <div class="absolute top-3 left-3 z-20 flex items-center gap-2 pointer-events-none">
+              <div class="bg-slate-900/90 text-cyan-300 text-[10px] sm:text-[11px] font-black px-2 py-0.5 rounded-lg flex items-center gap-1.5 shadow-lg border border-cyan-500/40">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span>بوابة الدخول الرئيسية #1 (Live)</span>
+              </div>
+            </div>
+
+            <!-- The Real Snapshot Photo provided by user -->
+            <img id="entry-camera-img" src="/static/icons/entry-image.png" alt="لقطة كاميرا الدخول"
+              class="w-full h-full object-cover max-h-[460px] rounded-xl transition duration-300">
+
+            <!-- Plate Bounding Box Highlight on the license plate -->
+            <div class="absolute border-2 border-cyan-400 bg-cyan-400/10 rounded shadow-[0_0_20px_rgba(34,211,238,0.8)] pointer-events-none animate-pulse"
+              style="bottom: 22%; left: 42%; width: 22%; height: 16%;">
+              <span class="absolute -top-4 right-0 bg-cyan-500 text-slate-950 text-[9px] font-black px-1 py-0.5 rounded-sm">
+                LPR: س ص ع 1984
+              </span>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+    <!-- BOTTOM ROW: RECENT SESSIONS TABLE -->
+    <div class="w-full glass-card p-3 sm:p-4 shadow-xl flex flex-col border border-cyan-500/20">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-2 mb-2">
+        <div class="flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block"></span>
+          <h3 class="font-black text-xs sm:text-base text-white">
+            سجل العمليات الأحدث بالوردية (آخر 5 سيارات دخلت)
+          </h3>
+        </div>
+        <span class="text-[10px] sm:text-[11px] font-bold text-emerald-400 bg-emerald-950/90 px-2 py-0.5 rounded-full border border-emerald-500/40">
+          تحديث فوري
+        </span>
+      </div>
+
+      <div class="table-scroll-container">
+        <table class="w-full text-right border-collapse text-xs sm:text-sm min-w-[500px]">
+          <thead>
+            <tr class="text-xs text-slate-300 font-bold border-b border-slate-800 bg-slate-950/80">
+              <th class="py-2 px-3">رقم الكارت</th>
+              <th class="py-2 px-3">وقت الدخول</th>
+              <th class="py-2 px-3">رقم السيارة</th>
+              <th class="py-2 px-3">حالة السيارة</th>
+            </tr>
+          </thead>
+          <tbody id="recent-sessions-tbody">
+            <tr class="border-b border-slate-800/60 bg-emerald-950/20">
+              <td class="py-2.5 px-3 font-digital text-cyan-300 font-bold text-sm">10048291</td>
+              <td class="py-2.5 px-3 text-slate-300 font-digital text-xs">2026-10-31 05:28:14</td>
+              <td class="py-2.5 px-3 font-digital"><span class="font-bold text-emerald-300">س ص ع 1984</span></td>
+              <td class="py-2.5 px-3">
+                <span class="text-emerald-400 font-bold bg-emerald-950/80 px-2.5 py-0.5 rounded-full border border-emerald-500/40 text-[11px]">
+                  داخل الجراج (الآن)
+                </span>
+              </td>
+            </tr>
+            <tr class="border-b border-slate-800/60 hover:bg-slate-800/40 transition">
+              <td class="py-2.5 px-3 font-digital text-slate-200 font-bold text-sm">10048285</td>
+              <td class="py-2.5 px-3 text-slate-300 font-digital text-xs">2026-10-31 05:22:40</td>
+              <td class="py-2.5 px-3 font-digital"><span class="font-bold text-cyan-300">ق ن د 7321</span></td>
+              <td class="py-2.5 px-3">
+                <span class="text-emerald-400 font-bold bg-emerald-950/80 px-2.5 py-0.5 rounded-full border border-emerald-500/40 text-[11px]">داخل الجراج</span>
+              </td>
+            </tr>
+            <tr class="border-b border-slate-800/60 hover:bg-slate-800/40 transition">
+              <td class="py-2.5 px-3 font-digital text-slate-200 font-bold text-sm">10048280</td>
+              <td class="py-2.5 px-3 text-slate-300 font-digital text-xs">2026-10-31 05:15:10</td>
+              <td class="py-2.5 px-3 font-digital"><span class="font-bold text-cyan-300">أ ب ج 4562</span></td>
+              <td class="py-2.5 px-3">
+                <span class="text-emerald-400 font-bold bg-emerald-950/80 px-2.5 py-0.5 rounded-full border border-emerald-500/40 text-[11px]">داخل الجراج</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <script src="preview-common.js?v=20261031_v5"></script>
+  <script>
+    initPreviewBar('entry');
+    startPreviewClock('op-clock');
+
+    const sampleCars = [
+      { plate: "س ص ع ١ ٩ ٨ ٤", card: "10048291", raw: "س ص ع 1984" },
+      { plate: "م ن هـ ٥ ٦ ٧ ٢", card: "10048292", raw: "م ن هـ 5672" },
+      { plate: "ر ق ك ٩ ٠ ١ ٣", card: "10048293", raw: "ر ق ك 9013" },
+      { plate: "ف ل س ٤ ٤ ٨ ٨", card: "10048294", raw: "ف ل س 4488" }
+    ];
+    let carIndex = 0;
+
+    function simulateNewCar() {
+      carIndex = (carIndex + 1) % sampleCars.length;
+      const c = sampleCars[carIndex];
+      document.getElementById('entry-plate-text').textContent = c.plate;
+      document.getElementById('plate-manual-input').value = c.raw;
+      document.getElementById('card-code-input').value = c.card;
+      document.getElementById('entry-card-code').textContent = c.card;
+    }
+  </script>
+</body>
+
+</html>

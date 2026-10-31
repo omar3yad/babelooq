@@ -537,7 +537,7 @@ Add the following keys:
 "admin.dashboard.occupancy": "نسبة الإشغال",
 "admin.dashboard.revenue_today": "إيراد اليوم",
 "admin.dashboard.open_shifts": "الشيفتات الشغالة",
-"admin.dashboard.long_stay_alert": "جلسات مفتوحة أكثر من ٢٤ ساعة",
+"admin.dashboard.long_stay_alert": "تنبيه نظام الرقابة: يوجد سيارات متأخرة بالداخل أكثر من 24 ساعة ",
 "admin.dashboard.overdue_shift_alert": "شيفتات مفتوحة أكثر من ١٢ ساعة",
 "admin.shifts.title": "الشيفتات",
 "admin.shifts.force_close": "إغلاق الشيفت إدارياً",

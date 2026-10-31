@@ -1,0 +1,1158 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>لوحة تحكم الإدارة — garage4u</title>
+
+  <!-- Google Fonts: Cairo & Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Outfit:wght@500;700;800;900&display=swap"
+    rel="stylesheet">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/static/css/tailwind.min.css">
+  <link rel="stylesheet" href="preview-common.css?v=20261031_v5">
+
+  <style>
+    body {
+      font-family: 'Cairo', 'Segoe UI', Tahoma, Arial, sans-serif;
+      background-color: #111827;
+      color: #f3f4f6;
+    }
+
+    @media (min-width: 769px) {
+      body {
+        padding-top: 55px; /* for desktop floating bar */
+      }
+    }
+
+    .font-digital {
+      font-family: 'Outfit', 'Cairo', monospace, sans-serif;
+    }
+
+    .admin-nav-item.active {
+      background-color: rgba(6, 182, 212, 0.15) !important;
+      color: #22d3ee !important;
+      font-weight: 700 !important;
+      border: 1px solid rgba(6, 182, 212, 0.4) !important;
+    }
+
+    /* Absolute mobile protection */
+    @media (max-width: 768px) {
+      #preview-floating-bar {
+        display: none !important;
+      }
+      #sidebar {
+        display: none !important;
+        position: fixed !important;
+        top: 0 !important;
+        bottom: 0 !important;
+        right: 0 !important;
+        z-index: 10000 !important;
+        width: 280px !important;
+        max-width: 85vw !important;
+        box-shadow: -10px 0 30px rgba(0, 0, 0, 0.9) !important;
+      }
+      #sidebar.open {
+        display: flex !important;
+      }
+      #sidebar-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(4px);
+        z-index: 9999;
+      }
+      #sidebar-overlay.active {
+        display: block !important;
+      }
+      main {
+        width: 100% !important;
+        max-width: 100vw !important;
+        min-width: 0 !important;
+      }
+    }
+  </style>
+</head>
+
+<body class="min-h-screen flex flex-col font-sans selection:bg-cyan-500 selection:text-white">
+
+  <!-- Mobile Sidebar Backdrop Overlay -->
+  <div id="sidebar-overlay" onclick="toggleMobileSidebar()"></div>
+
+  <div class="flex flex-1 min-h-screen">
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="w-64 bg-gray-950 border-l border-gray-800 flex-shrink-0 flex flex-col transition-all">
+      <div class="p-4 border-b border-gray-800 flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <img src="/static/icons/icon-32x32.png" alt="garage4u logo" class="w-8 h-8 rounded-lg shadow-lg shadow-cyan-500/20">
+          <span class="font-bold text-lg text-cyan-400 font-digital">garage4u</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-xs bg-cyan-900/40 text-cyan-300 border border-cyan-700/40 px-2 py-0.5 rounded-full font-bold">مسؤول</span>
+          <!-- Mobile Close Button -->
+          <button type="button" onclick="toggleMobileSidebar()" class="md:hidden text-gray-400 hover:text-white p-1">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <nav class="p-3 space-y-1 text-sm font-medium flex-1 overflow-y-auto">
+        <button onclick="showAdminSection('dashboard')" id="nav-dashboard" class="admin-nav-item active w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition text-right">
+          <svg class="w-5 h-5 shrink-0 text-current" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+            <rect x="3" y="3" width="7" height="9" rx="1.5"></rect>
+            <rect x="14" y="3" width="7" height="5" rx="1.5"></rect>
+            <rect x="14" y="12" width="7" height="9" rx="1.5"></rect>
+            <rect x="3" y="16" width="7" height="5" rx="1.5"></rect>
+          </svg>
+          <span>لوحة التحكم الرئيسية</span>
+        </button>
+
+        <button onclick="showAdminSection('shifts')" id="nav-shifts" class="admin-nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition text-right">
+          <svg class="w-5 h-5 shrink-0 text-current" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="9"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+          <span>إدارة الشيفتات والورديات</span>
+        </button>
+
+        <button onclick="showAdminSection('sessions')" id="nav-sessions" class="admin-nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition text-right">
+          <svg class="w-5 h-5 shrink-0 text-current" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+            <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9C2.1 11.1 2 11.5 2 12v4c0 .6.4 1 1 1h2"></path>
+            <circle cx="7" cy="17" r="2"></circle>
+            <path d="M9 17h6"></path>
+            <circle cx="17" cy="17" r="2"></circle>
+          </svg>
+          <span>دخول وخروج السيارات</span>
+        </button>
+
+        <button onclick="showAdminSection('reports')" id="nav-reports" class="admin-nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition text-right">
+          <svg class="w-5 h-5 shrink-0 text-current" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+            <line x1="18" y1="20" x2="18" y2="10"></line>
+            <line x1="12" y1="20" x2="12" y2="4"></line>
+            <line x1="6" y1="20" x2="6" y2="14"></line>
+          </svg>
+          <span>المالية والإيرادات</span>
+        </button>
+
+        <button onclick="showAdminSection('rates')" id="nav-rates" class="admin-nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition text-right">
+          <svg class="w-5 h-5 shrink-0 text-current" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="9"></circle>
+            <path d="M14.8 9A2 2 0 0 0 13 8h-2a2 2 0 0 0 0 4h2a2 2 0 0 1 0 4h-2a2 2 0 0 1-1.8-1"></path>
+            <path d="M12 6v2m0 8v2"></path>
+          </svg>
+          <span>التعريفات وقائمة الأسعار</span>
+        </button>
+
+        <button onclick="showAdminSection('subscriptions')" id="nav-subscriptions" class="admin-nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition text-right">
+          <svg class="w-5 h-5 shrink-0 text-current" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+            <rect x="2" y="5" width="20" height="14" rx="2"></rect>
+            <line x1="2" y1="10" x2="22" y2="10"></line>
+          </svg>
+          <span>الاشتراكات الشهرية</span>
+        </button>
+      </nav>
+
+      <div class="p-4 border-t border-gray-800 hidden md:block">
+        <div class="flex items-center gap-2.5 text-xs text-gray-400">
+          <div class="w-2 h-2 rounded-full bg-emerald-400"></div>
+          <span>نسخة العرض الحي للعملاء</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 flex flex-col min-w-0 overflow-y-auto">
+      
+      <!-- Topbar -->
+      <header class="h-14 border-b border-gray-800 bg-gray-950/60 backdrop-blur px-4 sm:px-6 flex items-center justify-between flex-shrink-0">
+        <div class="flex items-center gap-3">
+          <button id="sidebar-toggle" onclick="toggleMobileSidebar()"
+            class="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition focus:outline-none">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+          </button>
+          <span class="text-xs sm:text-sm font-bold text-gray-300">مواقف السيارات الذكية</span>
+        </div>
+
+        <div class="text-sm sm:text-lg font-black tracking-wide text-white drop-shadow-sm text-center">
+          جراج باب اللوق
+        </div>
+
+        <div class="flex items-center gap-2">
+          <div class="flex items-center gap-2 text-xs text-gray-300 bg-gray-900 border border-gray-800 px-2.5 py-1.5 rounded-xl">
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+            <span class="font-bold hidden sm:inline">م. عمر خالد</span>
+            <span class="text-gray-400 font-bold sm:hidden">مدير</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- VIEW 1: DASHBOARD (لوحة التحكم) -->
+      <div id="section-dashboard" class="p-4 sm:p-6 space-y-6">
+        
+        <!-- Welcome Title -->
+        <div class="flex items-center justify-between">
+          <div>
+            <h1 class="text-xl sm:text-2xl font-bold text-white">لوحة التحكم</h1>
+            <p class="text-xs sm:text-sm text-gray-400 mt-0.5">مرحباً م. عمر خالد</p>
+          </div>
+        </div>
+
+        <!-- Long Stay Alert Banner -->
+        <div class="bg-amber-950/60 border border-amber-500/50 rounded-xl p-3.5 sm:p-4 flex items-center justify-between text-amber-200 text-xs sm:text-sm gap-2">
+          <div class="font-medium flex items-center gap-2">
+            <svg class="w-5 h-5 text-amber-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"></path>
+            </svg>
+            <span>تنبيه: سيارات متأخرة بالداخل (>24س): <strong>3</strong></span>
+          </div>
+          <button onclick="showAdminSection('sessions')" class="text-xs bg-amber-600 hover:bg-amber-500 text-white px-3 py-1.5 rounded-lg font-bold shrink-0">
+            عرض
+          </button>
+        </div>
+
+        <!-- 4 KPI Cards Grid -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div class="bg-gray-800/80 border border-gray-700/60 rounded-xl p-4 sm:p-5 shadow">
+            <p class="text-xs text-gray-400 font-medium">السيارات النشطة</p>
+            <p class="text-2xl sm:text-3xl font-digital font-bold text-indigo-400 mt-2">142</p>
+          </div>
+
+          <div class="bg-gray-800/80 border border-gray-700/60 rounded-xl p-4 sm:p-5 shadow">
+            <p class="text-xs text-gray-400 font-medium">نسبة الإشغال</p>
+            <p class="text-2xl sm:text-3xl font-digital font-bold text-cyan-400 mt-2">71٪</p>
+          </div>
+
+          <div class="bg-gray-800/80 border border-gray-700/60 rounded-xl p-4 sm:p-5 shadow">
+            <p class="text-xs text-gray-400 font-medium">إيراد اليوم</p>
+            <div class="flex items-baseline gap-1.5 mt-2">
+              <span class="text-2xl sm:text-3xl font-digital font-bold text-emerald-400">8,450.00</span>
+              <span class="text-xs font-normal text-gray-400">ج.م</span>
+            </div>
+          </div>
+
+          <div class="bg-gray-800/80 border border-gray-700/60 rounded-xl p-4 sm:p-5 shadow">
+            <p class="text-xs text-gray-400 font-medium">الورديات المفتوحة</p>
+            <p class="text-2xl sm:text-3xl font-digital font-bold text-amber-400 mt-2">3</p>
+          </div>
+        </div>
+
+        <!-- Today's Active Shifts Table -->
+        <div class="bg-gray-800/80 border border-gray-700/60 rounded-xl shadow overflow-hidden">
+          <div class="p-4 border-b border-gray-700 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <svg class="w-5 h-5 text-indigo-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+              <h2 class="font-bold text-white text-sm sm:text-base">ورديات اليوم</h2>
+              <span class="bg-indigo-900/60 text-indigo-300 border border-indigo-700/50 text-xs px-2.5 py-0.5 rounded-full font-bold">4</span>
+            </div>
+            <button onclick="showAdminSection('shifts')" class="text-xs text-indigo-400 hover:text-indigo-300 font-bold">عرض كافة الورديات ←</button>
+          </div>
+
+          <div class="table-scroll-container">
+            <table class="w-full text-right text-xs sm:text-sm min-w-[550px]">
+              <thead class="bg-gray-900/60 text-gray-400 text-xs uppercase border-b border-gray-700">
+                <tr>
+                  <th class="p-3">العامل المسؤول</th>
+                  <th class="p-3">وقت البدء</th>
+                  <th class="p-3">وقت الإغلاق</th>
+                  <th class="p-3">المبالغ المحصلة</th>
+                  <th class="p-3">الحالة</th>
+                  <th class="p-3 text-center">التفاصيل</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-700/60">
+                <tr class="hover:bg-gray-700/40 transition">
+                  <td class="p-3 font-semibold text-white">محمود حسن (خروج 2B)</td>
+                  <td class="p-3 text-gray-300 font-digital text-xs">2026-10-31 08:00 ص</td>
+                  <td class="p-3 text-amber-400 font-medium">مستمرة الآن...</td>
+                  <td class="p-3 font-digital font-bold text-emerald-400">4,850.00 ج.م</td>
+                  <td class="p-3"><span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-900/60 text-emerald-300 border border-emerald-700/50"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>مفتوحة</span></td>
+                  <td class="p-3 text-center"><button onclick="openShiftDetailModal('104', 'محمود حسن', 'بوابة الخروج (2B)', '2026-10-31 08:00 ص', 'مفتوحة الآن', 4850, null, 0)" class="text-xs bg-gray-700 hover:bg-gray-600 text-white px-2.5 py-1 rounded">عرض</button></td>
+                </tr>
+                <tr class="hover:bg-gray-700/40 transition">
+                  <td class="p-3 font-semibold text-white">تامر إبراهيم (POS المحمول)</td>
+                  <td class="p-3 text-gray-300 font-digital text-xs">2026-10-31 09:00 ص</td>
+                  <td class="p-3 text-amber-400 font-medium">مستمرة الآن...</td>
+                  <td class="p-3 font-digital font-bold text-emerald-400">1,420.00 ج.م</td>
+                  <td class="p-3"><span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-900/60 text-emerald-300 border border-emerald-700/50"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>مفتوحة</span></td>
+                  <td class="p-3 text-center"><button onclick="openShiftDetailModal('103', 'تامر إبراهيم', 'بوابة POS-01', '2026-10-31 09:00 ص', 'مفتوحة الآن', 1420, null, 0)" class="text-xs bg-gray-700 hover:bg-gray-600 text-white px-2.5 py-1 rounded">عرض</button></td>
+                </tr>
+                <tr class="hover:bg-gray-700/40 transition">
+                  <td class="p-3 font-semibold text-white">أحمد سالم (دخول #1)</td>
+                  <td class="p-3 text-gray-300 font-digital text-xs">2026-10-31 08:00 ص</td>
+                  <td class="p-3 text-amber-400 font-medium">مستمرة الآن...</td>
+                  <td class="p-3 font-digital text-gray-400">0.00 ج.م</td>
+                  <td class="p-3"><span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-900/60 text-emerald-300 border border-emerald-700/50"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>مفتوحة</span></td>
+                  <td class="p-3 text-center"><button onclick="openShiftDetailModal('102', 'أحمد سالم', 'بوابة الدخول (#1)', '2026-10-31 08:00 ص', 'مفتوحة الآن', 0, null, 0)" class="text-xs bg-gray-700 hover:bg-gray-600 text-white px-2.5 py-1 rounded">عرض</button></td>
+                </tr>
+                <tr class="hover:bg-gray-700/40 transition">
+                  <td class="p-3 font-semibold text-white">وليد عادل (وردية ليلية)</td>
+                  <td class="p-3 text-gray-300 font-digital text-xs">2026-10-31 12:00 ص</td>
+                  <td class="p-3 text-gray-400 font-digital text-xs">2026-10-31 08:00 ص</td>
+                  <td class="p-3 font-digital font-bold text-emerald-400">2,180.00 ج.م</td>
+                  <td class="p-3"><span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-700 text-gray-400">مغلقة</span></td>
+                  <td class="p-3 text-center"><button onclick="openShiftDetailModal('101', 'وليد عادل', 'بوابة الخروج', '2026-10-31 12:00 ص', '2026-10-31 08:00 ص', 2180, 2180, 0)" class="text-xs bg-gray-700 hover:bg-gray-600 text-white px-2.5 py-1 rounded">عرض</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- VIEW 2: SHIFTS (إدارة الشيفتات والورديات - EXACT SYSTEM REPLICA) -->
+      <div id="section-shifts" class="p-4 sm:p-6 space-y-6 hidden">
+        <!-- Title -->
+        <div class="flex items-center justify-between">
+          <div>
+            <h1 class="text-xl sm:text-2xl font-bold text-white">الشيفتات</h1>
+            <p class="text-xs sm:text-sm text-gray-400 mt-1">متابعة وإدارة شيفتات العمال والبوابات</p>
+          </div>
+        </div>
+
+        <!-- Filter Bar (Exact Replica of templates/admin/shifts.html) -->
+        <div class="bg-gray-800/80 border border-gray-700/60 rounded-xl p-4 shadow">
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+            <div>
+              <label class="block text-xs font-medium text-gray-300 mb-1">تاريخ البداية</label>
+              <input type="date" value="2026-10-25" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-indigo-500">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-300 mb-1">تاريخ النهاية</label>
+              <input type="date" value="2026-10-31" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-indigo-500">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-300 mb-1">البوابة</label>
+              <select class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-indigo-500">
+                <option value="">كافة البوابات</option>
+                <option value="1">بوابة ١ (دخول)</option>
+                <option value="2">بوابة ٢ (خروج)</option>
+                <option value="3">بوابة ٣ (POS محمول)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-300 mb-1">العامل</label>
+              <select class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-indigo-500">
+                <option value="">كافة العمال</option>
+                <option value="1">محمود حسن</option>
+                <option value="2">تامر إبراهيم</option>
+                <option value="3">أحمد سالم</option>
+                <option value="4">وليد عادل</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-300 mb-1">الحالة</label>
+              <select class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-indigo-500">
+                <option value="">الكل</option>
+                <option value="open">مفتوح</option>
+                <option value="closed">مغلق</option>
+              </select>
+            </div>
+            <div class="flex items-end gap-3">
+              <label class="flex items-center gap-2 cursor-pointer pb-2 text-xs text-amber-300">
+                <input type="checkbox" class="rounded bg-gray-900 border-gray-700 text-indigo-600 focus:ring-0">
+                <span>متأخر (&gt;١٢س)</span>
+              </label>
+              <button type="button" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-1.5 px-3 rounded-lg text-sm transition">
+                تصفية
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Showing count -->
+        <div class="flex items-center justify-between text-xs text-gray-400">
+          <span>عرض ١ إلى ٨ من إجمالي ٨ شيفتات</span>
+        </div>
+
+        <!-- Shifts Table (Exact Columns & Style of templates/admin/shifts.html) -->
+        <div class="bg-gray-800/80 border border-gray-700/60 rounded-xl shadow overflow-hidden">
+          <div class="table-scroll-container">
+            <table class="w-full text-right text-sm min-w-[750px]">
+              <thead class="bg-gray-900/60 text-gray-400 text-xs uppercase border-b border-gray-700">
+                <tr>
+                  <th class="p-3">رقم الشيفت</th>
+                  <th class="p-3">العامل</th>
+                  <th class="p-3">البوابة</th>
+                  <th class="p-3">البداية</th>
+                  <th class="p-3">النهاية</th>
+                  <th class="p-3">الإيراد المحسوب</th>
+                  <th class="p-3">النقدية عند الإغلاق</th>
+                  <th class="p-3">الفارق</th>
+                  <th class="p-3">الحالة</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-700/60 text-xs sm:text-sm">
+                <!-- Shift #104 -->
+                <tr onclick="openShiftDetailModal('104', 'محمود حسن', 'بوابة ٢', '2026-10-31 08:00 ص', 'مفتوح', 4850, null, 0)" class="cursor-pointer hover:bg-gray-700/40 transition">
+                  <td class="p-3 font-mono font-medium text-white">#١٠٤</td>
+                  <td class="p-3 text-gray-200 font-bold">محمود حسن</td>
+                  <td class="p-3 text-gray-300">بوابة ٢</td>
+                  <td class="p-3 text-gray-400 text-xs font-digital">2026-10-31 08:00 ص</td>
+                  <td class="p-3 text-amber-400 text-xs font-bold">مفتوح</td>
+                  <td class="p-3 font-semibold text-emerald-400 font-digital"><span>4,850.00</span> <span class="text-xs font-normal text-gray-400 mr-1">ج.م</span></td>
+                  <td class="p-3 font-semibold text-white font-digital">—</td>
+                  <td class="p-3 font-semibold text-gray-400 font-digital">—</td>
+                  <td class="p-3">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-900/60 text-emerald-300 border border-emerald-700/50">
+                      مفتوح
+                    </span>
+                  </td>
+                </tr>
+
+                <!-- Shift #103 -->
+                <tr onclick="openShiftDetailModal('103', 'تامر إبراهيم', 'بوابة ٣ (POS)', '2026-10-31 09:00 ص', 'مفتوح', 1420, null, 0)" class="cursor-pointer hover:bg-gray-700/40 transition">
+                  <td class="p-3 font-mono font-medium text-white">#١٠٣</td>
+                  <td class="p-3 text-gray-200 font-bold">تامر إبراهيم</td>
+                  <td class="p-3 text-gray-300">بوابة ٣ (POS)</td>
+                  <td class="p-3 text-gray-400 text-xs font-digital">2026-10-31 09:00 ص</td>
+                  <td class="p-3 text-amber-400 text-xs font-bold">مفتوح</td>
+                  <td class="p-3 font-semibold text-emerald-400 font-digital"><span>1,420.00</span> <span class="text-xs font-normal text-gray-400 mr-1">ج.م</span></td>
+                  <td class="p-3 font-semibold text-white font-digital">—</td>
+                  <td class="p-3 font-semibold text-gray-400 font-digital">—</td>
+                  <td class="p-3">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-900/60 text-emerald-300 border border-emerald-700/50">
+                      مفتوح
+                    </span>
+                  </td>
+                </tr>
+
+                <!-- Shift #102 -->
+                <tr onclick="openShiftDetailModal('102', 'أحمد سالم', 'بوابة ١', '2026-10-31 08:00 ص', 'مفتوح', 0, null, 0)" class="cursor-pointer hover:bg-gray-700/40 transition">
+                  <td class="p-3 font-mono font-medium text-white">#١٠٢</td>
+                  <td class="p-3 text-gray-200 font-bold">أحمد سالم</td>
+                  <td class="p-3 text-gray-300">بوابة ١</td>
+                  <td class="p-3 text-gray-400 text-xs font-digital">2026-10-31 08:00 ص</td>
+                  <td class="p-3 text-amber-400 text-xs font-bold">مفتوح</td>
+                  <td class="p-3 font-semibold text-gray-400 font-digital"><span>0.00</span> <span class="text-xs font-normal text-gray-400 mr-1">ج.م</span></td>
+                  <td class="p-3 font-semibold text-white font-digital">—</td>
+                  <td class="p-3 font-semibold text-gray-400 font-digital">—</td>
+                  <td class="p-3">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-900/60 text-emerald-300 border border-emerald-700/50">
+                      مفتوح
+                    </span>
+                  </td>
+                </tr>
+
+                <!-- Shift #101 (Closed - Matching) -->
+                <tr onclick="openShiftDetailModal('101', 'وليد عادل', 'بوابة ٢', '2026-10-30 12:00 ص', '2026-10-31 08:00 ص', 2180, 2180, 0)" class="cursor-pointer hover:bg-gray-700/40 transition">
+                  <td class="p-3 font-mono font-medium text-white">#١٠١</td>
+                  <td class="p-3 text-gray-200 font-bold">وليد عادل</td>
+                  <td class="p-3 text-gray-300">بوابة ٢</td>
+                  <td class="p-3 text-gray-400 text-xs font-digital">2026-10-30 12:00 ص</td>
+                  <td class="p-3 text-gray-400 text-xs font-digital">2026-10-31 08:00 ص</td>
+                  <td class="p-3 font-semibold text-emerald-400 font-digital"><span>2,180.00</span> <span class="text-xs font-normal text-gray-400 mr-1">ج.م</span></td>
+                  <td class="p-3 font-semibold text-white font-digital"><span>2,180.00</span> <span class="text-xs font-normal text-gray-400 mr-1">ج.م</span></td>
+                  <td class="p-3 font-semibold text-emerald-400 font-digital"><span>0.00</span> <span class="text-xs font-normal text-gray-400 mr-1">ج.م</span></td>
+                  <td class="p-3"><span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-700 text-gray-300">مغلق</span></td>
+                </tr>
+
+                <!-- Shift #100 (Closed - Matching) -->
+                <tr onclick="openShiftDetailModal('100', 'شريف عبد الله', 'بوابة ٢', '2026-10-30 04:00 م', '2026-10-31 12:00 ص', 3920, 3920, 0)" class="cursor-pointer hover:bg-gray-700/40 transition">
+                  <td class="p-3 font-mono font-medium text-white">#١٠٠</td>
+                  <td class="p-3 text-gray-200 font-bold">شريف عبد الله</td>
+                  <td class="p-3 text-gray-300">بوابة ٢</td>
+                  <td class="p-3 text-gray-400 text-xs font-digital">2026-10-30 04:00 م</td>
+                  <td class="p-3 text-gray-400 text-xs font-digital">2026-10-31 12:00 ص</td>
+                  <td class="p-3 font-semibold text-emerald-400 font-digital"><span>3,920.00</span> <span class="text-xs font-normal text-gray-400 mr-1">ج.م</span></td>
+                  <td class="p-3 font-semibold text-white font-digital"><span>3,920.00</span> <span class="text-xs font-normal text-gray-400 mr-1">ج.م</span></td>
+                  <td class="p-3 font-semibold text-emerald-400 font-digital"><span>0.00</span> <span class="text-xs font-normal text-gray-400 mr-1">ج.م</span></td>
+                  <td class="p-3"><span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-700 text-gray-300">مغلق</span></td>
+                </tr>
+
+                <!-- Shift #99 (Surplus) -->
+                <tr onclick="openShiftDetailModal('99', 'حسام إبراهيم', 'بوابة ٢', '2026-10-30 08:00 ص', '2026-10-30 04:00 م', 4200, 4220, 20)" class="cursor-pointer hover:bg-gray-700/40 transition">
+                  <td class="p-3 font-mono font-medium text-white">#٩٩</td>
+                  <td class="p-3 text-gray-200 font-bold">حسام إبراهيم</td>
+                  <td class="p-3 text-gray-300">بوابة ٢</td>
+                  <td class="p-3 text-gray-400 text-xs font-digital">2026-10-30 08:00 ص</td>
+                  <td class="p-3 text-gray-400 text-xs font-digital">2026-10-30 04:00 م</td>
+                  <td class="p-3 font-semibold text-emerald-400 font-digital"><span>4,200.00</span> <span class="text-xs font-normal text-gray-400 mr-1">ج.م</span></td>
+                  <td class="p-3 font-semibold text-white font-digital"><span>4,220.00</span> <span class="text-xs font-normal text-gray-400 mr-1">ج.م</span></td>
+                  <td class="p-3 font-semibold text-amber-400 font-digital"><span>+20.00</span> <span class="text-xs font-normal text-gray-400 mr-1">ج.م</span></td>
+                  <td class="p-3"><span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-700 text-gray-300">مغلق</span></td>
+                </tr>
+
+                <!-- Shift #98 (Deficit) -->
+                <tr onclick="openShiftDetailModal('98', 'تامر إبراهيم', 'بوابة ٣ (POS)', '2026-10-30 09:00 ص', '2026-10-30 05:00 م', 1850, 1800, -50)" class="cursor-pointer hover:bg-gray-700/40 transition">
+                  <td class="p-3 font-mono font-medium text-white">#٩٨</td>
+                  <td class="p-3 text-gray-200 font-bold">تامر إبراهيم</td>
+                  <td class="p-3 text-gray-300">بوابة ٣ (POS)</td>
+                  <td class="p-3 text-gray-400 text-xs font-digital">2026-10-30 09:00 ص</td>
+                  <td class="p-3 text-gray-400 text-xs font-digital">2026-10-30 05:00 م</td>
+                  <td class="p-3 font-semibold text-emerald-400 font-digital"><span>1,850.00</span> <span class="text-xs font-normal text-gray-400 mr-1">ج.م</span></td>
+                  <td class="p-3 font-semibold text-white font-digital"><span>1,800.00</span> <span class="text-xs font-normal text-gray-400 mr-1">ج.م</span></td>
+                  <td class="p-3 font-semibold text-rose-400 font-digital"><span>-50.00</span> <span class="text-xs font-normal text-gray-400 mr-1">ج.م</span></td>
+                  <td class="p-3"><span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-700 text-gray-300">مغلق</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Pagination Bar -->
+          <div class="p-4 border-t border-gray-700 flex items-center justify-between text-xs sm:text-sm">
+            <button class="bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-lg">السابق</button>
+            <div class="text-gray-400">صفحة ١ من ١</div>
+            <button class="bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-lg opacity-50 cursor-not-allowed">التالي</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- VIEW 3: REVENUE & REPORTS (المالية والإيرادات - EXACT SYSTEM REPLICA) -->
+      <div id="section-reports" class="p-4 sm:p-6 space-y-6 hidden">
+        <!-- Title & Action Buttons -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 class="text-xl sm:text-2xl font-bold text-white">تقرير الإيرادات</h1>
+            <p class="text-xs sm:text-sm text-gray-400 mt-1">تقارير الإيرادات المجمعة والتفصيلية للمرآب</p>
+          </div>
+
+          <div class="flex items-center gap-3 flex-wrap">
+            <!-- CSV Export Dropdown (Exact Replica) -->
+            <div class="relative inline-block text-right" id="csvDropdownContainer">
+              <button type="button" id="csvDropdownBtn" onclick="toggleCsvDropdown()"
+                class="bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 px-3.5 py-2 rounded-lg text-xs sm:text-sm transition flex items-center gap-2 cursor-pointer shadow-sm">
+                <svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"></path>
+                </svg>
+                <span>تصدير كشف CSV</span>
+                <svg class="w-4 h-4 text-gray-400" id="csvDropdownArrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              <!-- Dropdown Menu -->
+              <div id="csvDropdownMenu" class="hidden absolute left-0 mt-2 rounded-xl shadow-2xl bg-gray-900 border border-gray-700 divide-y divide-gray-800 z-50 text-right min-w-[175px]">
+                <div class="p-1 space-y-0.5">
+                  <button onclick="alert('جاري تصدير تقرير الإيرادات الشهري...'); toggleCsvDropdown();" class="w-full flex items-center gap-2 px-3 py-2 text-xs sm:text-sm text-gray-200 hover:bg-gray-800 rounded-lg">
+                    <span>📅 تقرير شهر</span>
+                  </button>
+                  <button onclick="alert('جاري تصدير تقرير الإيرادات اليومي...'); toggleCsvDropdown();" class="w-full flex items-center gap-2 px-3 py-2 text-xs sm:text-sm text-gray-200 hover:bg-gray-800 rounded-lg">
+                    <span>🕒 تقرير يوم</span>
+                  </button>
+                  <button onclick="alert('جاري تصدير تقرير العمال...'); toggleCsvDropdown();" class="w-full flex items-center gap-2 px-3 py-2 text-xs sm:text-sm text-gray-200 hover:bg-gray-800 rounded-lg">
+                    <span>👷 تقرير عمال</span>
+                  </button>
+                  <button onclick="alert('جاري تصدير التقرير التفصيلي...'); toggleCsvDropdown();" class="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-400 hover:bg-gray-800 rounded-lg">
+                    <span>📋 تقرير تفصيلي</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Print Button (Exact Replica) -->
+            <button type="button" onclick="openPrintRevenueModal()"
+              class="bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 px-3.5 py-2 rounded-lg text-xs sm:text-sm transition flex items-center gap-2 font-bold cursor-pointer">
+              <svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24-1.076-.672-2.126-1.272-3.078M18 10a6 6 0 00-12 0v3.75A2.25 2.25 0 008.25 16h7.5A2.25 2.25 0 0018 13.75V10zM6 18h12a2 2 0 002-2v-4a2 2 0 00-2-2H6a2 2 0 00-2 2v4a2 2 0 002 2zM6 6h12v4H6V6z"></path>
+              </svg>
+              <span>طباعة التقرير الرسمي</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Filter Bar (Exact Replica) -->
+        <div class="bg-gray-800/80 border border-gray-700/60 rounded-xl p-4 shadow">
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
+            <div>
+              <label class="block text-xs font-medium text-gray-300 mb-1">تاريخ البداية</label>
+              <input type="date" value="2026-10-25" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-indigo-500">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-300 mb-1">تاريخ النهاية</label>
+              <input type="date" value="2026-10-31" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-indigo-500">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-300 mb-1">البوابة</label>
+              <select class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-indigo-500">
+                <option value="">كافة البوابات</option>
+                <option value="1">بوابة ١</option>
+                <option value="2">بوابة ٢</option>
+                <option value="3">بوابة ٣ (POS)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-300 mb-1">العامل</label>
+              <select class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-indigo-500">
+                <option value="">كافة العمال</option>
+                <option value="1">محمود حسن</option>
+                <option value="2">تامر إبراهيم</option>
+                <option value="3">شريف عبد الله</option>
+                <option value="4">وليد عادل</option>
+              </select>
+            </div>
+            <div class="flex items-end">
+              <button type="button" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-1.5 px-3 rounded-lg text-sm transition">
+                تصفية
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Summary KPI Cards (Exact 4 Cards from templates/admin/reports/revenue.html) -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div class="bg-gray-800/80 border border-gray-700/60 rounded-xl p-4 sm:p-5 shadow">
+            <p class="text-xs text-gray-400 font-medium">إجمالي الإيرادات</p>
+            <div class="flex items-center gap-1.5 mt-2">
+              <span class="text-2xl sm:text-3xl font-digital font-bold text-emerald-400 leading-none">58,920.00</span>
+              <span class="text-sm font-semibold text-emerald-400/80 leading-none">ج.م</span>
+            </div>
+          </div>
+          <div class="bg-gray-800/80 border border-gray-700/60 rounded-xl p-4 sm:p-5 shadow">
+            <p class="text-xs text-gray-400 font-medium">إجمالي الجلسات</p>
+            <p class="text-2xl sm:text-3xl font-digital font-bold text-white mt-2">1,480</p>
+          </div>
+          <div class="bg-gray-800/80 border border-gray-700/60 rounded-xl p-4 sm:p-5 shadow">
+            <p class="text-xs text-gray-400 font-medium">متوسط مدة الجلسة</p>
+            <p class="text-2xl sm:text-3xl font-digital font-bold text-indigo-400 mt-2">1س 48د</p>
+          </div>
+          <div class="bg-gray-800/80 border border-gray-700/60 rounded-xl p-4 sm:p-5 shadow">
+            <p class="text-xs text-gray-400 font-medium">متوسط قيمة التذكرة</p>
+            <div class="flex items-baseline gap-1.5 mt-2">
+              <span class="text-2xl sm:text-3xl font-digital font-bold text-cyan-400">39.80</span>
+              <span class="text-xs font-normal text-gray-400">ج.م</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Two Tables Grid (Service Type & Operators) -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          
+          <!-- Table 1: By Service Type Table (Exact Replica) -->
+          <div class="bg-gray-800/80 border border-gray-700/60 rounded-xl shadow overflow-hidden">
+            <div class="p-4 border-b border-gray-700 flex items-center justify-between">
+              <h2 class="font-bold text-white text-sm sm:text-base">الإيرادات حسب نوع الخدمة</h2>
+              <span class="text-xs text-gray-400">تذاكر / اشتراكات / غرامات</span>
+            </div>
+            <div class="table-scroll-container">
+              <table class="w-full text-right text-sm min-w-[360px]">
+                <thead class="bg-gray-900/60 text-gray-400 text-xs uppercase border-b border-gray-700">
+                  <tr>
+                    <th class="p-3">نوع الخدمة</th>
+                    <th class="p-3">العدد</th>
+                    <th class="p-3">إجمالي الإيراد</th>
+                    <th class="p-3">النسبة</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-700/60 text-xs sm:text-sm">
+                  <tr class="hover:bg-gray-700/30">
+                    <td class="p-3">
+                      <div class="flex items-center gap-2">
+                        <svg class="w-5 h-5 text-indigo-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 010 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 010-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375z"></path>
+                        </svg>
+                        <span class="font-semibold text-white">تذاكر انتظار (ساعات)</span>
+                      </div>
+                    </td>
+                    <td class="p-3 text-indigo-300 font-digital">1,280</td>
+                    <td class="p-3 font-bold text-emerald-400 font-digital"><span>41,200.00</span> <span class="text-xs font-normal text-gray-400 mr-1">ج.م</span></td>
+                    <td class="p-3">
+                      <div class="flex items-center gap-2">
+                        <div class="w-16 bg-gray-700 rounded-full h-2 overflow-hidden">
+                          <div class="bg-indigo-500 h-2 rounded-full" style="width: 70%;"></div>
+                        </div>
+                        <span class="text-xs text-gray-300 font-medium font-digital">70٪</span>
+                      </div>
+                    </td>
+                  </tr>
+
+                  <tr class="hover:bg-gray-700/30">
+                    <td class="p-3">
+                      <div class="flex items-center gap-2">
+                        <svg class="w-5 h-5 text-cyan-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z"></path>
+                        </svg>
+                        <span class="font-semibold text-white">اشتراكات شهرية</span>
+                      </div>
+                    </td>
+                    <td class="p-3 text-indigo-300 font-digital">64</td>
+                    <td class="p-3 font-bold text-emerald-400 font-digital"><span>14,800.00</span> <span class="text-xs font-normal text-gray-400 mr-1">ج.م</span></td>
+                    <td class="p-3">
+                      <div class="flex items-center gap-2">
+                        <div class="w-16 bg-gray-700 rounded-full h-2 overflow-hidden">
+                          <div class="bg-cyan-500 h-2 rounded-full" style="width: 25%;"></div>
+                        </div>
+                        <span class="text-xs text-gray-300 font-medium font-digital">25٪</span>
+                      </div>
+                    </td>
+                  </tr>
+
+                  <tr class="hover:bg-gray-700/30">
+                    <td class="p-3">
+                      <div class="flex items-center gap-2">
+                        <svg class="w-5 h-5 text-amber-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"></path>
+                        </svg>
+                        <span class="font-semibold text-white">غرامات كروت مفقودة</span>
+                      </div>
+                    </td>
+                    <td class="p-3 text-indigo-300 font-digital">29</td>
+                    <td class="p-3 font-bold text-emerald-400 font-digital"><span>2,920.00</span> <span class="text-xs font-normal text-gray-400 mr-1">ج.م</span></td>
+                    <td class="p-3">
+                      <div class="flex items-center gap-2">
+                        <div class="w-16 bg-gray-700 rounded-full h-2 overflow-hidden">
+                          <div class="bg-amber-500 h-2 rounded-full" style="width: 5%;"></div>
+                        </div>
+                        <span class="text-xs text-gray-300 font-medium font-digital">5٪</span>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Table 2: By Operator Table (Exact Replica) -->
+          <div class="bg-gray-800/80 border border-gray-700/60 rounded-xl shadow overflow-hidden">
+            <div class="p-4 border-b border-gray-700">
+              <h2 class="font-bold text-white text-sm sm:text-base">الإيرادات حسب العمال</h2>
+            </div>
+            <div class="table-scroll-container">
+              <table class="w-full text-right text-sm min-w-[360px]">
+                <thead class="bg-gray-900/60 text-gray-400 text-xs uppercase border-b border-gray-700">
+                  <tr>
+                    <th class="p-3">اسم العامل</th>
+                    <th class="p-3">عدد الجلسات</th>
+                    <th class="p-3">إجمالي الإيراد</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-700/60 text-xs sm:text-sm">
+                  <tr class="hover:bg-gray-700/30">
+                    <td class="p-3 font-semibold text-white">محمود حسن</td>
+                    <td class="p-3 text-indigo-300 font-digital">480</td>
+                    <td class="p-3 font-bold text-emerald-400 font-digital"><span>18,450.00</span> <span class="text-xs font-normal text-gray-400 mr-1">ج.م</span></td>
+                  </tr>
+                  <tr class="hover:bg-gray-700/30">
+                    <td class="p-3 font-semibold text-white">شريف عبد الله</td>
+                    <td class="p-3 text-indigo-300 font-digital">410</td>
+                    <td class="p-3 font-bold text-emerald-400 font-digital"><span>15,800.00</span> <span class="text-xs font-normal text-gray-400 mr-1">ج.م</span></td>
+                  </tr>
+                  <tr class="hover:bg-gray-700/30">
+                    <td class="p-3 font-semibold text-white">تامر إبراهيم (POS المحمول)</td>
+                    <td class="p-3 text-indigo-300 font-digital">270</td>
+                    <td class="p-3 font-bold text-emerald-400 font-digital"><span>12,470.00</span> <span class="text-xs font-normal text-gray-400 mr-1">ج.م</span></td>
+                  </tr>
+                  <tr class="hover:bg-gray-700/30">
+                    <td class="p-3 font-semibold text-white">وليد عادل</td>
+                    <td class="p-3 text-indigo-300 font-digital">320</td>
+                    <td class="p-3 font-bold text-emerald-400 font-digital"><span>12,200.00</span> <span class="text-xs font-normal text-gray-400 mr-1">ج.م</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Daily Revenue Table (Exact Replica from templates/admin/reports/revenue.html) -->
+        <div class="bg-gray-800/80 border border-gray-700/60 rounded-xl shadow overflow-hidden">
+          <div class="p-4 border-b border-gray-700">
+            <h2 class="font-bold text-white text-sm sm:text-base">الإيراد اليومي التفصيلي</h2>
+          </div>
+          <div class="table-scroll-container">
+            <table class="w-full text-right text-sm min-w-[450px]">
+              <thead class="bg-gray-900/60 text-gray-400 text-xs uppercase border-b border-gray-700">
+                <tr>
+                  <th class="p-3">التاريخ</th>
+                  <th class="p-3">عدد الجلسات</th>
+                  <th class="p-3">إجمالي الإيراد</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-700/60 text-xs sm:text-sm">
+                <tr class="hover:bg-gray-700/30 bg-emerald-950/10">
+                  <td class="p-3 font-mono font-bold text-white">2026-10-31 (اليوم)</td>
+                  <td class="p-3 text-indigo-300 font-digital font-bold">185</td>
+                  <td class="p-3 font-bold text-emerald-400 font-digital"><span>8,450.00</span> <span class="text-xs font-normal text-gray-400 mr-1">ج.م</span></td>
+                </tr>
+                <tr class="hover:bg-gray-700/30">
+                  <td class="p-3 font-mono font-medium text-white">2026-10-30</td>
+                  <td class="p-3 text-indigo-300 font-digital">240</td>
+                  <td class="p-3 font-bold text-emerald-400 font-digital"><span>11,200.00</span> <span class="text-xs font-normal text-gray-400 mr-1">ج.م</span></td>
+                </tr>
+                <tr class="hover:bg-gray-700/30">
+                  <td class="p-3 font-mono font-medium text-white">2026-10-29</td>
+                  <td class="p-3 text-indigo-300 font-digital">215</td>
+                  <td class="p-3 font-bold text-emerald-400 font-digital"><span>8,900.00</span> <span class="text-xs font-normal text-gray-400 mr-1">ج.م</span></td>
+                </tr>
+                <tr class="hover:bg-gray-700/30">
+                  <td class="p-3 font-mono font-medium text-white">2026-10-28</td>
+                  <td class="p-3 text-indigo-300 font-digital">190</td>
+                  <td class="p-3 font-bold text-emerald-400 font-digital"><span>7,400.00</span> <span class="text-xs font-normal text-gray-400 mr-1">ج.م</span></td>
+                </tr>
+                <tr class="hover:bg-gray-700/30">
+                  <td class="p-3 font-mono font-medium text-white">2026-10-27</td>
+                  <td class="p-3 text-indigo-300 font-digital">180</td>
+                  <td class="p-3 font-bold text-emerald-400 font-digital"><span>6,900.00</span> <span class="text-xs font-normal text-gray-400 mr-1">ج.م</span></td>
+                </tr>
+                <tr class="hover:bg-gray-700/30">
+                  <td class="p-3 font-mono font-medium text-white">2026-10-26</td>
+                  <td class="p-3 text-indigo-300 font-digital">230</td>
+                  <td class="p-3 font-bold text-emerald-400 font-digital"><span>8,200.00</span> <span class="text-xs font-normal text-gray-400 mr-1">ج.م</span></td>
+                </tr>
+                <tr class="hover:bg-gray-700/30">
+                  <td class="p-3 font-mono font-medium text-white">2026-10-25</td>
+                  <td class="p-3 text-indigo-300 font-digital">240</td>
+                  <td class="p-3 font-bold text-emerald-400 font-digital"><span>7,870.00</span> <span class="text-xs font-normal text-gray-400 mr-1">ج.م</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- VIEW 4: SESSIONS (دخول وخروج السيارات) -->
+      <div id="section-sessions" class="p-4 sm:p-6 space-y-6 hidden">
+        <div class="flex items-center justify-between">
+          <div>
+            <h1 class="text-xl sm:text-2xl font-bold text-white">سجل حركات السيارات</h1>
+            <p class="text-xs sm:text-sm text-gray-400 mt-1">كشف حركات الدخول والخروج واللوحات والكروت</p>
+          </div>
+          <button onclick="alert('تصدير كشف الحركات CSV')" class="bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 px-3 py-1.5 rounded-lg text-xs font-bold">
+            📥 تصدير CSV
+          </button>
+        </div>
+
+        <div class="bg-gray-800/80 border border-gray-700/60 rounded-xl shadow overflow-hidden">
+          <div class="table-scroll-container">
+            <table class="w-full text-right text-sm min-w-[650px]">
+              <thead class="bg-gray-900/60 text-gray-400 text-xs border-b border-gray-700">
+                <tr>
+                  <th class="p-3">رقم الكارت</th>
+                  <th class="p-3">رقم اللوحة</th>
+                  <th class="p-3">وقت الدخول</th>
+                  <th class="p-3">وقت الخروج</th>
+                  <th class="p-3">المبلغ</th>
+                  <th class="p-3">الحالة</th>
+                  <th class="p-3 text-center">الإيصال</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-700/60 text-xs sm:text-sm">
+                <tr class="hover:bg-gray-700/30">
+                  <td class="p-3 font-digital text-cyan-400 font-bold">10048291</td>
+                  <td class="p-3 font-bold text-white">س ص ع 1984</td>
+                  <td class="p-3 font-digital text-gray-300">2026-10-31 03:10 م</td>
+                  <td class="p-3 font-digital text-gray-300">2026-10-31 05:25 م</td>
+                  <td class="p-3 font-digital font-bold text-emerald-400">45.00 ج.م</td>
+                  <td class="p-3"><span class="bg-slate-700 text-slate-300 px-2 py-0.5 rounded text-xs">غادرت</span></td>
+                  <td class="p-3 text-center"><button onclick="showThermalReceipt({cardCode: '10048291', plateNumber: 'س ص ع 1984', amount: '45.00 ج.م'})" class="text-xs text-cyan-400 hover:underline font-bold">معاينة</button></td>
+                </tr>
+                <tr class="hover:bg-gray-700/30">
+                  <td class="p-3 font-digital text-cyan-400 font-bold">10048285</td>
+                  <td class="p-3 font-bold text-white">ق ن د 7321</td>
+                  <td class="p-3 font-digital text-gray-300">2026-10-31 05:22 م</td>
+                  <td class="p-3 font-digital text-gray-500">—</td>
+                  <td class="p-3 font-digital text-gray-500">—</td>
+                  <td class="p-3"><span class="bg-emerald-950 text-emerald-300 border border-emerald-700/60 px-2 py-0.5 rounded text-xs font-bold">داخل الجراج</span></td>
+                  <td class="p-3 text-center"><span class="text-gray-500 text-xs">—</span></td>
+                </tr>
+                <tr class="hover:bg-gray-700/30">
+                  <td class="p-3 font-digital text-purple-400 font-bold">VIP-8802</td>
+                  <td class="p-3 font-bold text-white">ق ط ر 5555</td>
+                  <td class="p-3 font-digital text-gray-300">2026-10-31 01:00 م</td>
+                  <td class="p-3 font-digital text-gray-300">2026-10-31 05:30 م</td>
+                  <td class="p-3 font-digital font-bold text-purple-400">0.00 ج.م</td>
+                  <td class="p-3"><span class="bg-purple-950 text-purple-300 border border-purple-700/60 px-2 py-0.5 rounded text-xs font-bold">مشترك VIP</span></td>
+                  <td class="p-3 text-center"><button onclick="showThermalReceipt({cardCode: 'VIP-8802', plateNumber: 'ق ط ر 5555', amount: '0.00 ج.م'})" class="text-xs text-cyan-400 hover:underline font-bold">معاينة</button></td>
+                </tr>
+                <tr class="hover:bg-gray-700/30">
+                  <td class="p-3 font-digital text-amber-400 font-bold">LOST-04</td>
+                  <td class="p-3 font-bold text-white">غير مسجل (كارت مفقود)</td>
+                  <td class="p-3 font-digital text-gray-300">2026-10-31 09:15 ص</td>
+                  <td class="p-3 font-digital text-gray-300">2026-10-31 04:30 م</td>
+                  <td class="p-3 font-digital font-bold text-amber-400">145.00 ج.م</td>
+                  <td class="p-3"><span class="bg-amber-950 text-amber-300 border border-amber-700/60 px-2 py-0.5 rounded text-xs font-bold">غرامة كارت</span></td>
+                  <td class="p-3 text-center"><button onclick="showThermalReceipt({cardCode: 'LOST-04', plateNumber: 'غير مسجل', amount: '145.00 ج.م'})" class="text-xs text-cyan-400 hover:underline font-bold">معاينة</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- VIEW 5: RATES (التعريفات) -->
+      <div id="section-rates" class="p-4 sm:p-6 space-y-6 hidden">
+        <div class="flex items-center justify-between">
+          <div>
+            <h1 class="text-xl sm:text-2xl font-bold text-white">التعريفات وقائمة الأسعار</h1>
+            <p class="text-xs sm:text-sm text-gray-400 mt-1">إعدادات تسعير ساعات الانتظار وفترات السماح</p>
+          </div>
+          <button onclick="alert('تعديل التسعيرة الفورية وتحديثها بالبوابات بنقرة واحدة.')" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-1.5 rounded-lg text-xs sm:text-sm transition">
+            ✏️ تعديل التسعيرة
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-center">
+          <div class="p-4 bg-gray-800 rounded-xl border border-gray-700">
+            <span class="text-xs text-gray-400 font-bold block mb-1">سعر أول ساعة</span>
+            <span class="text-2xl font-digital font-bold text-emerald-400">20.00 ج.م</span>
+          </div>
+          <div class="p-4 bg-gray-800 rounded-xl border border-gray-700">
+            <span class="text-xs text-gray-400 font-bold block mb-1">الساعات التالية</span>
+            <span class="text-2xl font-digital font-bold text-cyan-400">10.00 ج.م/س</span>
+          </div>
+          <div class="p-4 bg-gray-800 rounded-xl border border-gray-700">
+            <span class="text-xs text-gray-400 font-bold block mb-1">فترة السماح للخروج</span>
+            <span class="text-2xl font-digital font-bold text-indigo-400">15 دقيقة مجاناً</span>
+          </div>
+          <div class="p-4 bg-gray-800 rounded-xl border border-gray-700">
+            <span class="text-xs text-gray-400 font-bold block mb-1">غرامة فقدان الكارت</span>
+            <span class="text-2xl font-digital font-bold text-amber-400">100.00 ج.م</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- VIEW 6: SUBSCRIPTIONS (الاشتراكات) -->
+      <div id="section-subscriptions" class="p-4 sm:p-6 space-y-6 hidden">
+        <div class="flex items-center justify-between">
+          <div>
+            <h1 class="text-xl sm:text-2xl font-bold text-white">الاشتراكات الشهرية</h1>
+            <p class="text-xs sm:text-sm text-gray-400 mt-1">باقات الاشتراكات الدورية لرواد وموظفي المول</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="bg-gray-800/80 border border-purple-500/50 rounded-xl p-5 shadow">
+            <span class="text-xs font-bold text-purple-400 bg-purple-950 px-2 py-0.5 rounded">باقة VIP الذهبية</span>
+            <div class="text-2xl font-digital font-bold text-white mt-2">1,200 <span class="text-xs font-normal text-gray-400">ج.م/شهر</span></div>
+            <p class="text-xs text-gray-400 mt-2">دخول وخروج غير محدود طوال الـ 24 ساعة لكبار العملاء.</p>
+          </div>
+          <div class="bg-gray-800/80 border border-cyan-500/50 rounded-xl p-5 shadow">
+            <span class="text-xs font-bold text-cyan-400 bg-cyan-950 px-2 py-0.5 rounded">باقة موظفي المول</span>
+            <div class="text-2xl font-digital font-bold text-white mt-2">700 <span class="text-xs font-normal text-gray-400">ج.م/شهر</span></div>
+            <p class="text-xs text-gray-400 mt-2">مخصصة لموظفي وملاك المحلات من 8 ص حتى 11 م.</p>
+          </div>
+          <div class="bg-gray-800/80 border border-emerald-500/50 rounded-xl p-5 shadow">
+            <span class="text-xs font-bold text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded">باقة الشركات (ربع سنوي)</span>
+            <div class="text-2xl font-digital font-bold text-white mt-2">3,000 <span class="text-xs font-normal text-gray-400">ج.م/3 شهور</span></div>
+            <p class="text-xs text-gray-400 mt-2">خصم مخصص للشركات المتعاقدة على أسطول سيارات الموظفين.</p>
+          </div>
+        </div>
+      </div>
+
+    </main>
+
+  </div>
+
+  <!-- SHIFT DETAIL MODAL (Replica of templates/admin/shift_detail.html) -->
+  <div id="shift-detail-modal" class="fixed inset-0 z-[99999] bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center p-3 sm:p-4">
+    <div class="bg-gray-900 border border-gray-700 rounded-2xl max-w-2xl w-full p-5 sm:p-6 shadow-2xl overflow-y-auto max-h-[90vh] text-right">
+      <div class="flex items-center justify-between border-b border-gray-800 pb-3 mb-4">
+        <div class="flex items-center gap-2">
+          <span class="w-3 h-3 rounded-full bg-cyan-400"></span>
+          <h3 class="text-base sm:text-lg font-bold text-white" id="modal-shift-title">تفاصيل الشيفت #١٠٤</h3>
+        </div>
+        <button onclick="closeShiftDetailModal()" class="text-gray-400 hover:text-white p-1 rounded-lg">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs sm:text-sm mb-4 bg-gray-800/60 p-4 rounded-xl border border-gray-700/60">
+        <div>
+          <span class="text-gray-400 text-xs block">العامل المسؤول:</span>
+          <strong class="text-white font-bold" id="modal-shift-op">محمود حسن</strong>
+        </div>
+        <div>
+          <span class="text-gray-400 text-xs block">البوابة / الموقع:</span>
+          <strong class="text-white font-bold" id="modal-shift-gate">بوابة الخروج (2B)</strong>
+        </div>
+        <div>
+          <span class="text-gray-400 text-xs block">وقت البدء:</span>
+          <span class="text-gray-200 font-digital" id="modal-shift-start">2026-10-31 08:00 ص</span>
+        </div>
+        <div>
+          <span class="text-gray-400 text-xs block">وقت النهاية:</span>
+          <span class="text-gray-200 font-digital" id="modal-shift-end">مفتوحة الآن</span>
+        </div>
+        <div>
+          <span class="text-gray-400 text-xs block">الإيراد المحسوب بالنظام:</span>
+          <strong class="text-emerald-400 font-digital font-bold text-base" id="modal-shift-computed">4,850.00 ج.م</strong>
+        </div>
+        <div>
+          <span class="text-gray-400 text-xs block">حالة مطابقة الخزينة:</span>
+          <span class="text-emerald-300 font-bold" id="modal-shift-disc">مطابقة تامة (0.00 ج.م)</span>
+        </div>
+      </div>
+
+      <div class="p-3 rounded-xl bg-cyan-950/40 border border-cyan-800/50 text-xs text-cyan-200 mb-4">
+        📊 يقوم النظام آلياً بجرد جميع إيصالات الكاشير وحساب نقدية الدرج مع منع إغلاق الوردية قبل التأكيد.
+      </div>
+
+      <div class="flex items-center justify-between gap-3 pt-2 border-t border-gray-800 flex-wrap">
+        <button onclick="window.print()" class="bg-gray-800 hover:bg-gray-700 text-white font-bold px-4 py-2 rounded-xl text-xs sm:text-sm flex items-center gap-2 border border-gray-700">
+          <span>🖨️ طباعة تقرير الشيفت</span>
+        </button>
+        <button onclick="closeShiftDetailModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-4 py-2 rounded-xl text-xs sm:text-sm">
+          إغلاق النافذة
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- OFFICIAL PRINT REVENUE MODAL (A4 Report Replica) -->
+  <div id="print-revenue-modal" class="fixed inset-0 z-[99999] bg-slate-950/85 backdrop-blur-sm hidden items-center justify-center p-3 sm:p-4">
+    <div class="bg-white text-black rounded-2xl max-w-3xl w-full p-6 sm:p-8 shadow-2xl overflow-y-auto max-h-[92vh] text-right font-sans">
+      <div class="flex justify-between items-start border-b-2 border-black pb-4 mb-4">
+        <div>
+          <h2 class="text-xl sm:text-2xl font-black">garage4u • تقرير الإيرادات الرسمي</h2>
+          <span class="text-xs text-gray-600 font-bold block mt-1">جراج باب اللوق الذكي • تقرير محاسبي معتمد</span>
+        </div>
+        <div class="text-left text-xs font-mono">
+          <div>التاريخ: 2026-10-31</div>
+          <div>النطاق: أسبوعي مجمع</div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-3 gap-3 p-3 bg-gray-100 rounded-lg text-xs mb-4">
+        <div>إجمالي الإيرادات: <strong class="font-bold">58,920.00 ج.م</strong></div>
+        <div>إجمالي الجلسات: <strong class="font-bold">1,480 جلسة</strong></div>
+        <div>متوسط التذكرة: <strong class="font-bold">39.80 ج.م</strong></div>
+      </div>
+
+      <table class="w-full text-right text-xs border border-gray-300 mb-4">
+        <thead class="bg-gray-200 border-b border-gray-300">
+          <tr>
+            <th class="p-2 border-l border-gray-300">نوع الخدمة</th>
+            <th class="p-2 border-l border-gray-300">العدد</th>
+            <th class="p-2 border-l border-gray-300">الإيراد</th>
+            <th class="p-2">النسبة</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200">
+          <tr>
+            <td class="p-2 border-l border-gray-200">تذاكر انتظار (ساعات)</td>
+            <td class="p-2 border-l border-gray-200">1,280</td>
+            <td class="p-2 border-l border-gray-200 font-bold">41,200.00 ج.م</td>
+            <td class="p-2 font-bold">70%</td>
+          </tr>
+          <tr>
+            <td class="p-2 border-l border-gray-200">اشتراكات شهرية</td>
+            <td class="p-2 border-l border-gray-200">64</td>
+            <td class="p-2 border-l border-gray-200 font-bold">14,800.00 ج.م</td>
+            <td class="p-2 font-bold">25%</td>
+          </tr>
+          <tr>
+            <td class="p-2 border-l border-gray-200">غرامات كروت مفقودة</td>
+            <td class="p-2 border-l border-gray-200">29</td>
+            <td class="p-2 border-l border-gray-200 font-bold">2,920.00 ج.م</td>
+            <td class="p-2 font-bold">5%</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="flex justify-between items-center pt-4 border-t border-gray-300">
+        <button onclick="window.print()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-lg text-xs">
+          🖨️ طباعة الورقة A4
+        </button>
+        <button onclick="closePrintRevenueModal()" class="bg-gray-800 text-white font-bold px-4 py-2 rounded-lg text-xs">
+          إغلاق
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="preview-common.js?v=20261031_v5"></script>
+  <script>
+    initPreviewBar('admin');
+
+    function toggleMobileSidebar() {
+      const sb = document.getElementById('sidebar');
+      const ov = document.getElementById('sidebar-overlay');
+      if (sb && ov) {
+        sb.classList.toggle('open');
+        ov.classList.toggle('active');
+      }
+    }
+
+    function showAdminSection(sectionId) {
+      const sections = ['dashboard', 'shifts', 'reports', 'sessions', 'rates', 'subscriptions'];
+      sections.forEach(s => {
+        const secEl = document.getElementById('section-' + s);
+        const navEl = document.getElementById('nav-' + s);
+        if (secEl) {
+          if (s === sectionId) secEl.classList.remove('hidden');
+          else secEl.classList.add('hidden');
+        }
+        if (navEl) {
+          if (s === sectionId) navEl.classList.add('active');
+          else navEl.classList.remove('active');
+        }
+      });
+
+      // Close mobile sidebar on selection if open
+      const sb = document.getElementById('sidebar');
+      const ov = document.getElementById('sidebar-overlay');
+      if (sb && sb.classList.contains('open')) {
+        sb.classList.remove('open');
+        ov.classList.remove('active');
+      }
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function toggleCsvDropdown() {
+      const m = document.getElementById('csvDropdownMenu');
+      const a = document.getElementById('csvDropdownArrow');
+      if (m) {
+        m.classList.toggle('hidden');
+        if (a) a.classList.toggle('rotate-180');
+      }
+    }
+
+    function openShiftDetailModal(shiftId, op, gate, start, end, computed, closing, discrepancy) {
+      document.getElementById('modal-shift-title').textContent = `تفاصيل الشيفت #${shiftId}`;
+      document.getElementById('modal-shift-op').textContent = op;
+      document.getElementById('modal-shift-gate').textContent = gate;
+      document.getElementById('modal-shift-start').textContent = start;
+      document.getElementById('modal-shift-end').textContent = end;
+      document.getElementById('modal-shift-computed').textContent = `${computed.toLocaleString()} ج.م`;
+      
+      const discEl = document.getElementById('modal-shift-disc');
+      if (closing === null) {
+        discEl.textContent = 'الوردية مفتوحة حالياً (قيد التشغيل)';
+        discEl.className = 'text-amber-300 font-bold';
+      } else if (discrepancy === 0) {
+        discEl.textContent = '✅ مطابقة تامة (عجز 0.00 ج.م)';
+        discEl.className = 'text-emerald-400 font-bold';
+      } else if (discrepancy > 0) {
+        discEl.textContent = `⚠️ زيادة في العهدة (+${discrepancy} ج.م)`;
+        discEl.className = 'text-amber-400 font-bold';
+      } else {
+        discEl.textContent = `❌ عجز في العهدة (${discrepancy} ج.م)`;
+        discEl.className = 'text-rose-400 font-bold';
+      }
+
+      document.getElementById('shift-detail-modal').style.display = 'flex';
+    }
+
+    function closeShiftDetailModal() {
+      document.getElementById('shift-detail-modal').style.display = 'none';
+    }
+
+    function openPrintRevenueModal() {
+      document.getElementById('print-revenue-modal').style.display = 'flex';
+    }
+
+    function closePrintRevenueModal() {
+      document.getElementById('print-revenue-modal').style.display = 'none';
+    }
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>جهاز الـ POS المحمول (Sunmi V2) - garage4u POS</title>
+
+  <!-- Google Fonts: Cairo & Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Outfit:wght@500;700;800;900&display=swap"
+    rel="stylesheet">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/static/css/tailwind.min.css">
+  <link rel="stylesheet" href="preview-common.css?v=20261031_v5">
+
+  <style>
+    @media (max-width: 768px) {
+      #preview-floating-bar {
+        display: none !important;
+      }
+    }
+    body {
+      font-family: 'Cairo', 'Segoe UI', Tahoma, Arial, sans-serif;
+      background: radial-gradient(circle at 50% 10%, #0f172a 0%, #060911 80%);
+      color: #f8fafc;
+      min-height: 100vh;
+    }
+
+    @media (min-width: 769px) {
+      body {
+        padding-top: 60px;
+      }
+    }
+
+    .font-digital {
+      font-family: 'Outfit', 'Cairo', monospace, sans-serif;
+    }
+
+    /* Handheld Sunmi Device Frame */
+    .pos-device-frame {
+      width: 380px;
+      max-width: 100%;
+      background: #111827;
+      border-radius: 44px;
+      padding: 16px 14px 20px 14px;
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.9), 0 0 0 3px #1f2937, 0 0 30px rgba(14, 165, 233, 0.2);
+      position: relative;
+      margin: 0 auto;
+      border: 2px solid #374151;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transition: all 0.3s ease;
+    }
+
+    /* Thermal Printer Slot at Device Top */
+    .printer-head-slot {
+      width: 170px;
+      height: 14px;
+      background: #030712;
+      border-radius: 8px 8px 3px 3px;
+      border-top: 3px solid #0284c7;
+      margin-bottom: 12px;
+      position: relative;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.9);
+    }
+
+    /* Animated Paper Rolling Out */
+    @keyframes paperRollOut {
+      0% { height: 0; opacity: 0; }
+      100% { height: 110px; opacity: 1; }
+    }
+
+    .printed-paper-strip {
+      display: none;
+      width: 150px;
+      background: #ffffff;
+      color: #000;
+      border-radius: 0 0 4px 4px;
+      font-family: monospace;
+      font-size: 8px;
+      padding: 6px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+      position: absolute;
+      top: 14px;
+      left: 10px;
+      z-index: 30;
+      animation: paperRollOut 0.8s ease-out forwards;
+      overflow: hidden;
+    }
+
+    /* Internal Touch Screen */
+    .pos-touch-screen {
+      width: 100%;
+      background: #090e1a;
+      border-radius: 28px;
+      overflow: hidden;
+      border: 1px solid #1e293b;
+      min-height: 560px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+      position: relative;
+    }
+
+    /* Device Bottom Speaker / Grip */
+    .pos-bottom-chin {
+      width: 60px;
+      height: 4px;
+      background: #374151;
+      border-radius: 2px;
+      margin-top: 14px;
+    }
+
+    /* Fullscreen View Mode (Default on Mobile) */
+    .full-screen-mode .pos-device-frame {
+      width: 100%;
+      max-width: 600px;
+      border-radius: 18px;
+      padding: 6px;
+      border: none;
+      box-shadow: none;
+      background: transparent;
+    }
+    .full-screen-mode .printer-head-slot,
+    .full-screen-mode .pos-bottom-chin {
+      display: none;
+    }
+    .full-screen-mode .pos-touch-screen {
+      border-radius: 18px;
+      min-height: 580px;
+      border: 1px solid #334155;
+    }
+
+    /* Auto full screen on mobile screens */
+    @media (max-width: 640px) {
+      .pos-device-frame {
+        width: 100% !important;
+        border-radius: 16px !important;
+        padding: 4px !important;
+        border: none !important;
+        box-shadow: none !important;
+        background: transparent !important;
+      }
+      .printer-head-slot, .pos-bottom-chin {
+        display: none !important;
+      }
+      .pos-touch-screen {
+        border-radius: 16px !important;
+        min-height: calc(100vh - 120px) !important;
+      }
+    }
+  </style>
+</head>
+
+<body class="selection:bg-cyan-500 selection:text-white flex flex-col justify-between">
+
+  <!-- Header Controls -->
+  <div class="max-w-4xl mx-auto w-full px-4 pt-3 pb-2 flex items-center justify-between flex-wrap gap-2">
+    <div class="flex items-center gap-2">
+      <div class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></div>
+      <h1 class="text-sm sm:text-base font-black text-white">جهاز POS المحمول (Sunmi V2)</h1>
+    </div>
+
+    <!-- Toggle Device Mockup vs Touch App View (Hidden on very small phones) -->
+    <div class="hidden sm:flex items-center gap-1.5 bg-slate-900/90 border border-slate-800 p-1 rounded-xl text-xs">
+      <button id="btn-mode-frame" onclick="setMode('frame')" class="px-3 py-1 rounded-lg font-bold bg-amber-500 text-slate-950 shadow">
+        📱 مجسم جهاز POS
+      </button>
+      <button id="btn-mode-full" onclick="setMode('full')" class="px-3 py-1 rounded-lg font-bold text-slate-300 hover:text-white">
+        🖥️ شاشة اللمس المباشرة
+      </button>
+    </div>
+  </div>
+
+  <!-- Device Container Area -->
+  <main class="flex-grow flex items-center justify-center p-2 sm:p-4 mb-6">
+    <div id="device-container" class="pos-device-frame">
+      
+      <!-- Thermal Printer Slot -->
+      <div class="printer-head-slot" id="printer-slot">
+        <!-- Animated Receipt Paper Strip -->
+        <div id="paper-strip" class="printed-paper-strip">
+          <div class="text-center font-bold">garage4u</div>
+          <div class="text-[7px] text-center border-b border-black pb-1 mb-1">جراج باب اللوق الذكي</div>
+          <div>كارت: 10048291</div>
+          <div>المبلغ: 35.00 ج.م</div>
+          <div>اللوحة: أ ب ج 4562</div>
+          <div class="text-[6px] text-center mt-1">تمت المحاسبة بنجاح</div>
+        </div>
+      </div>
+
+      <!-- Touch Screen -->
+      <div class="pos-touch-screen">
+
+        <!-- Android Status Bar -->
+        <div class="bg-slate-950 px-4 py-1.5 flex justify-between items-center text-[11px] text-slate-400 font-digital border-b border-slate-800">
+          <span id="pos-status-clock">17:35</span>
+          <div class="flex items-center gap-2">
+            <span>4G LTE</span>
+            <span>📶</span>
+            <span>🔋 98%</span>
+          </div>
+        </div>
+
+        <!-- POS Top Bar -->
+        <div class="bg-slate-900 px-4 py-2 flex items-center justify-between border-b border-slate-800">
+          <div>
+            <span class="text-xs font-black text-white block">بوابة متحركة (POS-01)</span>
+            <span class="text-[10px] text-slate-400 font-bold">المشغل: تامر إبراهيم</span>
+          </div>
+          <div class="bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded text-[10px] font-bold">
+            الوردية #104
+          </div>
+        </div>
+
+        <!-- 3 POS Tabs -->
+        <div class="grid grid-cols-3 bg-slate-950 border-b border-slate-800 text-xs font-bold text-center">
+          <button onclick="switchTab('entry')" id="tab-btn-entry" class="py-2.5 text-cyan-400 border-b-2 border-cyan-400 bg-cyan-950/20">
+            🚗 دخول
+          </button>
+          <button onclick="switchTab('exit')" id="tab-btn-exit" class="py-2.5 text-slate-400 hover:text-white">
+            💰 خروج وحساب
+          </button>
+          <button onclick="switchTab('shift')" id="tab-btn-shift" class="py-2.5 text-slate-400 hover:text-white">
+            📋 الوردية
+          </button>
+        </div>
+
+        <!-- TAB 1: ENTRY SCREEN -->
+        <div id="tab-content-entry" class="p-4 flex-grow flex flex-col justify-between">
+          <div class="space-y-3">
+            <div class="text-center py-2">
+              <span class="text-xs text-slate-400 block font-bold mb-1">تسجيل سيارة جديدة عبر الـ POS</span>
+              <div class="bg-slate-950 border border-cyan-500/40 p-3 rounded-2xl flex flex-col items-center">
+                <span class="text-[11px] text-cyan-300 font-bold mb-1">رقم الكارت الممسوح</span>
+                <span class="text-xl font-digital font-black text-white">10048295</span>
+              </div>
+            </div>
+
+            <!-- Plate Entry Field -->
+            <div>
+              <label class="block text-[11px] font-bold text-slate-300 mb-1">رقم اللوحة (كاميرا POS / يدوي):</label>
+              <input type="text" value="ب ط ر 8421" class="w-full bg-slate-950 border border-slate-700 rounded-xl py-2 px-3 text-center text-sm font-digital font-bold text-cyan-300 outline-none">
+            </div>
+
+            <!-- Vehicle Type Quick Select -->
+            <div class="grid grid-cols-2 gap-2 text-xs">
+              <button class="bg-cyan-950/80 border border-cyan-500/50 text-cyan-300 py-2 rounded-xl font-bold">
+                🚗 ملاكي / عادي
+              </button>
+              <button class="bg-slate-900 border border-slate-800 text-slate-400 py-2 rounded-xl font-bold">
+                🚙 نقل / ميكروباص
+              </button>
+            </div>
+          </div>
+
+          <!-- Giant Touch Entry Action Button -->
+          <div class="mt-4 space-y-2">
+            <button onclick="simulatePOSPrint('entry')" class="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black py-3.5 rounded-2xl text-base shadow-lg shadow-emerald-950/60 flex items-center justify-center gap-2 cursor-pointer transition">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+              </svg>
+              <span>تأكيد الدخول وطباعة التذكرة</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- TAB 2: EXIT & CHECKOUT SCREEN -->
+        <div id="tab-content-exit" class="p-4 flex-grow flex flex-col justify-between hidden">
+          <div class="space-y-3">
+            <div class="flex justify-between items-center text-xs">
+              <span class="text-slate-400 font-bold">كارت: 10048291</span>
+              <span class="text-cyan-300 font-bold">الانتظار: 1 س و 40 د</span>
+            </div>
+
+            <!-- Big Price Box -->
+            <div class="bg-slate-950 border-2 border-emerald-500/50 rounded-2xl p-4 text-center">
+              <span class="text-[11px] text-slate-400 font-bold uppercase block">المبلغ المطلوب للدفع</span>
+              <div class="text-4xl font-digital font-black text-emerald-400 my-1">
+                35.00 <span class="text-lg">ج.م</span>
+              </div>
+              <span class="text-[10px] text-slate-400">السيارة: أ ب ج 4562</span>
+            </div>
+
+            <!-- Payment Methods -->
+            <div class="grid grid-cols-2 gap-2 text-xs">
+              <button class="bg-emerald-950 border border-emerald-500/60 text-emerald-300 py-2.5 rounded-xl font-bold flex items-center justify-center gap-1.5 shadow">
+                <span>💵 نقدياً (Cash)</span>
+              </button>
+              <button class="bg-slate-900 border border-slate-800 text-slate-400 py-2.5 rounded-xl font-bold flex items-center justify-center gap-1.5">
+                <span>💳 فيزا / مدى</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Giant Touch Checkout Action Button -->
+          <div class="mt-4 space-y-2">
+            <button onclick="simulatePOSPrint('exit')" class="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black py-3.5 rounded-2xl text-base shadow-lg shadow-emerald-950/60 flex items-center justify-center gap-2 cursor-pointer transition">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+              </svg>
+              <span>تحصيل وطباعة الإيصال الفوري</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- TAB 3: SHIFT SUMMARY (Z-REPORT) -->
+        <div id="tab-content-shift" class="p-4 flex-grow flex flex-col justify-between hidden">
+          <div class="space-y-3 text-xs">
+            <div class="bg-slate-950 border border-slate-800 p-3 rounded-2xl space-y-2">
+              <div class="flex justify-between text-slate-300 font-bold border-b border-slate-800 pb-1.5">
+                <span>ملخص الوردية الحالية</span>
+                <span class="text-amber-400 font-bold">وردية #104</span>
+              </div>
+              <div class="flex justify-between text-slate-400">
+                <span>إجمالي السيارات المغادرة:</span>
+                <span class="text-white font-bold font-digital">38 سيارة</span>
+              </div>
+              <div class="flex justify-between text-slate-400">
+                <span>إجمالي النقدية المحصلة:</span>
+                <span class="text-emerald-400 font-bold font-digital text-sm">1,420.00 ج.م</span>
+              </div>
+              <div class="flex justify-between text-slate-400">
+                <span>حركات المشتركين المعفية:</span>
+                <span class="text-purple-300 font-bold font-digital">7 سيارات</span>
+              </div>
+            </div>
+
+            <div class="p-2.5 rounded-xl bg-amber-950/40 border border-amber-600/40 text-[11px] text-amber-300 text-center font-bold">
+              ⚠️ يتم مطابقة هذه الأرقام آلياً فور إغلاق الوردية مع لوحة الإدارة.
+            </div>
+          </div>
+
+          <div class="mt-4">
+            <button onclick="simulatePOSPrint('shift')" class="w-full bg-slate-800 hover:bg-slate-700 text-white font-black py-3 rounded-2xl text-xs sm:text-sm border border-slate-700 flex items-center justify-center gap-2 transition">
+              <span>🖨️ طباعة تقرير الوردية (Z-Report)</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Device Home Indicator -->
+        <div class="p-2 flex justify-center bg-slate-950">
+          <div class="w-24 h-1 bg-slate-700 rounded-full"></div>
+        </div>
+
+      </div>
+
+      <!-- Bottom Speaker / Chin -->
+      <div class="pos-bottom-chin"></div>
+    </div>
+  </main>
+
+  <script src="preview-common.js?v=20261031_v5"></script>
+  <script>
+    initPreviewBar('pos');
+
+    function setMode(mode) {
+      const container = document.getElementById('device-container');
+      const btnFrame = document.getElementById('btn-mode-frame');
+      const btnFull = document.getElementById('btn-mode-full');
+
+      if (mode === 'full') {
+        document.body.classList.add('full-screen-mode');
+        if (btnFull) btnFull.className = 'px-3 py-1 rounded-lg font-bold bg-amber-500 text-slate-950 shadow';
+        if (btnFrame) btnFrame.className = 'px-3 py-1 rounded-lg font-bold text-slate-300 hover:text-white';
+      } else {
+        document.body.classList.remove('full-screen-mode');
+        if (btnFrame) btnFrame.className = 'px-3 py-1 rounded-lg font-bold bg-amber-500 text-slate-950 shadow';
+        if (btnFull) btnFull.className = 'px-3 py-1 rounded-lg font-bold text-slate-300 hover:text-white';
+      }
+    }
+
+    function switchTab(tab) {
+      ['entry', 'exit', 'shift'].forEach(t => {
+        const btn = document.getElementById('tab-btn-' + t);
+        const content = document.getElementById('tab-content-' + t);
+        if (t === tab) {
+          btn.className = 'py-2.5 text-cyan-400 border-b-2 border-cyan-400 bg-cyan-950/20';
+          content.classList.remove('hidden');
+        } else {
+          btn.className = 'py-2.5 text-slate-400 hover:text-white';
+          content.classList.add('hidden');
+        }
+      });
+    }
+
+    function simulatePOSPrint(action) {
+      const strip = document.getElementById('paper-strip');
+      if (strip) strip.style.display = 'block';
+
+      setTimeout(() => {
+        if (action === 'exit') {
+          showThermalReceipt({
+            cardCode: '10048291',
+            plateNumber: 'أ ب ج 4562',
+            gate: 'بوابة الـ POS المحمولة (POS-01)',
+            operator: 'تامر إبراهيم',
+            duration: '1 ساعة و40 دقيقة',
+            amount: '35.00 ج.م'
+          });
+        } else if (action === 'entry') {
+          showThermalReceipt({
+            cardCode: '10048295',
+            plateNumber: 'ب ط ر 8421',
+            gate: 'بوابة الـ POS المحمولة (POS-01)',
+            operator: 'تامر إبراهيم',
+            duration: 'تذكرة دخول جديدة',
+            rateType: 'تعريفة أول ساعة 20 ج.م',
+            amount: '0.00 ج.م (تذكرة دخول)'
+          });
+        } else {
+          showThermalReceipt({
+            cardCode: 'SHIFT-Z-REPORT',
+            plateNumber: 'كافة السيارات (38)',
+            gate: 'تقرير نهاية الوردية #104',
+            operator: 'تامر إبراهيم',
+            duration: '8 ساعات عمل',
+            rateType: 'إجمالي المتحصلات النقدية',
+            amount: '1,420.00 ج.م'
+          });
+        }
+      }, 700);
+    }
+  </script>
+</body>
+
+</html>

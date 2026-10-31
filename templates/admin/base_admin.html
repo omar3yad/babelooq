@@ -32,12 +32,53 @@
       overflow: hidden !important;
       border: none !important;
     }
+
+    @media (max-width: 768px) {
+      #sidebar {
+        position: fixed !important;
+        top: 0 !important;
+        bottom: 0 !important;
+        right: 0 !important;
+        width: 280px !important;
+        max-width: 85vw !important;
+        height: 100vh !important;
+        height: 100dvh !important;
+        z-index: 50 !important;
+        transform: translateX(100%) !important;
+        transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        box-shadow: -8px 0 32px rgba(0, 0, 0, 0.6) !important;
+        border-left: 1px solid rgba(55, 65, 81, 0.7) !important;
+      }
+
+      #sidebar.mobile-open {
+        transform: translateX(0) !important;
+      }
+
+      #sidebar.collapsed {
+        width: 280px !important;
+        padding: inherit !important;
+        overflow-y: auto !important;
+      }
+
+      #sidebar.collapsed:not(.mobile-open) {
+        transform: translateX(100%) !important;
+      }
+
+      main {
+        width: 100% !important;
+        min-width: 0 !important;
+      }
+    }
   </style>
   {% block head %}{% endblock %}
 </head>
 
 <body class="bg-gray-900 text-gray-100 min-h-screen flex flex-col font-sans">
-  <div class="flex flex-1 min-h-screen">
+  <div class="flex flex-1 min-h-screen relative overflow-x-hidden">
+    <!-- Mobile Sidebar Backdrop -->
+    <div id="sidebar-backdrop"
+      class="fixed inset-0 bg-black/60 z-40 backdrop-blur-sm transition-opacity hidden md:hidden"></div>
+
     <!-- Sidebar -->
     <aside id="sidebar"
       class="w-64 bg-gray-950 border-l border-gray-800 flex-shrink-0 transition-all duration-300 flex flex-col">
@@ -47,8 +88,17 @@
             class="w-8 h-8 rounded-lg shadow-lg shadow-cyan-500/20">
           <span class="font-bold text-lg text-cyan-400">garage4u</span>
         </div>
-        <span
-          class="text-xs bg-cyan-900/40 text-cyan-300 border border-cyan-700/40 px-2 py-0.5 rounded-full">مسؤول</span>
+        <div class="flex items-center gap-2">
+          <span
+            class="text-xs bg-cyan-900/40 text-cyan-300 border border-cyan-700/40 px-2 py-0.5 rounded-full">مسؤول</span>
+          <!-- Mobile Close Button -->
+          <button id="sidebar-close" type="button" aria-label="إغلاق القائمة"
+            class="p-1 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 md:hidden transition">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
       </div>
       <nav class="p-3 space-y-1 text-sm font-medium flex-1 overflow-y-auto">
         <a href="/ui/admin/dashboard"
@@ -135,12 +185,12 @@
     <!-- Main Content Area -->
     <main class="flex-1 flex flex-col min-w-0 overflow-y-auto">
       <!-- Topbar -->
-    <header
-        class="relative h-14 border-b border-gray-800 bg-gray-950/60 backdrop-blur px-4 flex items-center justify-between flex-shrink-0">
+      <header
+        class="relative h-14 border-b border-gray-800 bg-gray-950/60 backdrop-blur px-3 sm:px-4 flex items-center justify-between flex-shrink-0">
         
         <!-- الجانب الأيمن -->
-        <div class="flex items-center gap-3">
-          <button id="sidebar-toggle"
+        <div class="flex items-center gap-2 sm:gap-3">
+          <button id="sidebar-toggle" type="button" aria-label="تبديل القائمة الجانبية"
             class="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition focus:outline-none">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
               <line x1="3" y1="12" x2="21" y2="12"></line>
@@ -148,25 +198,25 @@
               <line x1="3" y1="18" x2="21" y2="18"></line>
             </svg>
           </button>
-          <span class="text-sm font-semibold text-gray-300">مواقف السيارات الذكية</span>
+          <span class="text-xs sm:text-sm font-semibold text-gray-300 hidden sm:inline">مواقف السيارات الذكية</span>
         </div>
 
         <!-- النص في المنتصف تماماً بخط عريض -->
-        <div class="absolute left-1/2 -translate-x-1/2 pointer-events-none">
-          <span class="text-lg md:text-xl font-bold tracking-wide text-white drop-shadow-sm">
+        <div class="absolute left-1/2 -translate-x-1/2 pointer-events-none text-center">
+          <span class="text-base sm:text-lg md:text-xl font-bold tracking-wide text-white drop-shadow-sm whitespace-nowrap">
             جراج باب اللوق
           </span>
         </div>
 
         <!-- الجانب الأيسر -->
-        <div class="flex items-center gap-4 text-sm">
-          <span class="text-gray-300 font-medium">{{ user.full_name if user else "" }}</span>
-          <span class="inline-block w-2 h-2 rounded-full bg-emerald-500"></span>
+        <div class="flex items-center gap-2 sm:gap-4 text-sm">
+          <span class="text-gray-300 font-medium text-xs sm:text-sm truncate max-w-[90px] sm:max-w-none">{{ user.full_name if user else "" }}</span>
+          <span class="inline-block w-2 h-2 rounded-full bg-emerald-500 shrink-0" title="متصل"></span>
         </div>
       </header> 
 
       <!-- Content Container -->
-      <section class="flex-1 p-4 md:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+      <section class="flex-1 p-3 sm:p-4 md:p-6 lg:p-8 max-w-7xl w-full mx-auto">
         {% block content %}
         {% block admin_content %}{% endblock %}
         {% endblock %}
@@ -175,17 +225,87 @@
   </div>
 
   <script>
-    // Sidebar collapse with localStorage
-    const sidebar = document.getElementById('sidebar');
-    const toggle = document.getElementById('sidebar-toggle');
-    const STORAGE_KEY = 'garage4u_sidebar_collapsed';
-    if (localStorage.getItem(STORAGE_KEY) === 'true') {
-      sidebar.classList.add('collapsed');
-    }
-    toggle.addEventListener('click', () => {
-      const collapsed = sidebar.classList.toggle('collapsed');
-      localStorage.setItem(STORAGE_KEY, collapsed);
-    });
+    (function() {
+      // Sidebar collapse with responsive drawer support
+      const sidebar = document.getElementById('sidebar');
+      const toggle = document.getElementById('sidebar-toggle');
+      const backdrop = document.getElementById('sidebar-backdrop');
+      const closeBtn = document.getElementById('sidebar-close');
+      const STORAGE_KEY = 'garage4u_sidebar_collapsed';
+
+      function isMobile() {
+        return window.innerWidth <= 768;
+      }
+
+      // Initialize desktop collapse state
+      if (!isMobile() && localStorage.getItem(STORAGE_KEY) === 'true') {
+        sidebar.classList.add('collapsed');
+      }
+
+      function openMobileSidebar() {
+        sidebar.classList.add('mobile-open');
+        if (backdrop) backdrop.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+      }
+
+      function closeMobileSidebar() {
+        sidebar.classList.remove('mobile-open');
+        if (backdrop) backdrop.classList.add('hidden');
+        document.body.style.overflow = '';
+      }
+
+      if (toggle) {
+        toggle.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (isMobile()) {
+            if (sidebar.classList.contains('mobile-open')) {
+              closeMobileSidebar();
+            } else {
+              openMobileSidebar();
+            }
+          } else {
+            const collapsed = sidebar.classList.toggle('collapsed');
+            localStorage.setItem(STORAGE_KEY, collapsed);
+          }
+        });
+      }
+
+      if (closeBtn) {
+        closeBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          closeMobileSidebar();
+        });
+      }
+
+      if (backdrop) {
+        backdrop.addEventListener('click', () => {
+          closeMobileSidebar();
+        });
+      }
+
+      // Close on navigation link click on mobile
+      if (sidebar) {
+        sidebar.querySelectorAll('nav a').forEach(link => {
+          link.addEventListener('click', () => {
+            if (isMobile()) {
+              closeMobileSidebar();
+            }
+          });
+        });
+      }
+
+      // Handle screen resize
+      window.addEventListener('resize', () => {
+        if (!isMobile()) {
+          closeMobileSidebar();
+          if (localStorage.getItem(STORAGE_KEY) === 'true') {
+            sidebar.classList.add('collapsed');
+          } else {
+            sidebar.classList.remove('collapsed');
+          }
+        }
+      });
+    })();
   </script>
   {% block scripts %}{% endblock %}
 

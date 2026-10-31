@@ -265,7 +265,7 @@ async def test_dashboard_long_stay_banner_shown(
 
     res = await async_client.get("/ui/admin/dashboard")
     assert res.status_code == 200
-    assert "جلسات مفتوحة أكثر من ٢٤ ساعة" in res.text
+    assert "تنبيه نظام الرقابة: يوجد سيارات متأخرة بالداخل أكثر من 24 ساعة " in res.text
 
 
 @pytest.mark.asyncio
@@ -277,7 +277,7 @@ async def test_dashboard_no_banner_when_no_long_stay(
     # Make sure no active session > 24 hours exists
     res = await async_client.get("/ui/admin/dashboard")
     assert res.status_code == 200
-    assert "جلسات مفتوحة أكثر من ٢٤ ساعة" not in res.text
+    assert "تنبيه نظام الرقابة: يوجد سيارات متأخرة بالداخل أكثر من 24 ساعة " not in res.text
 
 
 @pytest.mark.asyncio

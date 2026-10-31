@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>بوابة المعاينة التفاعلية | نظام garage4u الذكي لإدارة المواقف</title>
+
+  <!-- Google Fonts: Cairo & Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Outfit:wght@500;700;800;900&display=swap"
+    rel="stylesheet">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/static/css/tailwind.min.css">
+  <link rel="stylesheet" href="preview-common.css?v=20261031_v5">
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Cairo', 'sans-serif'],
+            digital: ['Outfit', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              400: '#38bdf8',
+              500: '#0ea5e9',
+              600: '#0284c7',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      font-family: 'Cairo', 'Segoe UI', Tahoma, Arial, sans-serif;
+      background: radial-gradient(circle at 50% 0%, #0f1d36 0%, #060911 75%);
+      min-height: 100vh;
+      color: #f8fafc;
+    }
+
+    .selection-card {
+      background: rgba(13, 20, 36, 0.85);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      border-radius: 20px;
+      backdrop-filter: blur(14px);
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .selection-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      left: 0;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, #38bdf8, transparent);
+      opacity: 0;
+      transition: opacity 0.25s ease;
+    }
+
+    .selection-card:hover {
+      transform: translateY(-5px);
+      border-color: rgba(56, 189, 248, 0.6);
+      box-shadow: 0 16px 30px -10px rgba(14, 165, 233, 0.3);
+    }
+
+    .selection-card:hover::before {
+      opacity: 1;
+    }
+  </style>
+</head>
+
+<body class="flex flex-col justify-between selection:bg-cyan-500 selection:text-white">
+
+  <!-- Top Header Navigation -->
+  <header class="bg-[#0b0f19]/90 backdrop-blur-md border-b border-slate-800/80 px-3.5 sm:px-8 py-3 sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+      <div class="flex items-center gap-2.5 sm:gap-3">
+        <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-cyan-600 to-sky-400 p-0.5 shadow-lg shadow-cyan-500/20">
+          <div class="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center">
+            <span class="text-cyan-400 font-digital font-black text-sm sm:text-base">4U</span>
+          </div>
+        </div>
+        <div>
+          <span class="text-lg sm:text-xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-sky-300 to-indigo-400 font-digital">
+            garage4u
+          </span>
+          <span class="text-[10px] sm:text-xs text-slate-400 block -mt-1 font-bold">منظومة إدارة المواقف الذكية</span>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 sm:gap-3">
+        <div class="bg-cyan-950/80 border border-cyan-500/40 px-2.5 sm:px-3.5 py-1 rounded-xl flex items-center gap-1.5 text-[11px] sm:text-xs font-bold text-cyan-300 shadow-inner">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span>نسخة المعاينة والعرض</span>
+        </div>
+        <div class="bg-slate-950 border border-slate-800 px-3 py-1 rounded-xl font-digital text-xs font-bold text-slate-300 hidden md:block" id="live-clock">
+          --:--:--
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Hero & Selection Section -->
+  <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-8 py-6 sm:py-10 w-full flex flex-col justify-center">
+    
+    <!-- Hero Text -->
+    <div class="text-center max-w-3xl mx-auto mb-8 sm:mb-10">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800/80 border border-slate-700/80 text-[11px] sm:text-xs font-bold text-sky-300 mb-3 shadow-sm">
+        <svg class="w-3.5 h-3.5 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+        </svg>
+        <span>معاينة واجهات النظام الحية</span>
+      </div>
+      <h1 class="text-2xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-tight">
+        اختر الشاشة لاستعراض تجربة النظام
+      </h1>
+      <p class="text-xs sm:text-base text-slate-300 mt-2.5 leading-relaxed">
+        شاهد وتصفح جميع شاشات وواجهات نظام <span class="text-cyan-400 font-bold font-digital">garage4u</span> كما تظهر على الأجهزة الفعلية بكل دقة وسلاسة.
+      </p>
+    </div>
+
+    <!-- The 4 Main Selection Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+
+      <!-- Card 1: عامل دخول كمبيوتر -->
+      <a href="operator_entry.html" class="selection-card p-5 sm:p-6 flex flex-col justify-between group">
+        <div>
+          <div class="flex items-center justify-between mb-4">
+            <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/10 border border-emerald-500/40 flex items-center justify-center text-emerald-400 group-hover:scale-105 transition-transform">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <span class="text-[10px] sm:text-[11px] font-bold text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded-full border border-emerald-700/50">
+              بوابة الدخول #1
+            </span>
+          </div>
+
+          <h2 class="text-lg sm:text-xl font-black text-white group-hover:text-emerald-300 transition-colors">
+            عامل دخول كمبيوتر
+          </h2>
+          <p class="text-xs text-slate-400 font-semibold mt-1">شاشة الكاشير المكتبي للبوابة الرئيسية</p>
+
+          <ul class="mt-3 space-y-1.5 text-xs text-slate-300">
+            <li class="flex items-center gap-2">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+              <span>كاميرا التعرف على اللوحات (LPR)</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+              <span>اللوحة المصرية الأصلية بتصميم حي</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+              <span>مسح الكروت السريع والتحقق اللحظي</span>
+            </li>
+          </ul>
+        </div>
+
+        <div class="mt-5 pt-3.5 border-t border-slate-800/80 flex items-center justify-between text-emerald-400 font-bold text-xs">
+          <span>دخول الشاشة</span>
+          <svg class="w-4 h-4 rtl:rotate-180 group-hover:translate-x-[-4px] transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+          </svg>
+        </div>
+      </a>
+
+      <!-- Card 2: عامل خروج كمبيوتر -->
+      <a href="operator_exit.html" class="selection-card p-5 sm:p-6 flex flex-col justify-between group">
+        <div>
+          <div class="flex items-center justify-between mb-4">
+            <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-blue-500/10 border border-cyan-500/40 flex items-center justify-center text-cyan-400 group-hover:scale-105 transition-transform">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <span class="text-[10px] sm:text-[11px] font-bold text-cyan-400 bg-cyan-950/80 px-2 py-0.5 rounded-full border border-cyan-700/50">
+              بوابة الخروج #2
+            </span>
+          </div>
+
+          <h2 class="text-lg sm:text-xl font-black text-white group-hover:text-cyan-300 transition-colors">
+            عامل خروج كمبيوتر
+          </h2>
+          <p class="text-xs text-slate-400 font-semibold mt-1">شاشة المحاسبة والحساب الإلكتروني</p>
+
+          <ul class="mt-3 space-y-1.5 text-xs text-slate-300">
+            <li class="flex items-center gap-2">
+              <span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
+              <span>شاشة السعر العملاقة الفورية (45 ج.م)</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
+              <span>احتساب مدة الانتظار والتعريفة بدقة</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
+              <span>طباعة الإيصال الحراري 80mm</span>
+            </li>
+          </ul>
+        </div>
+
+        <div class="mt-5 pt-3.5 border-t border-slate-800/80 flex items-center justify-between text-cyan-400 font-bold text-xs">
+          <span>دخول الشاشة</span>
+          <svg class="w-4 h-4 rtl:rotate-180 group-hover:translate-x-[-4px] transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+          </svg>
+        </div>
+      </a>
+
+      <!-- Card 3: جهاز POS -->
+      <a href="pos_device.html" class="selection-card p-5 sm:p-6 flex flex-col justify-between group">
+        <div>
+          <div class="flex items-center justify-between mb-4">
+            <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-500/20 to-orange-500/10 border border-amber-500/40 flex items-center justify-center text-amber-400 group-hover:scale-105 transition-transform">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <span class="text-[10px] sm:text-[11px] font-bold text-amber-400 bg-amber-950/80 px-2 py-0.5 rounded-full border border-amber-700/50">
+              أجهزة Sunmi المحمولة
+            </span>
+          </div>
+
+          <h2 class="text-lg sm:text-xl font-black text-white group-hover:text-amber-300 transition-colors">
+            جهاز POS الذكي
+          </h2>
+          <p class="text-xs text-slate-400 font-semibold mt-1">تطبيق البوابات المتنقلة والتحصيل الميداني</p>
+
+          <ul class="mt-3 space-y-1.5 text-xs text-slate-300">
+            <li class="flex items-center gap-2">
+              <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+              <span>واجهة لمس متوافقة 100% مع الموبايل</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+              <span>تسجيل دخول وخروج ومحاسبة سريعة</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+              <span>محاكاة خروج الإيصال الحراري الفوري</span>
+            </li>
+          </ul>
+        </div>
+
+        <div class="mt-5 pt-3.5 border-t border-slate-800/80 flex items-center justify-between text-amber-400 font-bold text-xs">
+          <span>دخول الشاشة</span>
+          <svg class="w-4 h-4 rtl:rotate-180 group-hover:translate-x-[-4px] transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+          </svg>
+        </div>
+      </a>
+
+      <!-- Card 4: صفحة الأدمن أو المدير -->
+      <a href="admin_dashboard.html" class="selection-card p-5 sm:p-6 flex flex-col justify-between group">
+        <div>
+          <div class="flex items-center justify-between mb-4">
+            <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-purple-500/10 border border-indigo-500/40 flex items-center justify-center text-indigo-400 group-hover:scale-105 transition-transform">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+            </div>
+            <span class="text-[10px] sm:text-[11px] font-bold text-indigo-400 bg-indigo-950/80 px-2 py-0.5 rounded-full border border-indigo-700/50">
+              لوحة الإدارة المركزية
+            </span>
+          </div>
+
+          <h2 class="text-lg sm:text-xl font-black text-white group-hover:text-indigo-300 transition-colors">
+            صفحة الأدمن والمدير
+          </h2>
+          <p class="text-xs text-slate-400 font-semibold mt-1">الورديات • المالية • الحركات • الأسعار</p>
+
+          <ul class="mt-3 space-y-1.5 text-xs text-slate-300">
+            <li class="flex items-center gap-2">
+              <span class="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
+              <span>متابعة الشيفتات وكشف العجز والزيادة</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <span class="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
+              <span>تقارير المالية وتفاصيل الخدمات والعمال</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <span class="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
+              <span>مؤشرات الإشغال والاشتراكات والأسعار</span>
+            </li>
+          </ul>
+        </div>
+
+        <div class="mt-5 pt-3.5 border-t border-slate-800/80 flex items-center justify-between text-indigo-400 font-bold text-xs">
+          <span>دخول الشاشة</span>
+          <svg class="w-4 h-4 rtl:rotate-180 group-hover:translate-x-[-4px] transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+          </svg>
+        </div>
+      </a>
+
+    </div>
+
+    <!-- Quick Info Banner -->
+    <div class="mt-8 sm:mt-12 p-3.5 sm:p-4 rounded-2xl bg-slate-900/60 border border-slate-800 text-center text-xs text-slate-400 max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2.5">
+      <div class="flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
+        <span class="text-slate-200 font-bold">ملاحظة:</span>
+        <span>النسخة للعرض والمعاينة التفاعلية ببيانات ثابتة لكافة البوابات والأجهزة.</span>
+      </div>
+      <div>
+        <button onclick="showThermalReceipt()" class="text-cyan-400 hover:underline font-bold text-xs">
+          📄 تجربة معاينة إيصال حراري
+        </button>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-slate-800/80 bg-[#070b14] py-3 text-center text-[11px] sm:text-xs text-slate-500">
+    garage4u Smart Parking System • Demo Showcase &copy; 2026
+  </footer>
+
+  <script src="preview-common.js?v=20261031_v5"></script>
+  <script>
+    startPreviewClock('live-clock');
+  </script>
+</body>
+
+</html>
